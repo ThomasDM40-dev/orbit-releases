@@ -50,6 +50,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAIInterpolateComplete: (cb) => ipcRenderer.on('ai-interpolate-complete', (_e, v) => cb(v)),
   onAIInterpolateError: (cb) => ipcRenderer.on('ai-interpolate-error', (_e, v) => cb(v)),
   checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
+  startUpdateDownload: () => ipcRenderer.invoke('start-update-download'),
+  checkToolUpdates: () => ipcRenderer.invoke('check-tool-updates'),
   onUpdaterStatus: (cb) => ipcRenderer.on('updater-status', (_e, v) => cb(v)),
   rpcUpdate: (data) => ipcRenderer.send('rpc-update', data),
   openSniffer: (url) => ipcRenderer.send('open-sniffer', url),

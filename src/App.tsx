@@ -11,21 +11,22 @@ import OrbitEnhance from "@/components/OrbitEnhance";
 import HandBrake from "@/components/HandBrake";
 import MediaLibrary from "@/components/MediaLibrary";
 import MattingStudio from "@/components/MattingStudio";
+import UpdatePrompt from "@/components/UpdatePrompt";
 import LiquidLoader from "@/components/LiquidLoader";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function App() {
   const defaultMainTabs = [
-    { id: 'downloads', label: '🌐 Téléchargements' },
-    { id: 'converter', label: '🔃 Convertisseur & Tags' },
-    { id: 'subscriptions', label: '📡Abonnements ' },
+    { id: 'downloads', label: '⬇️ Téléchargements' },
+    { id: 'converter', label: '🎚️ Convertisseur & Tags' },
+    { id: 'subscriptions', label: '📡 Abonnements' },
     { id: 'interpolator', label: '⚡ Interpolateur IA' },
-    { id: 'library', label: '🎬 Médiathèque' },
-    { id: 'enhance', label: '🚀 Amélioration IA' },
+    { id: 'library', label: '🎞️ Médiathèque' },
+    { id: 'enhance', label: '✨ Amélioration IA' },
     { id: 'matting', label: '✂️ Détourage IA' },
-    { id: 'handbrake', label: '🔥 HandBrake' },
-    { id: 'topaz', label: '✨ Topaz Video AI' },
+    { id: 'handbrake', label: '🗜️ HandBrake' },
+    { id: 'topaz', label: '💎 Topaz Video AI' },
     { id: 'transcription', label: '📝 Transcription' }
   ];
 
@@ -35,8 +36,12 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved) as { id: string; label: string; visible: boolean }[];
         const validIds = new Set(defaultMainTabs.map(t => t.id));
-        // Drop tabs that no longer exist (e.g. Crunchyroll, removed).
-        const cleaned = parsed.filter(t => validIds.has(t.id));
+        // Drop tabs that no longer exist (e.g. Crunchyroll, removed); always
+        // refresh the label from defaults so updated emojis/names propagate.
+        const cleaned = parsed.filter(t => validIds.has(t.id)).map(t => {
+          const def = defaultMainTabs.find(d => d.id === t.id);
+          return def ? { ...t, label: def.label } : t;
+        });
         // Merge in any newly-added default tabs so they appear for existing users.
         const known = new Set(cleaned.map(t => t.id));
         const merged = [...cleaned];
@@ -542,6 +547,9 @@ export default function App() {
       {showImportModal && (
         <ImportModal onClose={() => setShowImportModal(false)} language={language} />
       )}
+
+      {/* Launch update prompt (Orbit + bundled tools) */}
+      <UpdatePrompt />
 
     </main>
   );

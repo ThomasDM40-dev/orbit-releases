@@ -167,10 +167,9 @@ function createWindow() {
   });
 
   autoUpdater.on('update-available', (info) => {
+    // Do NOT auto-download — ask the user first (handled by the launch prompt).
     mainWindow.webContents.send('updater-status', { type: 'available', version: info.version });
     mainWindow.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('app-update-available', { detail: ${JSON.stringify(info)} }))`);
-    // Start downloading automatically once we know there's an update
-    autoUpdater.downloadUpdate();
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -215,6 +214,28 @@ function createWindow() {
 
   ipcMain.handle('install-update', () => {
     autoUpdater.quitAndInstall(true, true);
+  });
+
+  // Download the pending app update (after the user accepts the launch prompt).
+  ipcMain.handle('start-update-download', async () => {
+    try { await autoUpdater.downloadUpdate(); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.message }; }
+  });
+
+  // Check bundled tools (yt-dlp) for updates — returned structured for the launch prompt.
+  ipcMain.handle('check-tool-updates', async () => {
+    const out = { ytdlp: null };
+    try {
+      const bin = getYtDlpBin();
+      const cur = await new Promise(res => { try { const p = spawn(bin, ['--version'], { windowsHide: true }); let s = ''; p.stdout.on('data', d => s += d); p.on('close', () => res(s.trim())); p.on('error', () => res('')); } catch (e) { res(''); } });
+      let latest = '';
+      try {
+        const j = await new Promise((rs, rj) => { https.get('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest', { headers: { 'User-Agent': 'Orbit' } }, r => { let b = ''; r.on('data', d => b += d); r.on('end', () => { try { rs(JSON.parse(b)); } catch (e) { rj(e); } }); }).on('error', rj); });
+        latest = (j.tag_name || j.name || '').trim();
+      } catch (e) {}
+      if (cur) out.ytdlp = { current: cur, latest, outdated: !!(latest && latest.replace(/[^0-9.]/g, '') !== cur.replace(/[^0-9.]/g, '')) };
+    } catch (e) {}
+    return out;
   });
 
   if (isDev) {
@@ -408,11 +429,12 @@ app.whenReady().then(() => {
   // Init Discord Rich Presence
   setTimeout(() => initDiscordRPC(), 3000);
 
-  // Check for updates globally
+  // Check for updates at launch — only CHECK (no auto-download); the renderer
+  // shows a prompt asking the user whether to update.
   if (!isDev) {
     setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify().catch(e => console.error("Auto-updater check failed:", e));
-    }, 5000);
+      autoUpdater.checkForUpdates().catch(e => console.error("Auto-updater check failed:", e));
+    }, 2500);
   }
 
   app.on('activate', function () {
