@@ -139,4 +139,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onLibConvertProgress: (cb) => { ipcRenderer.on('lib-convert-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('lib-convert-progress'); },
   onLibConvertComplete: (cb) => { ipcRenderer.on('lib-convert-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('lib-convert-complete'); },
   onLibConvertError: (cb) => { ipcRenderer.on('lib-convert-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('lib-convert-error'); },
+
+  // ── Suppression de fond IA (Robust Video Matting) ──
+  mattingDetect: () => ipcRenderer.invoke('matting-detect'),
+  mattingInstall: (modelKey) => ipcRenderer.invoke('matting-install', modelKey),
+  mattingPreview: (job) => ipcRenderer.invoke('matting-preview', job),
+  mattingStart: (job) => ipcRenderer.send('matting-start', job),
+  mattingCancel: (id) => ipcRenderer.send('matting-cancel', id),
+  onMattingProgress: (cb) => { ipcRenderer.on('matting-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-progress'); },
+  onMattingComplete: (cb) => { ipcRenderer.on('matting-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-complete'); },
+  onMattingError: (cb) => { ipcRenderer.on('matting-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-error'); },
 });

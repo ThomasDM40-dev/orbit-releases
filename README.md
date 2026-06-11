@@ -55,6 +55,11 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - **Restauration** : débruitage temporel/spatial, deblock, deband, désentrelacement, colorimétrie
 - **Stabilisation** vidstab 2-passes, netteté CAS, comparaison Avant/Après, moniteur GPU/VRAM/CPU/RAM
 
+### ✂️ Détourage IA (suppression de fond sans fond vert)
+- **Robust Video Matting** (ONNX) — détoure le sujet en **alpha**, aucun fond vert requis
+- Sorties : **transparent** (WebM alpha / ProRes 4444 / séquence PNG), fond vert, couleur, **flou**, ou image
+- Modèles MobileNetV3 (rapide) / ResNet50 (qualité), aperçu 3 s, file par lot — pipeline en flux décodage→ONNX→FFmpeg
+
 ### 🔥 HandBrake
 - Le **vrai moteur HandBrakeCLI** (open-source) auto-téléchargé et piloté par Orbit
 - **100+ préréglages officiels**, encodeurs x264 / x265 / AV1 (SVT) + **NVENC** matériel
@@ -153,6 +158,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.14.0** — Onglet Détourage IA (Robust Video Matting · transparent/vert/flou/image)
 - **v0.13.0** — Onglet Médiathèque (gestionnaire + conversion ProRes/DNxHR + export créatif) · fix Reels Instagram
 - **v0.12.0** — Onglet HandBrake (moteur officiel) + code source public sur `main`
 - **v0.11.x** — Amélioration IA (Real-ESRGAN/RIFE) + paramètres refaits et fonctionnels

@@ -3091,3 +3091,161 @@ ipcMain.on('lib-convert', async (event, job) => {
     sendErr('Échec : ' + ((e && e.message) || String(e)));
   }
 });
+
+// ─── AI Background Removal (Robust Video Matting · ONNX) ──────────────────────
+const matting = require('./matting.js');
+let _ort = null;
+function getOrt() { if (!_ort) { _ort = require('onnxruntime-node'); try { _ort.env.logLevel = 'error'; } catch (e) {} } return _ort; }
+const RVM_DIR = path.join(ORBIT_DIR, 'modules', 'rvm');
+
+async function installRvmModel(modelKey, onLog) {
+  const m = matting.MODELS[modelKey] || matting.MODELS.mobilenetv3;
+  if (!fs.existsSync(RVM_DIR)) fs.mkdirSync(RVM_DIR, { recursive: true });
+  const dest = path.join(RVM_DIR, m.file);
+  if (fs.existsSync(dest) && fs.statSync(dest).size >= m.minBytes) return dest;
+  onLog && onLog(`Téléchargement du modèle RVM « ${m.label} »…`);
+  await new Promise((resolve, reject) => {
+    const c = spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '3', m.url]);
+    c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
+    c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLog && onLog('RVM: ' + s.replace(/\r/g, '').split('\n').pop()); });
+    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+  });
+  if (!fs.existsSync(dest) || fs.statSync(dest).size < m.minBytes) { try { fs.unlinkSync(dest); } catch (e) {} throw new Error('Modèle RVM incomplet.'); }
+  return dest;
+}
+
+ipcMain.handle('matting-detect', async () => {
+  let ready = false, err = null;
+  try { getOrt(); ready = true; } catch (e) { err = e.message; }
+  const models = Object.entries(matting.MODELS).map(([k, m]) => ({ key: k, label: m.label, installed: (() => { try { return fs.existsSync(path.join(RVM_DIR, m.file)) && fs.statSync(path.join(RVM_DIR, m.file)).size >= m.minBytes; } catch (e) { return false; } })() }));
+  return { ready, err, models };
+});
+ipcMain.handle('matting-install', async (e, modelKey) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  try { await installRvmModel(modelKey, m => win?.webContents.send('matting-progress', { id: 'install', log: m })); return { ok: true }; }
+  catch (er) { return { ok: false, error: er.message }; }
+});
+ipcMain.on('matting-cancel', (e, id) => { const j = activeDownloads.get(id); if (j && j.kill) j.kill(); });
+
+// The streaming pipeline: ffmpeg decode → RVM recurrent loop → alpha → ffmpeg composite.
+async function runMatting(job, opts) {
+  const onProgress = opts.onProgress || (() => {});
+  const onLog = opts.onLog || (() => {});
+  const isCancelled = opts.isCancelled || (() => false);
+  const reg = opts.registerProc || (() => {});
+
+  const ort = getOrt();
+  const eng = enhanceLib.detectEngines(ORBIT_DIR);
+  if (!eng.ffmpeg) throw new Error('ffmpeg introuvable.');
+  const ff = eng.ffmpeg;
+  const modelPath = await installRvmModel(job.model || 'mobilenetv3', onLog);
+
+  // Probe + (optional) trim for preview.
+  let input = job.inputPath;
+  const tmpFiles = [];
+  let meta = await enhanceProbe(ff, input);
+  if (opts.preview) {
+    const clip = path.join(os.tmpdir(), `orbit_rvm_clip_${Date.now()}.mp4`); tmpFiles.push(clip);
+    await new Promise((res, rej) => { const p = spawn(ff, ['-hide_banner', '-y', '-ss', String(opts.preview.start || 0), '-t', String(opts.preview.duration || 3), '-i', job.inputPath, '-c:v', 'libx264', '-crf', '18', '-c:a', 'aac', clip], { windowsHide: true }); reg(p); p.on('error', rej); p.on('close', c => c === 0 ? res() : rej(new Error('clip ' + c))); });
+    input = clip; meta = await enhanceProbe(ff, input);
+  }
+  const W = meta.width || 1280, H = meta.height || 720, fps = Math.round(meta.fps || 30) || 30;
+  const totalFrames = Math.max(1, Math.round((meta.duration || 0) * fps));
+  const { pw, ph, ratio } = matting.procSize(W, H, job.quality || 'balanced');
+  onLog(`Matte ${pw}×${ph} (ratio ${ratio}) · ${W}×${H} sortie`);
+
+  // ── Stage A: decode → RVM → alpha video ──
+  const alphaPath = path.join(os.tmpdir(), `orbit_rvm_alpha_${Date.now()}.mkv`); tmpFiles.push(alphaPath);
+  const session = await ort.InferenceSession.create(modelPath);
+  const decode = spawn(ff, matting.decodeArgs(input, pw, ph, fps), { windowsHide: true });
+  const aenc = spawn(ff, matting.alphaEncodeArgs(pw, ph, fps, alphaPath), { windowsHide: true });
+  reg(decode); reg(aenc);
+  decode.stderr.on('data', () => {}); aenc.stderr.on('data', () => {});
+
+  const frameSize = pw * ph * 3, N = pw * ph;
+  const empty = () => new ort.Tensor('float32', new Float32Array(1), [1, 1, 1, 1]);
+  let rec = [empty(), empty(), empty(), empty()];
+  const ratioT = new ort.Tensor('float32', new Float32Array([ratio]), [1]);
+  const chw = new Float32Array(3 * N);
+  const drain = (s) => new Promise(r => s.once('drain', r));
+  let acc = Buffer.alloc(0), frames = 0, fatal = null;
+
+  await new Promise((resolve, reject) => {
+    decode.stdout.on('data', async (chunk) => {
+      if (fatal) return;
+      acc = acc.length ? Buffer.concat([acc, chunk]) : chunk;
+      while (acc.length >= frameSize) {
+        if (isCancelled()) { fatal = new Error('cancelled'); decode.stdout.destroy(); try { aenc.stdin.end(); } catch (e) {} return reject(fatal); }
+        decode.stdout.pause();
+        const fr = acc.subarray(0, frameSize); acc = acc.subarray(frameSize);
+        for (let i = 0; i < N; i++) { chw[i] = fr[i * 3] / 255; chw[N + i] = fr[i * 3 + 1] / 255; chw[2 * N + i] = fr[i * 3 + 2] / 255; }
+        let out;
+        try { out = await session.run({ src: new ort.Tensor('float32', chw, [1, 3, ph, pw]), r1i: rec[0], r2i: rec[1], r3i: rec[2], r4i: rec[3], downsample_ratio: ratioT }); }
+        catch (e) { fatal = e; return reject(e); }
+        rec = [out.r1o, out.r2o, out.r3o, out.r4o];
+        const pha = out.pha.data; const gray = Buffer.allocUnsafe(N);
+        for (let i = 0; i < N; i++) { const v = pha[i] * 255; gray[i] = v < 0 ? 0 : v > 255 ? 255 : v; }
+        frames++;
+        if (frames % 3 === 0 || frames === 1) onProgress({ percent: Math.min(70, Math.round(frames / totalFrames * 70)), stage: `Détourage IA (${frames}/${totalFrames})` });
+        if (!aenc.stdin.write(gray)) await drain(aenc.stdin);
+        decode.stdout.resume();
+      }
+    });
+    decode.stdout.on('end', () => { try { aenc.stdin.end(); } catch (e) {} });
+    decode.on('error', reject); aenc.on('error', reject);
+    aenc.on('close', () => fatal ? reject(fatal) : resolve());
+  });
+  if (frames === 0) throw new Error('Aucune frame traitée (vidéo illisible ?).');
+
+  // ── Stage B: composite ──
+  onProgress({ percent: 72, stage: 'Composition' });
+  const outDir = opts.preview ? os.tmpdir() : ((job.outputDir && fs.existsSync(job.outputDir)) ? job.outputDir : path.dirname(job.inputPath));
+  const cOpts = { mode: opts.preview ? (job.mode === 'transparent' ? 'transparent' : job.mode) : job.mode, color: job.color, bgImage: job.bgImage, transparentFormat: job.transparentFormat || 'webm', blurStrength: job.blurStrength, hasAudio: !!meta.hasAudio, fps, outputDir: outDir };
+  let outputPath = opts.preview ? path.join(os.tmpdir(), `orbit_rvm_preview_${Date.now()}.${job.mode === 'transparent' && (job.transparentFormat === 'prores') ? 'mov' : job.mode === 'transparent' ? 'webm' : 'mp4'}`) : matting.outputPathFor(job.inputPath, job.mode, job.transparentFormat || 'webm', outDir);
+  const cArgs = matting.compositeArgs(input, alphaPath, W, H, cOpts, outputPath);
+  await new Promise((resolve, reject) => {
+    const cp = spawn(ff, cArgs, { windowsHide: true }); reg(cp);
+    let log = '';
+    const ond = d => { const s = d.toString(); log += s; const tm = s.match(/time=(\d+):(\d+):(\d+\.\d+)/); if (tm && meta.duration > 0) { const sec = (+tm[1]) * 3600 + (+tm[2]) * 60 + (+tm[3]); onProgress({ percent: Math.min(99, 72 + Math.round(sec / meta.duration * 27)), stage: 'Composition' }); } };
+    cp.stdout.on('data', ond); cp.stderr.on('data', ond);
+    cp.on('error', reject);
+    cp.on('close', c => { if (isCancelled()) return reject(new Error('cancelled')); c === 0 ? resolve() : reject(new Error('Composition échouée (code ' + c + ')\n' + log.slice(-300))); });
+  });
+
+  for (const t of tmpFiles) { try { fs.unlinkSync(t); } catch (e) {} }
+  const checkPath = outputPath.includes('%05d') ? outputPath.replace('%05d', '00001') : outputPath;
+  if (!fs.existsSync(checkPath)) throw new Error('Sortie non générée.');
+  return { outputPath };
+}
+
+ipcMain.handle('matting-preview', async (e, job) => {
+  try { return await runMatting(job, { preview: job.preview || { start: 0, duration: 3 } }); }
+  catch (er) { return { error: 'Aperçu impossible : ' + (er && er.message) }; }
+});
+
+ipcMain.on('matting-start', async (event, job) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const id = job.id;
+  const sendP = (d) => win?.webContents.send('matting-progress', { id, ...d });
+  const sendErr = (msg) => win?.webContents.send('matting-error', { id, error: msg });
+  const sendDone = (d) => win?.webContents.send('matting-complete', { id, ...d });
+  let cancelled = false; const procs = new Set();
+  activeDownloads.set(id, { kill: () => { cancelled = true; for (const p of procs) { try { p.kill('SIGKILL'); } catch (e) {} } } });
+  try {
+    const r = await runMatting(job, {
+      onProgress: (d) => sendP(d), onLog: (m) => sendP({ log: m }),
+      isCancelled: () => cancelled, registerProc: (p) => procs.add(p),
+    });
+    activeDownloads.delete(id);
+    if (cancelled) return sendErr('Annulé par l\'utilisateur.');
+    sendP({ percent: 100, stage: 'Terminé' });
+    sendDone({ outputPath: r.outputPath });
+    try { let gs = {}; try { gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); } catch (e) {} if (gs.notifications) { const { Notification } = require('electron'); if (Notification.isSupported()) new Notification({ title: 'Orbit — Détourage terminé', body: path.basename(r.outputPath) }).show(); } } catch (e) {}
+    if (job.whenDone === 'open') { try { shell.showItemInFolder(r.outputPath); } catch (e) {} }
+  } catch (e) {
+    activeDownloads.delete(id);
+    const msg = (e && e.message) || String(e);
+    if (/cancelled/i.test(msg)) return sendErr('Annulé par l\'utilisateur.');
+    sendErr('Échec : ' + msg);
+  }
+});
