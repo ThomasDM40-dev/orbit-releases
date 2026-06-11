@@ -9,6 +9,7 @@ import Transcription from "@/components/Transcription";
 import TopazVideoAI from "@/components/TopazVideoAI";
 import OrbitEnhance from "@/components/OrbitEnhance";
 import HandBrake from "@/components/HandBrake";
+import MediaLibrary from "@/components/MediaLibrary";
 import LiquidLoader from "@/components/LiquidLoader";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -19,6 +20,7 @@ export default function App() {
     { id: 'converter', label: '🔃 Convertisseur & Tags' },
     { id: 'subscriptions', label: '📡Abonnements ' },
     { id: 'interpolator', label: '⚡ Interpolateur IA' },
+    { id: 'library', label: '🎬 Médiathèque' },
     { id: 'enhance', label: '🚀 Amélioration IA' },
     { id: 'handbrake', label: '🔥 HandBrake' },
     { id: 'topaz', label: '✨ Topaz Video AI' },
@@ -500,6 +502,9 @@ export default function App() {
           </div>
           <div className={activeTab === 'enhance' ? '' : 'hidden'} style={{ height: '100%' }}>
             <OrbitEnhance />
+          </div>
+          <div className={activeTab === 'library' ? '' : 'hidden'} style={{ height: '100%' }}>
+            <MediaLibrary />
           </div>
           <div className={activeTab === 'handbrake' ? '' : 'hidden'} style={{ height: '100%' }}>
             <HandBrake />

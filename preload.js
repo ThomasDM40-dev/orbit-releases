@@ -124,4 +124,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onHbProgress: (cb) => { ipcRenderer.on('hb-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('hb-progress'); },
   onHbComplete: (cb) => { ipcRenderer.on('hb-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('hb-complete'); },
   onHbError: (cb) => { ipcRenderer.on('hb-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('hb-error'); },
+
+  // ── Médiathèque (Anime Media Manager) ──
+  libLoad: () => ipcRenderer.invoke('lib-load'),
+  libSave: (data) => ipcRenderer.invoke('lib-save', data),
+  libAddFiles: () => ipcRenderer.invoke('lib-add-files'),
+  libScanFolder: () => ipcRenderer.invoke('lib-scan-folder'),
+  libProbe: (file) => ipcRenderer.invoke('lib-probe', file),
+  libThumbnail: (file) => ipcRenderer.invoke('lib-thumbnail', file),
+  libParseName: (name) => ipcRenderer.invoke('lib-parse-name', name),
+  libPresets: () => ipcRenderer.invoke('lib-presets'),
+  libConvert: (job) => ipcRenderer.send('lib-convert', job),
+  libCancel: (id) => ipcRenderer.send('lib-cancel', id),
+  onLibConvertProgress: (cb) => { ipcRenderer.on('lib-convert-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('lib-convert-progress'); },
+  onLibConvertComplete: (cb) => { ipcRenderer.on('lib-convert-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('lib-convert-complete'); },
+  onLibConvertError: (cb) => { ipcRenderer.on('lib-convert-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('lib-convert-error'); },
 });

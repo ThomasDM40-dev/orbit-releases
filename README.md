@@ -43,6 +43,12 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - Conversion entre tous formats (MP4, MKV, AVI, MOV, MP3, FLAC, WAV, OGG…)
 - Éditeur de tags ID3 (titre, artiste, album, pochette), drag & drop
 
+### 🎬 Médiathèque (Anime Media Manager)
+- Gestionnaire de médias pour monteurs & artistes 3D : import drag & drop, **scan de dossiers**, organisation par **séries / saisons / épisodes** (détection auto)
+- Recherche instantanée + filtres (résolution, codec, tri), sections **Récemment ajoutés / Favoris / Reprendre la lecture**
+- **Lecteur intégré** (vitesse, image par image, reprise) + panneau d'infos complet
+- Conversion FFmpeg vers **ProRes / DNxHR / H.264 / H.265** + **« Préparer pour AE / Premiere / DaVinci / Blender »**
+
 ### 🚀 Amélioration IA (moteur libre, gratuit)
 - **Upscale** Real-ESRGAN (vidéo / photo / anime) jusqu'à 8× + résolutions cibles 720p→8K
 - **Interpolation** RIFE jusqu'à 120 fps + ralenti IA
@@ -147,6 +153,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.13.0** — Onglet Médiathèque (gestionnaire + conversion ProRes/DNxHR + export créatif) · fix Reels Instagram
 - **v0.12.0** — Onglet HandBrake (moteur officiel) + code source public sur `main`
 - **v0.11.x** — Amélioration IA (Real-ESRGAN/RIFE) + paramètres refaits et fonctionnels
 - **v0.10.0** — Onglet Topaz Video AI

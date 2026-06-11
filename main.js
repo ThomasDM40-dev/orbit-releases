@@ -1215,6 +1215,16 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
     }
   }
 
+  // Instagram reels/posts expose several renditions (and carousels = multiple
+  // entries), so a plain download grabs many files. Keep a SINGLE best-quality
+  // video: one entry only + best video+audio merged to mp4.
+  if (/instagram\.com/i.test(url) && !options.audioOnly && !globalSettings.extractAudio) {
+    args.noPlaylist = true;
+    args.playlistItems = '1';
+    args.format = 'bestvideo*+bestaudio/best/best';
+    args.mergeOutputFormat = 'mp4';
+  }
+
   youtubedl = require('youtube-dl-exec').create(getYtDlpBin());
   const subprocess = youtubedl.exec(url, args);
   if (subprocess.catch) {
@@ -2988,5 +2998,96 @@ ipcMain.on('hb-start', async (event, job) => {
   } catch (e) {
     activeDownloads.delete(id);
     sendErr('Échec HandBrake : ' + ((e && e.message) || String(e)));
+  }
+});
+
+// ─── Media Library (Anime Media Manager) ──────────────────────────────────────
+const library = require('./library.js');
+const LIB_FILE = path.join(ORBIT_DIR, 'library.json');
+
+ipcMain.handle('lib-load', () => enhanceReadJson(LIB_FILE, { items: [] }));
+ipcMain.handle('lib-save', (e, data) => { try { if (!fs.existsSync(ORBIT_DIR)) fs.mkdirSync(ORBIT_DIR, { recursive: true }); fs.writeFileSync(LIB_FILE, JSON.stringify(data, null, 2)); return true; } catch (er) { return false; } });
+
+ipcMain.handle('lib-add-files', async () => {
+  const r = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: 'Vidéos', extensions: library.VIDEO_EXT }] });
+  return r.canceled ? [] : r.filePaths;
+});
+
+ipcMain.handle('lib-scan-folder', async () => {
+  const r = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+  if (r.canceled || !r.filePaths[0]) return [];
+  const root = r.filePaths[0];
+  const found = [];
+  const walk = (dir, depth) => {
+    if (depth > 8 || found.length > 5000) return;
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) walk(full, depth + 1);
+      else if (ent.isFile() && library.isVideo(ent.name)) found.push(full);
+    }
+  };
+  walk(root, 0);
+  return found;
+});
+
+ipcMain.handle('lib-probe', async (e, file) => {
+  const eng = enhanceLib.detectEngines(ORBIT_DIR);
+  return enhanceProbe(eng.ffmpeg, file);
+});
+ipcMain.handle('lib-thumbnail', async (e, file) => {
+  const eng = enhanceLib.detectEngines(ORBIT_DIR);
+  if (!eng.ffmpeg || !file || !fs.existsSync(file)) return null;
+  const out = path.join(os.tmpdir(), `orbit_lib_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+  return new Promise(resolve => {
+    execFile(eng.ffmpeg, ['-hide_banner', '-y', '-ss', '2', '-i', file, '-frames:v', '1', '-vf', 'scale=400:-1', out], { timeout: 15000 }, (err) => {
+      if (err || !fs.existsSync(out)) return resolve(null);
+      try { const b = fs.readFileSync(out); fs.unlinkSync(out); resolve('data:image/jpeg;base64,' + b.toString('base64')); } catch (e) { resolve(null); }
+    });
+  });
+});
+ipcMain.handle('lib-parse-name', (e, filename) => library.parseSeriesInfo(filename));
+ipcMain.handle('lib-presets', () => ({ presets: library.PRESETS, prep: library.PREP }));
+
+ipcMain.on('lib-cancel', (e, id) => { const j = activeDownloads.get(id); if (j && j.kill) j.kill(); });
+
+ipcMain.on('lib-convert', async (event, job) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const id = job.id;
+  const sendP = (d) => win?.webContents.send('lib-convert-progress', { id, ...d });
+  const sendErr = (msg) => win?.webContents.send('lib-convert-error', { id, error: msg });
+  const sendDone = (d) => win?.webContents.send('lib-convert-complete', { id, ...d });
+  let cancelled = false, proc = null;
+  activeDownloads.set(id, { kill: () => { cancelled = true; try { proc && proc.kill('SIGKILL'); } catch (e) {} } });
+  try {
+    const eng = enhanceLib.detectEngines(ORBIT_DIR);
+    if (!eng.ffmpeg) return sendErr('ffmpeg introuvable.');
+    const meta = await enhanceProbe(eng.ffmpeg, job.inputPath);
+    const totalDur = (meta && meta.duration) || 0;
+    // Resolve preset + suffix (creative-app prep maps to a codec).
+    let preset = job.preset, suffix = '';
+    if (job.mode === 'prep' && library.PREP[job.prep]) { preset = library.PREP[job.prep].preset; suffix = library.PREP[job.prep].suffix; }
+    const ext = (library.PRESETS[preset] || library.PRESETS.h264).ext;
+    const outputPath = library.outputName(job.inputPath, preset, suffix, (job.outputDir && fs.existsSync(job.outputDir)) ? job.outputDir : null, ext);
+    const { args } = library.buildConvert(preset, job.inputPath, outputPath);
+    sendP({ stage: 'Conversion', percent: 0 });
+    await new Promise((resolve, reject) => {
+      proc = spawn(eng.ffmpeg, args, { windowsHide: true });
+      let log = '';
+      const ond = d => { const s = d.toString(); log += s; const tm = s.match(/time=(\d+):(\d+):(\d+\.\d+)/); if (tm && totalDur > 0) { const sec = (+tm[1]) * 3600 + (+tm[2]) * 60 + (+tm[3]); sendP({ percent: Math.min(99, Math.round(sec / totalDur * 100)), stage: 'Conversion' }); } };
+      proc.stdout.on('data', ond); proc.stderr.on('data', ond);
+      proc.on('error', reject);
+      proc.on('close', c => { if (cancelled) return resolve('cancelled'); c === 0 ? resolve('ok') : reject(new Error('code ' + c + '\n' + log.slice(-300))); });
+    });
+    activeDownloads.delete(id);
+    if (cancelled) return sendErr('Annulé.');
+    if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 2000) return sendErr('Sortie vide.');
+    sendP({ percent: 100, stage: 'Terminé' });
+    sendDone({ outputPath });
+    try { let gs = {}; try { gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); } catch (e) {} if (gs.notifications) { const { Notification } = require('electron'); if (Notification.isSupported()) new Notification({ title: 'Orbit — Conversion terminée', body: path.basename(outputPath) }).show(); } } catch (e) {}
+  } catch (e) {
+    activeDownloads.delete(id);
+    sendErr('Échec : ' + ((e && e.message) || String(e)));
   }
 });

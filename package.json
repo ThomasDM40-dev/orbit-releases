@@ -1,6 +1,6 @@
 {
     "name":  "frontend",
-    "version":  "0.12.0",
+    "version":  "0.13.0",
     "private":  true,
     "main":  "main.js",
     "scripts":  {
@@ -27,6 +27,7 @@
                                 "topaz.js",
                                 "enhance.js",
                                 "handbrake.js",
+                                "library.js",
                                 "package.json",
                                 "changelog.html"
                             ],
