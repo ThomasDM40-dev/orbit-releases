@@ -435,6 +435,12 @@ ipcMain.handle('minimize-window', () => {
   }
 });
 
+ipcMain.handle('toggle-maximize-window', () => {
+  if (!mainWindow) return false;
+  if (mainWindow.isMaximized()) { mainWindow.unmaximize(); return false; }
+  mainWindow.maximize(); return true;
+});
+
 ipcMain.handle('open-home-dir', async () => {
   await shell.openPath(ORBIT_DIR);
 });

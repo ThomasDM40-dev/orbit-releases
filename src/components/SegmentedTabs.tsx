@@ -23,69 +23,54 @@ export default function SegmentedTabs({
 }: SegmentedTabsProps) {
   const visibleTabs = tabs.filter(t => t.visible)
   const activeIndex = visibleTabs.findIndex(t => t.id === activeTab)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
-  const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0 })
+  const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0, opacity: 0 })
 
-  // Update slider position
-  useEffect(() => {
-    if (!containerRef.current) return
-    const container = containerRef.current
+  // Position the animated slider using offsets (relative to the scroll content,
+  // so it stays correct even when the tab strip is scrolled horizontally).
+  const updateSlider = useCallback(() => {
+    const container = scrollRef.current
+    if (!container) return
     const buttons = container.querySelectorAll<HTMLButtonElement>("[data-tab-btn]")
     const activeBtn = buttons[activeIndex]
-    if (!activeBtn) return
-    const containerRect = container.getBoundingClientRect()
-    const btnRect = activeBtn.getBoundingClientRect()
-    setSliderStyle({
-      left: btnRect.left - containerRect.left,
-      width: btnRect.width,
-    })
-  }, [activeIndex, visibleTabs])
+    if (!activeBtn) { setSliderStyle(s => ({ ...s, opacity: 0 })); return }
+    setSliderStyle({ left: activeBtn.offsetLeft, width: activeBtn.offsetWidth, opacity: 1 })
+    // Keep the active tab visible when the strip overflows.
+    activeBtn.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" })
+  }, [activeIndex])
 
-  const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
-    setDragIndex(idx)
-    e.dataTransfer.effectAllowed = "move"
-  }, [])
+  useEffect(() => { updateSlider() }, [updateSlider, visibleTabs.length])
+  useEffect(() => {
+    const onResize = () => updateSlider()
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [updateSlider])
 
-  const handleDragOver = useCallback((e: React.DragEvent, idx: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-    setDragOverIndex(idx)
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent, dropIdx: number) => {
-    e.preventDefault()
-    if (dragIndex === null || dragIndex === dropIdx || !onReorder) return
-    const allTabs = [...tabs]
+  const handleDrop = useCallback((dropIdx: number) => {
+    if (dragIndex === null || dragIndex === dropIdx || !onReorder) { setDragIndex(null); setDragOverIndex(null); return }
     const visibleCopy = [...visibleTabs]
     const [moved] = visibleCopy.splice(dragIndex, 1)
     visibleCopy.splice(dropIdx, 0, moved)
-    // Rebuild allTabs preserving invisible ones
     let visIdx = 0
-    const newAll = allTabs.map(t => {
-      if (!t.visible) return t
-      return visibleCopy[visIdx++]
-    })
+    const newAll = tabs.map(t => (t.visible ? visibleCopy[visIdx++] : t))
     onReorder(newAll)
     setDragIndex(null)
     setDragOverIndex(null)
-  }, [dragIndex, dragOverIndex, visibleTabs, tabs, onReorder])
-
-  const handleDragEnd = useCallback(() => {
-    setDragIndex(null)
-    setDragOverIndex(null)
-  }, [])
+  }, [dragIndex, visibleTabs, tabs, onReorder])
 
   return (
     <div
-      ref={containerRef}
-      className="relative flex items-center p-1 rounded-2xl gap-0.5"
+      ref={scrollRef}
+      className="relative flex items-center p-1 rounded-2xl gap-0.5 min-w-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth"
       style={{
         background: "rgba(0,0,0,0.35)",
         border: "1px solid rgba(255,255,255,0.08)",
         backdropFilter: "blur(20px) saturate(180%)",
         boxShadow: "0 2px 12px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset",
+        WebkitMaskImage: "linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%)",
+        maskImage: "linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%)",
       }}
     >
       {/* Animated slider */}
@@ -94,6 +79,7 @@ export default function SegmentedTabs({
         style={{
           left: sliderStyle.left,
           width: sliderStyle.width,
+          opacity: sliderStyle.opacity,
           background: `linear-gradient(135deg, ${accentColor}30 0%, ${accentColor}18 100%)`,
           border: `1px solid ${accentColor}50`,
           boxShadow: `0 2px 10px ${accentColor}30, 0 1px 0 rgba(255,255,255,0.1) inset`,
@@ -111,34 +97,17 @@ export default function SegmentedTabs({
             key={tab.id}
             data-tab-btn
             draggable={!!onReorder}
-            onDragStart={e => handleDragStart(e, idx)}
-            onDragOver={e => handleDragOver(e, idx)}
-            onDrop={e => handleDrop(e, dropIdx => dropIdx)}
-            onDragEnd={handleDragEnd}
+            onDragStart={e => { setDragIndex(idx); e.dataTransfer.effectAllowed = "move" }}
+            onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverIndex(idx) }}
+            onDrop={e => { e.preventDefault(); handleDrop(idx) }}
+            onDragEnd={() => { setDragIndex(null); setDragOverIndex(null) }}
             onClick={() => onTabChange(tab.id)}
-            className={`relative z-10 px-4 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 select-none whitespace-nowrap ${
-              isActive
-                ? "text-white"
-                : "text-gray-400 hover:text-gray-200"
+            className={`relative z-10 shrink-0 px-4 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 select-none whitespace-nowrap ${
+              isActive ? "text-white" : "text-gray-400 hover:text-gray-200"
             } ${isDragging ? "opacity-40 scale-95" : ""} ${isDragOver ? "scale-105" : ""}`}
             style={{
               cursor: onReorder ? "grab" : "pointer",
               textShadow: isActive ? "0 0 20px rgba(255,255,255,0.4)" : "none",
-            }}
-            onDrop={(e) => {
-              e.preventDefault()
-              if (dragIndex === null || dragIndex === idx || !onReorder) return
-              const visibleCopy = [...visibleTabs]
-              const [moved] = visibleCopy.splice(dragIndex, 1)
-              visibleCopy.splice(idx, 0, moved)
-              let visIdx = 0
-              const newAll = tabs.map(t => {
-                if (!t.visible) return t
-                return visibleCopy[visIdx++]
-              })
-              onReorder(newAll)
-              setDragIndex(null)
-              setDragOverIndex(null)
             }}
           >
             {tab.label}

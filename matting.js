@@ -41,7 +41,12 @@ function compositeArgs(input, alphaPath, W, H, opts, outputPath) {
   const a = ['-hide_banner', '-nostdin', '-y', '-i', input, '-i', alphaPath];
   const alphaChain = `[1:v]scale=${W}:${H},format=gray[a];[0:v][a]alphamerge[fg]`;
   let filter, vcodec = [], map = ['-map', '[o]'];
-  const audio = (opts.hasAudio && opts.mode !== 'pngseq') ? ['-map', '0:a?', '-c:a', 'aac', '-b:a', '192k'] : ['-an'];
+  // Audio codec MUST match the container: WebM → Opus, PNG seq → none, else AAC.
+  const tf = opts.transparentFormat || 'webm';
+  const noAudio = !opts.hasAudio || (opts.mode === 'transparent' && tf === 'png');
+  const audio = noAudio ? ['-an']
+    : (opts.mode === 'transparent' && tf === 'webm') ? ['-map', '0:a?', '-c:a', 'libopus', '-b:a', '192k']
+      : ['-map', '0:a?', '-c:a', 'aac', '-b:a', '192k'];
 
   if (opts.mode === 'transparent') {
     filter = `${alphaChain};[fg]copy[o]`;

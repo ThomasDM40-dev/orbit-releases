@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteFile: (path) => ipcRenderer.invoke('delete-file', path),
   showItemInFolder: (path) => ipcRenderer.invoke('show-item-in-folder', path),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('toggle-maximize-window'),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
   onProgress: (callback) => ipcRenderer.on('download-progress', (_event, value) => callback(value)),
   onComplete: (callback) => ipcRenderer.on('download-complete', (_event, value) => callback(value)),
