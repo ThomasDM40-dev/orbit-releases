@@ -1,0 +1,2992 @@
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
+const { autoUpdater } = require('electron-updater');
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'media', privileges: { bypassCSP: true, supportFetchAPI: true, stream: true, secure: true } }
+]);
+const path = require('path');
+let youtubedl = require('youtube-dl-exec');
+const fs = require('fs');
+const os = require('os');
+const { spawn } = require('child_process');
+const serve = require('electron-serve');
+const isDev = !app.isPackaged;
+const https = require('https');
+const { execFile, exec } = require('child_process');
+const ffmpegPath = require('ffmpeg-static');
+const ytDlpPath = require('youtube-dl-exec/src/constants').YOUTUBE_DL_PATH;
+
+// Resolve the correct yt-dlp path: prefer manually updated local copy,
+// then bundled binary (unpacked from asar and already signed), then module default.
+function getYtDlpBin() {
+  const localUpdated = path.join(os.homedir(), '.orbit', 'yt-dlp.exe');
+  if (fs.existsSync(localUpdated) && fs.statSync(localUpdated).size > 5000000) return localUpdated;
+  if (app.isPackaged) {
+    const bundled = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
+    if (fs.existsSync(bundled)) return bundled;
+  }
+  return ytDlpPath;
+}
+
+// Resolve ffmpeg: prefer local copy, then bundled unpacked binary.
+function getFfmpegBin() {
+  const localFfmpeg = path.join(os.homedir(), '.orbit', 'ffmpeg', 'ffmpeg.exe');
+  if (fs.existsSync(localFfmpeg)) return localFfmpeg;
+  if (app.isPackaged) {
+    const bundled = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
+    if (fs.existsSync(bundled)) return bundled;
+  }
+  return ffmpegPath;
+}
+const DiscordRPC = require('discord-rpc');
+
+
+const loadURL = (serve.default || serve)({ directory: 'dist' });
+
+let mainWindow;
+
+// ---- DISCORD RICH PRESENCE ----
+// IMPORTANT: Replace with your Discord Application ID from:
+// https://discord.com/developers/applications
+const DISCORD_CLIENT_ID = '1513138156965466132';
+
+let rpcClient = null;
+let rpcReady = false;
+let sessionStart = Date.now();
+let rpcState = {
+  details: 'Orbit - Téléchargeur Multimédia',
+  state: 'En attente...',
+  activeDownloads: 0,
+  tab: 'downloads'
+};
+
+function buildPresence() {
+  const tab = rpcState.tab;
+  let details = 'Orbit - Téléchargeur Multimédia';
+  let state = 'Prêt';
+  if (tab === 'downloads') {
+    details = rpcState.activeDownloads > 0
+      ? `⬇️ ${rpcState.activeDownloads} téléchargement(s) en cours`
+      : '⬇️ Onglet Téléchargements';
+    state = rpcState.activeDownloads > 0 ? 'Téléchargement actif' : 'En attente d\'un lien...';
+  } else if (tab === 'converter') {
+    details = '🎬 Convertisseur & Orbit AI Studio';
+    state = 'Conversion de fichiers multimédias';
+  } else if (tab === 'interpolator') {
+    details = '⚡ Interpolateur IA (RIFE)';
+    state = 'Interpolation vidéo 60FPS';
+  } else if (tab === 'subscriptions') {
+    details = '📡 Gestionnaire d\'Abonnements';
+    state = 'Surveillance des chaînes';
+  }
+  return {
+    details,
+    state,
+    startTimestamp: sessionStart,
+    largeImageKey: 'orbit_logo',
+    largeImageText: 'Orbit v' + require('./package.json').version,
+    smallImageKey: rpcState.activeDownloads > 0 ? 'downloading' : 'idle',
+    smallImageText: rpcState.activeDownloads > 0 ? 'Téléchargement' : 'Prêt',
+    buttons: [
+      { label: '⬇️ Télécharger Orbit', url: 'https://github.com/ThomasDM40-dev/orbit-releases/releases/latest' },
+      { label: '⭐ GitHub', url: 'https://github.com/ThomasDM40-dev/orbit-releases' }
+    ],
+    instance: false
+  };
+}
+
+async function initDiscordRPC() {
+  try {
+    DiscordRPC.register(DISCORD_CLIENT_ID);
+    rpcClient = new DiscordRPC.Client({ transport: 'ipc' });
+    rpcClient.on('ready', () => {
+      rpcReady = true;
+      console.log('[Discord RPC] Connecté à Discord !');
+      rpcClient.setActivity(buildPresence());
+      // Update every 15 seconds
+      setInterval(() => {
+        if (rpcReady) rpcClient.setActivity(buildPresence());
+      }, 15000);
+    });
+    rpcClient.on('disconnected', () => {
+      rpcReady = false;
+      console.log('[Discord RPC] Déconnecté de Discord.');
+    });
+    await rpcClient.login({ clientId: DISCORD_CLIENT_ID });
+  } catch (e) {
+    console.log('[Discord RPC] Discord non disponible ou non ouvert:', e.message);
+  }
+}
+
+function updateRPC(patch) {
+  Object.assign(rpcState, patch);
+  if (rpcReady && rpcClient) {
+    try { rpcClient.setActivity(buildPresence()); } catch(e) {}
+  }
+}
+
+// IPC: renderer updates RPC state
+ipcMain.on('rpc-update', (event, data) => updateRPC(data));
+
+
+// Logging system
+const logPath = path.join(os.homedir(), '.orbit', 'orbit.log');
+function logToFile(...args) {
+  try {
+    const msg = new Date().toISOString() + ' ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '\n';
+    fs.appendFileSync(logPath, msg);
+  } catch (e) {}
+}
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+console.log = (...args) => { originalConsoleLog(...args); logToFile('[INFO]', ...args); };
+console.error = (...args) => { originalConsoleError(...args); logToFile('[ERROR]', ...args); };
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#111111',
+      symbolColor: '#ffffff'
+    },
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  // Setup Auto-Updater Listeners
+  autoUpdater.autoDownload = false; // We'll trigger manually so user sees progress
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    mainWindow.webContents.send('updater-status', { type: 'checking' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow.webContents.send('updater-status', { type: 'available', version: info.version });
+    mainWindow.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('app-update-available', { detail: ${JSON.stringify(info)} }))`);
+    // Start downloading automatically once we know there's an update
+    autoUpdater.downloadUpdate();
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    mainWindow.webContents.send('updater-status', { type: 'up-to-date' });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow.webContents.send('updater-status', { type: 'downloading', percent: Math.round(progress.percent) });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow.webContents.send('updater-status', { type: 'ready', version: info.version });
+    mainWindow.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('app-update-ready', { detail: ${JSON.stringify(info)} }))`);
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-updater check failed:', err.message || err);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater-status', { type: 'error', message: err.message });
+    }
+  });
+
+  // Global unhandled rejection handler to prevent crashes
+  process.on('unhandledRejection', (reason) => {
+    // Silently ignore SIGINT (cancelled downloads) and GitHub update errors
+    if (reason && (reason.signal === 'SIGINT' || (reason.message || '').includes('No published versions') || (reason.message || '').includes('latest.yml'))) return;
+    console.error('UnhandledRejection:', reason);
+  });
+  process.on('uncaughtException', (err) => {
+    if ((err.message || '').includes('SIGINT') || (err.message || '').includes('No published versions')) return;
+    console.error('UncaughtException:', err);
+  });
+
+  ipcMain.handle('check-for-update', async () => {
+    try {
+      await autoUpdater.checkForUpdates();
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall(true, true);
+  });
+
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+  } else {
+    loadURL(mainWindow);
+  }
+}
+
+const ORBIT_DIR = path.join(os.homedir(), '.orbit');
+
+// Apply persisted app-level settings that MUST be set before app is ready.
+let bootSettings = {};
+try { bootSettings = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); } catch (e) {}
+if (bootSettings.disableHardwareAccel) { try { app.disableHardwareAcceleration(); } catch (e) {} }
+
+function setupOrbitEnv() {
+  const dirs = [
+    ORBIT_DIR,
+    path.join(ORBIT_DIR, 'ffmpeg'),
+    path.join(ORBIT_DIR, 'storage'),
+    path.join(ORBIT_DIR, 'subscriptions'),
+    path.join(ORBIT_DIR, 'deno')
+  ];
+
+  dirs.forEach(d => {
+    if (!fs.existsSync(d)) {
+      fs.mkdirSync(d, { recursive: true });
+    }
+  });
+
+  // Note: the changelog shown via the menu is the bundled changelog.html
+  // (loaded from __dirname in the 'open-changelog' handler). Keep that file
+  // updated with every release — no runtime generation needed here.
+
+  // Copy ffmpeg if missing
+  const localFfmpegPath = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
+  if (ffmpegPath && !fs.existsSync(localFfmpegPath)) {
+    try { fs.copyFileSync(ffmpegPath, localFfmpegPath); } catch (e) { console.error('Failed to copy ffmpeg', e); }
+  }
+
+  // Load Settings
+  const settingsPath = path.join(ORBIT_DIR, 'settings.json');
+  let settings = {};
+  if (fs.existsSync(settingsPath)) {
+    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (e) {}
+  }
+  
+  // Use the bundled signed binary — no download at startup (AV-friendly)
+  youtubedl = require('youtube-dl-exec').create(getYtDlpBin());
+  console.log('[yt-dlp] Using:', getYtDlpBin());
+}
+
+function downloadYtDlp(dest) {
+  const tmpDest = dest + '.tmp';
+  const url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+  const file = fs.createWriteStream(tmpDest);
+  
+  const handleResponse = (response) => {
+    if (response.statusCode === 302 || response.statusCode === 301) {
+      https.get(response.headers.location, handleResponse).on('error', handleError);
+    } else {
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close(() => {
+          try {
+            if (fs.existsSync(dest)) fs.unlinkSync(dest);
+            fs.renameSync(tmpDest, dest);
+            console.log("yt-dlp download complete!");
+            youtubedl = require('youtube-dl-exec').create(dest);
+          } catch(e) {
+            console.error("Error renaming yt-dlp.exe", e);
+          }
+        });
+      });
+    }
+  };
+
+  const handleError = (err) => {
+    console.error("Error downloading yt-dlp:", err);
+    try { fs.unlinkSync(tmpDest); } catch(e) {}
+  };
+
+  https.get(url, handleResponse).on('error', handleError);
+}
+
+ipcMain.handle('get-global-settings', () => {
+  const settingsPath = path.join(ORBIT_DIR, 'settings.json');
+  if (fs.existsSync(settingsPath)) {
+    try { return JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (e) { return {}; }
+  }
+  return {};
+});
+
+ipcMain.handle('save-global-settings', (event, settings) => {
+  const settingsPath = path.join(ORBIT_DIR, 'settings.json');
+  try { if (!fs.existsSync(ORBIT_DIR)) fs.mkdirSync(ORBIT_DIR, { recursive: true }); } catch (e) {}
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  return true;
+});
+
+// ── App-level system settings (all genuinely functional) ──
+ipcMain.handle('set-launch-at-startup', (event, enabled) => {
+  try { app.setLoginItemSettings({ openAtLogin: !!enabled, path: process.execPath }); return { ok: true }; }
+  catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('get-launch-at-startup', () => {
+  try { return app.getLoginItemSettings().openAtLogin; } catch (e) { return false; }
+});
+
+// Compute / clear Orbit's temporary working files (leftover frame dirs, audio, previews).
+function listCacheTargets() {
+  const targets = [];
+  const modulesDir = path.join(ORBIT_DIR, 'modules');
+  try {
+    for (const name of fs.readdirSync(modulesDir)) {
+      if (/^(interp_|enh_|trx_)/.test(name) || /_audio\.wav$/.test(name) || /_(in|out|uin|uout|iin|iout)$/.test(name)) {
+        targets.push(path.join(modulesDir, name));
+      }
+    }
+  } catch (e) {}
+  try {
+    const tmp = os.tmpdir();
+    for (const name of fs.readdirSync(tmp)) {
+      if (/^orbit_(tvai|enh|vs|thumb|ethumb|cookies|rife_test)/.test(name)) targets.push(path.join(tmp, name));
+    }
+  } catch (e) {}
+  return targets;
+}
+function dirSize(p) {
+  let total = 0;
+  try {
+    const st = fs.statSync(p);
+    if (st.isFile()) return st.size;
+    for (const e of fs.readdirSync(p)) total += dirSize(path.join(p, e));
+  } catch (e) {}
+  return total;
+}
+ipcMain.handle('get-cache-size', () => {
+  let bytes = 0;
+  for (const t of listCacheTargets()) bytes += dirSize(t);
+  return bytes;
+});
+ipcMain.handle('clear-temp-cache', () => {
+  let freed = 0;
+  for (const t of listCacheTargets()) { const s = dirSize(t); try { fs.rmSync(t, { recursive: true, force: true }); freed += s; } catch (e) {} }
+  return { freed };
+});
+
+ipcMain.handle('test-proxy', async (event, proxy) => {
+  if (!proxy) return { ok: false, error: 'Aucun proxy défini.' };
+  return new Promise((resolve) => {
+    try {
+      const ytdlpBin = getYtDlpBin();
+      const child = spawn(ytdlpBin, ['--proxy', proxy, '--simulate', '--no-warnings', '-q', 'https://www.youtube.com/watch?v=jNQXAC9IVRw'], { windowsHide: true });
+      let err = '';
+      child.stderr.on('data', d => err += d.toString());
+      const to = setTimeout(() => { try { child.kill(); } catch (e) {} resolve({ ok: false, error: 'Délai dépassé' }); }, 15000);
+      child.on('close', code => { clearTimeout(to); resolve(code === 0 ? { ok: true } : { ok: false, error: err.slice(-150) || 'Échec' }); });
+      child.on('error', e => { clearTimeout(to); resolve({ ok: false, error: e.message }); });
+    } catch (e) { resolve({ ok: false, error: e.message }); }
+  });
+});
+
+ipcMain.handle('notify', (event, { title, body }) => {
+  try {
+    const { Notification } = require('electron');
+    if (Notification.isSupported()) { new Notification({ title: title || 'Orbit', body: body || '' }).show(); return true; }
+  } catch (e) {}
+  return false;
+});
+
+app.whenReady().then(() => {
+  protocol.registerFileProtocol('media', (request, callback) => {
+    let rawPath = request.url.replace(/^media:\/\//i, '');
+    if (rawPath.startsWith('/')) {
+      rawPath = rawPath.slice(1);
+    }
+    try {
+      const decodedPath = decodeURIComponent(rawPath);
+      return callback({ path: decodedPath });
+    } catch (error) {
+      console.error("Media protocol error:", error);
+    }
+  });
+
+  setupOrbitEnv();
+  setupSnifferSession();
+  createWindow();
+
+  // Init Discord Rich Presence
+  setTimeout(() => initDiscordRPC(), 3000);
+
+  // Check for updates globally
+  if (!isDev) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify().catch(e => console.error("Auto-updater check failed:", e));
+    }, 5000);
+  }
+
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', function () {
+  if (rpcClient) { try { rpcClient.destroy(); } catch(e) {} }
+  if (process.platform !== 'darwin') app.quit();
+});
+
+ipcMain.on('app-quit', () => {
+  app.quit();
+});
+
+ipcMain.handle('minimize-window', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.handle('open-home-dir', async () => {
+  await shell.openPath(ORBIT_DIR);
+});
+
+
+
+ipcMain.handle('open-file', async (event, filePath) => {
+  if (!filePath) return;
+  const result = await shell.openPath(filePath);
+  if (result) {
+    await shell.openPath(path.dirname(filePath));
+  }
+});
+
+ipcMain.handle('show-item-in-folder', (event, filePath) => {
+  if (!filePath) return;
+  if (fs.existsSync(filePath)) {
+    shell.showItemInFolder(filePath);
+  } else {
+    shell.openPath(path.dirname(filePath));
+  }
+});
+
+ipcMain.handle('open-external-url', async (event, url) => {
+  if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+    await shell.openExternal(url);
+    return { success: true };
+  }
+  return { success: false, message: 'Invalid URL' };
+});
+
+ipcMain.handle('open-changelog', async () => {
+  const changelogPath = path.join(__dirname, 'changelog.html');
+  const win = new BrowserWindow({
+    width: 900,
+    height: 780,
+    title: 'Orbit — Changelog',
+    autoHideMenuBar: true,
+    backgroundColor: '#080808',
+    webPreferences: { nodeIntegration: false, contextIsolation: true },
+    icon: path.join(__dirname, 'assets', 'icon.ico').replace(/\.ico$/, process.platform === 'darwin' ? '.icns' : '.ico'),
+  });
+  win.loadFile(changelogPath);
+});
+
+
+// Helper: fetch JSON from HTTPS
+function fetchJSON(url) {
+  return new Promise((resolve, reject) => {
+    const options = new URL(url);
+    const req = https.get({
+      hostname: options.hostname,
+      path: options.pathname + options.search,
+      headers: { 'User-Agent': 'Orbit-App/1.0' }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (e) { reject(new Error('JSON parse error')); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+// Helper: run a command and get stdout
+function runCommand(cmd, args) {
+  return new Promise((resolve, reject) => {
+    execFile(cmd, args, { timeout: 10000 }, (err, stdout, stderr) => {
+      if (err) reject(err);
+      else resolve(stdout.trim());
+    });
+  });
+}
+
+ipcMain.handle('check-updates', async () => {
+  const results = [];
+  let allGood = true;
+
+  // --- Check yt-dlp ---
+  try {
+    let localVersion = null;
+    try {
+      if (ytDlpPath && fs.existsSync(ytDlpPath)) {
+        localVersion = await runCommand(ytDlpPath, ['--version']);
+      }
+    } catch (_) {}
+
+    // Get latest yt-dlp release from GitHub
+    let latestVersion = null;
+    try {
+      const ghData = await fetchJSON('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest');
+      latestVersion = ghData.tag_name || ghData.name;
+    } catch (_) {}
+
+    if (localVersion && latestVersion) {
+      const localClean = localVersion.replace(/[^0-9.]/g, '');
+      const latestClean = latestVersion.replace(/[^0-9.]/g, '');
+      if (localClean === latestClean) {
+        results.push(`✓ yt-dlp ${localVersion} (à jour)`);
+      } else {
+        allGood = false;
+        results.push(`⚠ yt-dlp ${localVersion} → ${latestVersion} disponible`);
+      }
+    } else if (localVersion) {
+      results.push(`✓ yt-dlp ${localVersion} (installé)`);
+    } else {
+      allGood = false;
+      results.push('✗ yt-dlp non trouvé');
+    }
+  } catch (err) {
+    allGood = false;
+    results.push(`✗ Erreur yt-dlp: ${err.message}`);
+  }
+
+  // --- Check ffmpeg ---
+  try {
+    const ffmpegVersion = await runCommand(ffmpegPath, ['-version']);
+    const match = ffmpegVersion.match(/ffmpeg version ([^\s]+)/);
+    const ver = match ? match[1] : 'installé';
+    results.push(`✓ ffmpeg ${ver}`);
+  } catch (_) {
+    results.push('⚠ ffmpeg non trouvé (certains formats peuvent ne pas fonctionner)');
+  }
+
+  const message = allGood
+    ? `Tout est à jour ! (${results.join(' | ')})`
+    : results.join(' | ');
+
+  return { upToDate: allGood, message, details: results };
+});
+
+ipcMain.handle('update-ytdlp', async () => {
+  try {
+    const dest = path.join(ORBIT_DIR, 'yt-dlp.exe');
+    await new Promise((resolve, reject) => {
+      downloadYtDlp(dest);
+      // Poll until file appears or timeout
+      let attempts = 0;
+      const check = setInterval(() => {
+        attempts++;
+        if (fs.existsSync(dest) && fs.statSync(dest).size > 5000000) { clearInterval(check); resolve(); }
+        else if (attempts > 60) { clearInterval(check); reject(new Error('Timeout')); }
+      }, 2000);
+    });
+    return { success: true, message: 'yt-dlp mis à jour avec succès dans ~/.orbit/' };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('analyze-url', async (event, url) => {
+  try {
+    const info = await youtubedl(url, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      noCallHome: true,
+      noCheckCertificate: true,
+      youtubeSkipDashManifest: true,
+    });
+    return { success: true, data: info };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-default-downloads', () => {
+  return app.getPath('downloads');
+});
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('open-logs', () => {
+  const logPath = path.join(os.homedir(), '.orbit', 'orbit.log');
+  if (fs.existsSync(logPath)) {
+    shell.openPath(logPath);
+  } else {
+    fs.writeFileSync(logPath, '--- Orbit Logs ---\n');
+    shell.openPath(logPath);
+  }
+});
+
+ipcMain.handle('select-directory', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory']
+  });
+  if (result.canceled) {
+    return null;
+  } else {
+    return result.filePaths[0];
+  }
+});
+
+let snifferWindow = null;
+const seenSnifferUrls = new Set();
+// Map of media-request-URL → real page Referer captured from request headers.
+// CDNs like Mux enforce a referer/domain restriction, so we must forward the
+// actual embedding page URL, not the media URL itself.
+const refererByUrl = new Map();
+let lastMainFrameUrl = '';
+// Real page title/URL reported by browser.html so downloads are named after the
+// actual video page instead of an opaque stream-URL hash.
+let snifferPageTitle = '';
+let snifferPageUrl = '';
+
+// ── Attach stream interceptors to the sniffer session at startup ──────────────
+// This runs once. The webview in browser.html uses partition="persist:sniffer",
+// so all traffic goes through this session regardless of which window opened it.
+function setupSnifferSession() {
+  const { session } = require('electron');
+  const sSession = session.fromPartition('persist:sniffer');
+
+  // Collect every cookie the session knows so yt-dlp can authenticate. We grab
+  // cookies for both the media host AND the page host (often different domains).
+  async function gatherCookies(mediaUrl, pageUrl) {
+    const jar = new Map();
+    for (const u of [mediaUrl, pageUrl].filter(Boolean)) {
+      try {
+        const cks = await sSession.cookies.get({ url: u });
+        cks.forEach(c => jar.set(c.name, c.value));
+      } catch (e) {}
+    }
+    return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
+  }
+
+  // Capture the real Referer header on EVERY request so we can associate it
+  // with media URLs. Track the current top page too.
+  const allReq = { urls: ['https://*/*', 'http://*/*'] };
+  sSession.webRequest.onBeforeSendHeaders(allReq, (details, callback) => {
+    if (details.resourceType === 'mainFrame' && details.url.startsWith('http')) {
+      lastMainFrameUrl = details.url;
+    }
+    const h = details.requestHeaders || {};
+    const ref = h['Referer'] || h['referer'] || h['Origin'] || h['origin'] || '';
+    const urlLower = details.url.toLowerCase();
+    if (urlLower.includes('.m3u8') || urlLower.includes('.mpd') || urlLower.includes('.mp4')) {
+      refererByUrl.set(details.url.split('?')[0], ref || lastMainFrameUrl);
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
+  const emit = async (url, title, type) => {
+    const key = url.split('?')[0];
+    if (seenSnifferUrls.has(key)) return;
+    seenSnifferUrls.add(key);
+    const pageRef = snifferPageUrl || refererByUrl.get(key) || lastMainFrameUrl || url;
+    const cookieStr = await gatherCookies(url, pageRef);
+    // Prefer the real page title for both the display label and the output filename.
+    const niceTitle = snifferPageTitle || title;
+    const data = {
+      url, type, cookies: cookieStr, referer: pageRef, pageUrl: pageRef,
+      title: niceTitle,
+      videoTitle: snifferPageTitle || '',
+    };
+    if (snifferWindow) snifferWindow.webContents.send('browser-video-detected', data);
+    if (mainWindow) mainWindow.webContents.send('sniffer-caught-video', data);
+  };
+
+  const streamFilter = { urls: ['*://*/*.m3u8*', '*://*/*.mpd*'] };
+  sSession.webRequest.onBeforeRequest(streamFilter, (details, callback) => {
+    const urlLower = details.url.toLowerCase();
+    if (urlLower.includes('rendition') || urlLower.includes('audio.m3u8') || urlLower.includes('.m4s')) {
+      callback({ cancel: false }); return;
+    }
+    const type = urlLower.includes('.m3u8') ? 'HLS (m3u8)' : 'DASH (mpd)';
+    emit(details.url, 'Flux ' + type + ' détecté', type);
+    callback({ cancel: false });
+  });
+
+  const allFilter = { urls: ['https://*/*', 'http://*/*'] };
+  sSession.webRequest.onHeadersReceived(allFilter, (details, callback) => {
+    const urlLower = details.url.toLowerCase();
+    if (urlLower.includes('.ts') || urlLower.includes('.m4s') || urlLower.includes('segment') ||
+        urlLower.includes('rendition') || urlLower.includes('chunk')) {
+      callback({}); return;
+    }
+    const ct = ([...(details.responseHeaders?.['content-type'] || []), ...(details.responseHeaders?.['Content-Type'] || [])]).join('').toLowerCase();
+    if (ct.includes('video/mp2t') || ct.includes('video/iso.segment') || ct.includes('application/octet')) {
+      callback({}); return;
+    }
+    const isVideo = ct.startsWith('video/') || ct.includes('application/x-mpegurl') || ct.includes('application/vnd.apple.mpegurl');
+    if (isVideo) {
+      const ext = urlLower.includes('.mp4') ? 'MP4' : urlLower.includes('.webm') ? 'WebM' : urlLower.includes('.mov') ? 'MOV' : 'Vidéo';
+      emit(details.url, `Fichier ${ext} détecté`, ext);
+    }
+    callback({});
+  });
+}
+
+ipcMain.on('open-sniffer', (event, targetUrl) => {
+  if (snifferWindow) {
+    snifferWindow.focus();
+    if (targetUrl) {
+      snifferWindow.webContents.executeJavaScript(
+        `navigate(${JSON.stringify(targetUrl)})`
+      ).catch(() => {});
+    }
+    return;
+  }
+
+  seenSnifferUrls.clear();
+
+  snifferWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 800,
+    minHeight: 600,
+    title: 'Orbit Browser',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'browser-preload.js'),
+      webviewTag: true,
+    }
+  });
+
+  snifferWindow.setMenu(null);
+  snifferWindow.loadFile(path.join(__dirname, 'browser.html'),
+    targetUrl ? { query: { url: targetUrl } } : {}
+  );
+
+  snifferWindow.on('closed', () => {
+    snifferWindow = null;
+    seenSnifferUrls.clear();
+  });
+});
+
+// Route "download this video" from browser → DownloadInterface in main window
+// browser.html reports the current page title + URL so downloads can be named
+// after the real video instead of a stream-URL hash.
+ipcMain.on('sniffer-page-info', (event, info) => {
+  if (info && typeof info.title === 'string') snifferPageTitle = info.title.trim();
+  if (info && typeof info.url === 'string' && info.url.startsWith('http')) snifferPageUrl = info.url;
+});
+
+ipcMain.on('browser-download-video', (event, data) => {
+  if (mainWindow) {
+    const title = data.videoTitle || data.title || snifferPageTitle || 'Vidéo';
+    mainWindow.webContents.send('sniffer-caught-video', {
+      url: data.url,
+      title,
+      videoTitle: data.videoTitle || snifferPageTitle || '',
+      cookies: data.cookies || '',
+      referer: data.referer || snifferPageUrl || data.url,
+      pageUrl: data.referer || snifferPageUrl || data.url,
+      type: data.type || 'Vidéo',
+    });
+    mainWindow.focus();
+  }
+});
+
+// Analyze a page URL with yt-dlp --dump-json to check if it's downloadable
+ipcMain.handle('browser-analyze-url', async (event, url) => {
+  return new Promise(resolve => {
+    const ytdlp = getYtDlpBin();
+    const args = ['--dump-json', '--no-playlist', '--no-warnings', '--socket-timeout', '10', url];
+    const child = spawn(ytdlp, args, { windowsHide: true });
+    let out = '';
+    child.stdout.on('data', d => { out += d.toString(); });
+    child.on('close', code => {
+      if (code === 0 && out.trim()) {
+        try {
+          const info = JSON.parse(out.split('\n').find(l => l.trim().startsWith('{')));
+          resolve({ title: info.title, extractor: info.extractor_key || info.extractor, thumbnail: info.thumbnail });
+        } catch(e) { resolve(null); }
+      } else { resolve(null); }
+    });
+    child.on('error', () => resolve(null));
+    setTimeout(() => { try { child.kill(); } catch(e) {} resolve(null); }, 20000);
+  });
+});
+
+
+const activeDownloads = new Map();
+
+// ─── Crunchyroll Sniffer ───────────────────────────────────────────────────────
+
+let crunchyrollWindow = null;
+
+ipcMain.on('open-crunchyroll-sniffer', async () => {
+  if (crunchyrollWindow) {
+    crunchyrollWindow.focus();
+    return;
+  }
+
+  crunchyrollWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    title: 'Orbit — Crunchyroll',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      partition: 'persist:crunchyroll'
+    }
+  });
+
+  crunchyrollWindow.setMenu(null);
+  crunchyrollWindow.loadURL('https://www.crunchyroll.com');
+
+  async function getCrunchyrollCookies() {
+    try {
+      const cookies = await crunchyrollWindow.webContents.session.cookies.get({ url: 'https://www.crunchyroll.com' });
+      const etpRt = cookies.find(c => c.name === 'etp_rt');
+      const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+      return { cookies, cookieStr, etpRt: etpRt?.value || null };
+    } catch(e) {
+      return { cookies: [], cookieStr: '', etpRt: null };
+    }
+  }
+
+  async function handleNavigation(url) {
+    if (!crunchyrollWindow) return;
+
+    const { cookieStr, etpRt } = await getCrunchyrollCookies();
+    mainWindow.webContents.send('crunchyroll-sniffer-status', {
+      isLoggedIn: !!etpRt,
+      currentUrl: url
+    });
+
+    // Detect episode page navigation
+    if (url.includes('crunchyroll.com/watch/')) {
+      try {
+        const title = crunchyrollWindow.webContents.getTitle();
+        // Extract thumbnail from og:image meta tag
+        let thumbnail = '';
+        try {
+          thumbnail = await crunchyrollWindow.webContents.executeJavaScript(
+            `document.querySelector('meta[property="og:image"]')?.content || ''`
+          );
+        } catch(e) {}
+
+        mainWindow.webContents.send('crunchyroll-episode-detected', {
+          url,
+          title: title.replace(' | Crunchyroll', '').trim() || 'Épisode Crunchyroll',
+          thumbnail,
+          cookies: cookieStr,
+          etpRt,
+          isLoggedIn: !!etpRt
+        });
+      } catch(e) {
+        console.error('Crunchyroll episode detect error:', e);
+      }
+    }
+  }
+
+  crunchyrollWindow.webContents.on('did-navigate', (e, url) => handleNavigation(url));
+  crunchyrollWindow.webContents.on('did-navigate-in-page', (e, url) => handleNavigation(url));
+
+  crunchyrollWindow.on('closed', () => { crunchyrollWindow = null; });
+});
+
+// ─── Crunchyroll Download ──────────────────────────────────────────────────────
+
+ipcMain.on('start-crunchyroll-download', (event, { id, url, cookies, quality, audioLang, subLang, outputDir }) => {
+  const downloadDir = outputDir || app.getPath('downloads');
+  if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+
+  // Write Netscape-format cookie file
+  const cookieFilePath = path.join(ORBIT_DIR, `cr_${id}.txt`);
+  const cookieLines = ['# Netscape HTTP Cookie File'];
+  if (cookies) {
+    cookies.split('; ').forEach(pair => {
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx < 1) return;
+      const name = pair.substring(0, eqIdx).trim();
+      const value = pair.substring(eqIdx + 1).trim();
+      if (name) cookieLines.push(`.crunchyroll.com\tTRUE\t/\tFALSE\t2147483647\t${name}\t${value}`);
+    });
+  }
+  fs.writeFileSync(cookieFilePath, cookieLines.join('\n') + '\n', 'utf8');
+
+  const ytdlpBin = getYtDlpBin();
+  const ffmpegBin = getFfmpegBin();
+
+  // Quality → height
+  const heightMap = { '1080p': 1080, '720p': 720, '480p': 480, '360p': 360 };
+  const height = heightMap[quality] || 1080;
+
+  // Output template: Series/S01E01 - Title [1080p].mkv
+  const outputTemplate = path.join(downloadDir,
+    '%(series,title)s', 'Saison %(season_number,1)s',
+    'S%(season_number,1)02dE%(episode_number,0)02d - %(episode,title)s [%(height)sp].%(ext)s'
+  );
+
+  const args = [
+    url,
+    '--cookies', cookieFilePath,
+    '-f', `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
+    '--merge-output-format', 'mkv',
+    '-o', outputTemplate,
+    '--embed-metadata',
+    '--no-warnings',
+    '--newline',
+  ];
+
+  if (fs.existsSync(ffmpegBin)) args.push('--ffmpeg-location', ffmpegBin);
+
+  // Subtitles
+  if (subLang && subLang !== 'none') {
+    args.push('--write-subs', '--sub-langs', subLang, '--embed-subs', '--convert-subs', 'ass');
+  }
+
+  // Audio language hint via extractor args
+  args.push('--extractor-args', `crunchyrollbeta:hardsub=none`);
+
+  console.log(`[CR] Starting download: ${url} quality=${quality} audio=${audioLang} subs=${subLang}`);
+
+  const child = spawn(ytdlpBin, args, { windowsHide: true });
+
+  child.stdout.on('data', data => {
+    const lines = data.toString().split('\n').filter(l => l.trim());
+    lines.forEach(line => {
+      const pctMatch = line.match(/(\d+\.?\d*)%/);
+      const speedMatch = line.match(/([\d.]+\s*[KMGkm]iB\/s)/);
+      const etaMatch = line.match(/ETA\s+(\S+)/);
+      if (pctMatch) {
+        mainWindow.webContents.send('crunchyroll-dl-progress', {
+          id,
+          percent: parseFloat(pctMatch[1]),
+          speed: speedMatch?.[1] || '',
+          eta: etaMatch?.[1] || ''
+        });
+      }
+      mainWindow.webContents.send('download-log', { id, line, level: 'info' });
+    });
+  });
+
+  child.stderr.on('data', data => {
+    data.toString().split('\n').filter(l => l.trim()).forEach(line => {
+      mainWindow.webContents.send('download-log', { id, line, level: 'error' });
+    });
+  });
+
+  child.on('close', code => {
+    try { fs.unlinkSync(cookieFilePath); } catch(e) {}
+    if (code === 0) {
+      mainWindow.webContents.send('crunchyroll-dl-complete', { id });
+    } else {
+      mainWindow.webContents.send('crunchyroll-dl-error', { id, error: `yt-dlp exit code ${code} — vérifie que tu es bien connecté à Crunchyroll dans le Sniffer` });
+    }
+  });
+
+  child.on('error', err => {
+    try { fs.unlinkSync(cookieFilePath); } catch(e) {}
+    mainWindow.webContents.send('crunchyroll-dl-error', { id, error: err.message });
+  });
+
+  activeDownloads.set(id, child);
+});
+
+ipcMain.on('start-download', (event, { id, url, format, options }) => {
+  // Crunchyroll: sniffer catches the raw MPD manifest URL — redirect to the
+  // episode watch page so yt-dlp's crunchyrollbeta extractor handles DRM auth.
+  if (/crunchyroll\.com\/playback\/v\d+\/manifest\//i.test(url)) {
+    const m = url.match(/\/manifest\/([A-Z0-9]+)/i);
+    if (m) {
+      // strip 4-char locale suffix (FRFR, DEDE, ESES …)
+      const videoId = m[1].replace(/[A-Z]{4}$/i, '');
+      url = `https://www.crunchyroll.com/watch/${videoId}/`;
+    }
+  }
+
+  const settingsPath = path.join(ORBIT_DIR, 'settings.json');
+  let globalSettings = {};
+  if (fs.existsSync(settingsPath)) {
+    try { globalSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
+  }
+
+  const downloadDir = globalSettings.outputDir || options.outputDir || path.join(os.homedir(), 'Downloads');
+  let targetDir = options.outputDir;
+  if (!targetDir || targetDir.includes('C:\\Users\\User\\Downloads')) {
+    targetDir = app.getPath('downloads');
+  }
+
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+
+  // Is this a direct stream URL (sniffer-caught m3u8/mpd/mp4)?
+  const isDirectStream = /\.(m3u8|mpd|mp4|webm|mov)(\?|$)/i.test(url);
+
+  // Sanitize a title for use as a Windows filename (strip illegal chars).
+  const sanitizeName = (s) => (s || '')
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ')   // illegal on Windows
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 150);
+
+  // When the sniffer provides the real page title, name the file after it.
+  // yt-dlp's generic extractor would otherwise use an opaque URL hash.
+  const cleanTitle = sanitizeName(options.videoTitle);
+  const outputTemplate = cleanTitle
+    ? path.join(downloadDir, `${cleanTitle}.%(ext)s`)
+    : path.join(downloadDir, '%(title)s.%(ext)s');
+
+  const args = {
+    output: outputTemplate,
+    ffmpegLocation: path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe')
+  };
+
+  if (globalSettings.proxy || options.proxy) args.proxy = globalSettings.proxy || options.proxy;
+  if (globalSettings.extractAudio) args.extractAudio = true;
+  if (globalSettings.noPart) args.noPart = true;
+  if (globalSettings.mtime) args.mtime = true;
+  if (globalSettings.limitRate) args.limitRate = globalSettings.limitRate;
+  if (globalSettings.forceIPv4) args.forceIpv4 = true;
+  if (globalSettings.forceIPv6) args.forceIpv6 = true;
+  if (globalSettings.keepVideo) args.keepVideo = true;
+  if (globalSettings.embedMetadata) args.addMetadata = true;
+  if (globalSettings.embedThumbnail || globalSettings.writeThumbnail) args.writeThumbnail = true;
+  if (globalSettings.embedSubs) args.embedSubs = true;
+  if (globalSettings.writeInfoJson) args.writeInfoJson = true;
+  if (globalSettings.sponsorblock) args.sponsorblockMark = 'all';
+  if (globalSettings.removeSponsors) args.sponsorblockRemove = 'all';
+  if (globalSettings.downloadArchive) args.downloadArchive = path.join(ORBIT_DIR, 'archive.txt');
+  if (globalSettings.noCheckCertificate) args.noCheckCertificate = true;
+  if (globalSettings.embedThumbnail) args.embedThumbnail = true;
+  if (globalSettings.restrictFilenames) args.restrictFilenames = true;
+  if (globalSettings.ignoreErrors) args.ignoreErrors = true;
+  if (globalSettings.concurrentFragments && Number(globalSettings.concurrentFragments) > 1) args.concurrentFragments = Number(globalSettings.concurrentFragments);
+  if (globalSettings.cookiesFromBrowser && globalSettings.cookiesFromBrowser !== 'none' && !options.cookies && !options.cookiesFromBrowser) args.cookiesFromBrowser = globalSettings.cookiesFromBrowser;
+  // Advanced: parse user-supplied yt-dlp flags ("--flag value" / "--bool") into options.
+  if (globalSettings.customArgs && typeof globalSettings.customArgs === 'string') {
+    const toks = globalSettings.customArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+    for (let i = 0; i < toks.length; i++) {
+      const tok = toks[i];
+      if (!tok.startsWith('--')) continue;
+      const key = tok.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      const next = toks[i + 1];
+      if (next && !next.startsWith('--')) { args[key] = next.replace(/^"|"$/g, ''); i++; } else { args[key] = true; }
+    }
+  }
+
+  // Toggles
+  if (options.embedSubtitles || options.embedSubs) args.embedSubs = true;
+  if (options.embedThumbnail) args.embedThumbnail = true;
+  if (options.isPlaylist) {
+    args.yesPlaylist = true;
+  } else {
+    args.noPlaylist = true;
+  }
+
+  // Format mapping
+  if (options.audioOnly || globalSettings.extractAudio) {
+    args.extractAudio = true;
+    if (format === 'MP3') args.audioFormat = 'mp3';
+    else if (format === 'FLAC') args.audioFormat = 'flac';
+    else if (format === 'WAV') args.audioFormat = 'wav';
+    else if (format === 'M4A') args.audioFormat = 'm4a';
+    else if (format === 'OGG') args.audioFormat = 'vorbis';
+    else if (format === 'ALAC') args.audioFormat = 'alac';
+    else args.audioFormat = 'mp3'; // default fallback
+  } else if (isDirectStream) {
+    // Direct HLS/DASH/MP4 stream from the sniffer. The [ext=mp4] filters below
+    // break on HLS variants (which have no ext), so use plain resolution caps
+    // with a generous fallback to 'best'.
+    const heightMap = { '8K': 4320, '4K': 2160, '2K': 1440, '1080p': 1080, '720p': 720, '480p': 480, '360p': 360, '144p': 144 };
+    const h = heightMap[format];
+    args.format = h
+      ? `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]/best`
+      : 'bestvideo+bestaudio/best';
+    args.mergeOutputFormat = 'mp4';
+  } else {
+    // Video resolutions
+    if (format === '8K') {
+      args.format = 'bestvideo[height<=4320][ext=mp4]+bestaudio[ext=m4a]/best[height<=4320][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '4K') {
+      args.format = 'bestvideo[height<=2160][ext=mp4]+bestaudio[ext=m4a]/best[height<=2160][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '2K') {
+      args.format = 'bestvideo[height<=1440][ext=mp4]+bestaudio[ext=m4a]/best[height<=1440][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '1080p') {
+      args.format = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '720p') {
+      args.format = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '480p') {
+      args.format = 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '360p') {
+      args.format = 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === '144p') {
+      args.format = 'bestvideo[height<=144][ext=mp4]+bestaudio[ext=m4a]/best[height<=144][ext=mp4]/best';
+      args.mergeOutputFormat = 'mp4';
+    } else if (format === 'WEBM') {
+      args.format = 'bestvideo[ext=webm]+bestaudio/best[ext=webm]/best';
+    } else { // BEST or MP4
+      args.format = 'bestvideo+bestaudio/best';
+      args.mergeOutputFormat = 'mp4';
+    }
+  }
+
+  // Toggles
+  if (options.embedSubtitles || options.embedSubs) args.embedSubs = true;
+  if (options.embedThumbnail) args.embedThumbnail = true;
+  if (options.isPlaylist) {
+    args.yesPlaylist = true;
+  } else {
+    args.noPlaylist = true;
+  }
+
+  // New Advanced Global Settings
+  if (options.limitRate) {
+    args.limitRate = '50K'; // Example usage or logic if limitRate is boolean or string
+  }
+  if (options.forceIPv4) args.forceIpv4 = true;
+  if (options.forceIPv6) args.forceIpv6 = true;
+  if (options.keepVideo) args.keepVideo = true;
+  if (options.embedMetadata) args.embedMetadata = true;
+  if (options.removeSponsors) {
+    args.sponsorblockRemove = 'all';
+  }
+  if (options.sponsorChapters) {
+    args.sponsorblockMark = 'all';
+  }
+  if (options.recodeVideo) {
+    args.recodeVideo = 'mp4';
+  }
+
+  if (options.trimStart || options.trimEnd) {
+    const start = options.trimStart || '0';
+    const end = options.trimEnd || 'inf';
+    args.downloadSections = `*${start}-${end}`;
+  }
+
+  if (options.cookiesFromBrowser && !options.cookies) {
+    // Verify Chrome profile exists before passing --cookies-from-browser
+    const chromeCookiePaths = [
+      path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'Network', 'Cookies'),
+      path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'Cookies'),
+      path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome Beta', 'User Data', 'Default', 'Network', 'Cookies'),
+    ];
+    if (chromeCookiePaths.some(p => fs.existsSync(p))) {
+      args.cookiesFromBrowser = options.cookiesFromBrowser;
+    }
+  }
+
+  if (options.cookies || options.referer) {
+    const refererStr = options.referer || '';
+    if (options.cookies) {
+      // Write a Netscape-format cookie file — more reliable than --add-header Cookie:
+      // (especially for Crunchyroll whose extractor does its own cookie handling)
+      const cookieFilePath = path.join(os.tmpdir(), `orbit_cookies_${id}.txt`);
+      let cookieContent = '# Netscape HTTP Cookie File\n';
+      options.cookies.split(/;\s*/).forEach(pair => {
+        const eq = pair.indexOf('=');
+        if (eq === -1) return;
+        const name = pair.substring(0, eq).trim();
+        const value = pair.substring(eq + 1).trim();
+        if (!name) return;
+        // Derive domain from referer or default to .crunchyroll.com
+        let domain = '.crunchyroll.com';
+        if (refererStr) {
+          try { domain = '.' + new URL(refererStr).hostname.replace(/^www\./, ''); } catch(e) {}
+        }
+        cookieContent += `${domain}\tTRUE\t/\tFALSE\t2147483647\t${name}\t${value}\n`;
+      });
+      fs.writeFileSync(cookieFilePath, cookieContent, 'utf8');
+      args.cookies = cookieFilePath;
+      setTimeout(() => { try { fs.unlinkSync(cookieFilePath); } catch(e) {} }, 120000);
+    }
+    if (refererStr) {
+      // Many CDNs (Mux, etc.) enforce both Referer and Origin domain checks.
+      const headers = [`Referer:${refererStr}`];
+      try {
+        const o = new URL(refererStr);
+        headers.push(`Origin:${o.protocol}//${o.host}`);
+      } catch (e) {}
+      args.addHeader = headers;
+    }
+  }
+
+  youtubedl = require('youtube-dl-exec').create(getYtDlpBin());
+  const subprocess = youtubedl.exec(url, args);
+  if (subprocess.catch) {
+    subprocess.catch(err => {
+      console.log(`yt-dlp exec rejected for ${url}:`, err.message);
+      mainWindow.webContents.send('download-log', { id, line: `CRASH ERROR: ${err.message}`, level: 'error' });
+      if (err.stderr) {
+        err.stderr.split('\n').forEach(l => {
+          if (l.trim()) mainWindow.webContents.send('download-log', { id, line: `[STDERR] ${l.trim()}`, level: 'error' });
+        });
+      }
+      if (err.stdout) {
+        err.stdout.split('\n').forEach(l => {
+          if (l.trim()) mainWindow.webContents.send('download-log', { id, line: `[STDOUT] ${l.trim()}`, level: 'info' });
+        });
+      }
+    });
+  }
+  activeDownloads.set(id, subprocess);
+
+  let finalFilePath = '';
+  let stderrLog = [];
+  let stdoutLog = [];
+
+  subprocess.stdout.on('data', (data) => {
+    const output = data.toString();
+    stdoutLog.push(output.trim());
+    
+    // Stream log lines to frontend
+    output.split('\n').filter(l => l.trim()).forEach(line => {
+      mainWindow.webContents.send('download-log', { id, line: line.trim(), level: 'info' });
+    });
+
+    const destMatch = output.match(/\[download\] Destination: (.*)/) || 
+                      output.match(/\[download\] (.*) has already been downloaded/) ||
+                      output.match(/\[Merger\] Merging formats into "(.*)"/) ||
+                      output.match(/\[ExtractAudio\] Destination: (.*)/) ||
+                      output.match(/\[FixupM4a\] Fixing .* into "(.*)"/) ||
+                      output.match(/\[VideoConvertor\] Converting .* to (.*)/);
+    if (destMatch && destMatch[1]) {
+      let fp = destMatch[1].trim().replace(/"/g, '');
+      // yt-dlp sometimes outputs relative paths or just filenames for merged files
+      if (!path.isAbsolute(fp)) {
+        fp = path.join(downloadDir, path.basename(fp));
+      }
+      finalFilePath = fp;
+    }
+
+    const progressMatch = output.match(/\[download\]\s+([\d\.]+)%\s+of\s+([~]?[\d\.]+\w+)\s+at\s+([\d\.]+\w+\/s)\s+ETA\s+([\d:]+)/);
+    if (progressMatch) {
+      mainWindow.webContents.send('download-progress', {
+        id,
+        percentage: parseFloat(progressMatch[1]),
+        size: progressMatch[2],
+        speed: progressMatch[3],
+        eta: progressMatch[4]
+      });
+    }
+  });
+
+  subprocess.stderr.on('data', (data) => {
+    const output = data.toString();
+    stderrLog.push(output.trim());
+    // Stream error lines to frontend
+    output.split('\n').filter(l => l.trim()).forEach(line => {
+      mainWindow.webContents.send('download-log', { id, line: line.trim(), level: line.startsWith('ERROR') ? 'error' : 'warn' });
+    });
+  });
+
+  subprocess.on('close', (code) => {
+    activeDownloads.delete(id);
+    const success = code === 0;
+    if (!success) {
+      // Send full error summary
+      const errorSummary = stderrLog.join('\n') || stdoutLog.slice(-5).join('\n');
+      mainWindow.webContents.send('download-log', { id, line: `--- Exit code: ${code} ---`, level: 'error' });
+      mainWindow.webContents.send('download-error', { id, error: errorSummary });
+    }
+    mainWindow.webContents.send('download-complete', { id, success, filePath: finalFilePath });
+    // Desktop notification on completion (if enabled in settings).
+    try {
+      let gs = {};
+      try { gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); } catch (e) {}
+      if (gs.notifications && success) {
+        const { Notification } = require('electron');
+        if (Notification.isSupported()) new Notification({ title: 'Orbit — Téléchargement terminé', body: finalFilePath ? path.basename(finalFilePath) : 'Terminé' }).show();
+      }
+    } catch (e) {}
+  });
+
+  subprocess.on('error', (err) => {
+    activeDownloads.delete(id);
+    mainWindow.webContents.send('download-log', { id, line: `SPAWN ERROR: ${err.message}`, level: 'error' });
+    mainWindow.webContents.send('download-error', { id, error: err.message });
+  });
+});
+
+ipcMain.on('cancel-download', (event, id) => {
+  const subprocess = activeDownloads.get(id);
+  if (subprocess) subprocess.kill('SIGINT');
+});
+
+ipcMain.handle('get-log-file', () => logPath);
+
+ipcMain.on('cancel-all-downloads', () => {
+  for (const [id, subprocess] of activeDownloads.entries()) {
+    subprocess.kill('SIGINT');
+  }
+});
+
+ipcMain.handle('delete-file', async (event, filePath) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+});
+
+ipcMain.handle('select-image', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png'] }]
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('select-video-file', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Vidéos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv'] }]
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('select-files', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'Médias', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'] }
+    ]
+  });
+  return result.canceled ? [] : result.filePaths;
+});
+
+ipcMain.handle('get-gpus', async () => {
+  const modulesDir = path.join(ORBIT_DIR, 'modules');
+  const rifeDir = path.join(modulesDir, 'rife');
+  
+  function findRifeExeLocal(dir) {
+    if (!fs.existsSync(dir)) return null;
+    try {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isFile() && entry.name === 'rife-ncnn-vulkan.exe') return full;
+        if (entry.isDirectory()) { const found = findRifeExeLocal(full); if (found) return found; }
+      }
+    } catch(e) {}
+    return null;
+  }
+  
+  const rifeExe = findRifeExeLocal(rifeDir);
+  if (!rifeExe) return [];
+
+  return new Promise(resolve => {
+    const tmpDir = path.join(require('os').tmpdir(), 'orbit_rife_test_' + Date.now());
+    try { require('fs').mkdirSync(tmpDir, { recursive: true }); } catch(e) {}
+
+    const proc = require('child_process').spawn(rifeExe, ['-i', tmpDir, '-o', tmpDir]);
+    let out = '';
+    proc.stderr.on('data', d => out += d.toString());
+    proc.stdout.on('data', d => out += d.toString());
+    proc.on('close', () => {
+      try { require('fs').rmdirSync(tmpDir); } catch(e) {}
+      const gpus = [];
+      const regex = /\[(\d+)\s+([^\]]+)\]/g;
+      let match;
+      const seen = new Set();
+      while ((match = regex.exec(out)) !== null) {
+        const id = match[1];
+        const name = match[2].trim();
+        if (!seen.has(id)) {
+          seen.add(id);
+          gpus.push({ id, name });
+        }
+      }
+      resolve(gpus);
+    });
+  });
+});
+
+ipcMain.handle('get-video-fps', async (event, inputPath) => {
+  const ffmpegLocation = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
+  if (!require('fs').existsSync(ffmpegLocation)) return null;
+  return new Promise(resolve => {
+    const p = require('child_process').spawn(ffmpegLocation, ['-i', inputPath]);
+    let out = '';
+    p.stderr.on('data', d => out += d.toString());
+    p.on('close', () => {
+      const match = out.match(/(\d+(?:\.\d+)?)\s+fps/);
+      if (match) return resolve(parseFloat(match[1]));
+      resolve(null);
+    });
+  });
+});
+
+ipcMain.on('ai-interpolate', async (event, { inputPath, outputDir, engine, model, multiplier, outputFormat, codec, whenDone, gpu }) => {
+  const modulesDir = path.join(ORBIT_DIR, 'modules');
+  const rifeDir = path.join(modulesDir, 'rife');
+  const ffmpegLocation = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
+  if (!fs.existsSync(modulesDir)) fs.mkdirSync(modulesDir, { recursive: true });
+
+  const win = BrowserWindow.getAllWindows()[0];
+  const sendP = (msg) => win?.webContents.send('ai-interpolate-progress', { time: msg });
+  const sendErr = (e) => win?.webContents.send('ai-interpolate-error', { error: e });
+
+  // Recursive search for rife-ncnn-vulkan.exe
+  function findRifeExe(dir) {
+    if (!fs.existsSync(dir)) return null;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const full = path.join(dir, entry.name);
+        if (entry.isFile() && entry.name === 'rife-ncnn-vulkan.exe') return full;
+        if (entry.isDirectory()) {
+          const found = findRifeExe(full);
+          if (found) return found;
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  let rifeExe = findRifeExe(rifeDir);
+
+  if (!rifeExe) {
+    sendP('Téléchargement du moteur RIFE-NCNN (~400MB, première utilisation — merci de patienter)...');
+    try {
+      const rifeZip = path.join(modulesDir, 'rife.zip');
+      if (!fs.existsSync(rifeDir)) fs.mkdirSync(rifeDir, { recursive: true });
+
+      // Fetch latest release URL from GitHub API
+      let RIFE_URL = 'https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-windows.zip';
+      try {
+        sendP('Recherche de la dernière version RIFE...');
+        const apiData = await new Promise((res, rej) => {
+          https.get('https://api.github.com/repos/nihui/rife-ncnn-vulkan/releases/latest', { headers: { 'User-Agent': 'Orbit-App' } }, (r) => {
+            let body = '';
+            r.on('data', d => body += d);
+            r.on('end', () => { try { res(JSON.parse(body)); } catch(e) { rej(e); } });
+          }).on('error', rej);
+        });
+        const winAsset = apiData.assets?.find(a => a.name.includes('windows') && a.name.endsWith('.zip'));
+        if (winAsset?.browser_download_url) {
+          RIFE_URL = winAsset.browser_download_url;
+          sendP(`Version RIFE trouvée : ${apiData.tag_name}`);
+        }
+      } catch(e) {
+        sendP('API GitHub inaccessible, utilisation URL de secours...');
+      }
+
+      await new Promise((resolve, reject) => {
+        // curl -L follows redirects, --output saves to file, -# shows progress bar
+        const curlProc = spawn('curl', ['-L', '--output', rifeZip, '--progress-bar', '--retry', '3', RIFE_URL]);
+        curlProc.on('error', (e) => reject(new Error('curl non disponible: ' + e.message)));
+        curlProc.stderr.on('data', (d) => {
+          // curl writes progress to stderr
+          const s = d.toString().trim();
+          if (s) sendP('Téléchargement RIFE: ' + s.replace(/\r/g, '').split('\n').pop());
+        });
+        curlProc.on('close', (code) => {
+          if (code !== 0) return reject(new Error('curl a retourné le code ' + code));
+          // Validate file size (RIFE zip should be > 5MB)
+          try {
+            const stat = fs.statSync(rifeZip);
+            if (stat.size < 5 * 1024 * 1024) {
+              fs.unlinkSync(rifeZip);
+              return reject(new Error(`Fichier téléchargé trop petit (${Math.round(stat.size/1024)}KB) — réessayez`));
+            }
+            sendP(`Téléchargement terminé (${Math.round(stat.size / 1024 / 1024)}MB) ✓`);
+            resolve(rifeZip);
+          } catch(e) { reject(e); }
+        });
+      });
+
+      sendP('Extraction de l\'archive RIFE...');
+      const { execSync } = require('child_process');
+      execSync(`powershell -Command "Expand-Archive -Path '${rifeZip}' -DestinationPath '${rifeDir}' -Force"`, { timeout: 60000 });
+      try { fs.unlinkSync(rifeZip); } catch(e) {}
+      rifeExe = findRifeExe(rifeDir);
+    } catch(e) {
+      return sendErr(`Erreur téléchargement RIFE: ${e.message}\n\nSolution manuelle :\n1. Téléchargez : https://github.com/nihui/rife-ncnn-vulkan/releases/download/20240622/rife-ncnn-vulkan-20240622-windows.zip\n2. Extrayez dans : ${path.join(ORBIT_DIR, 'modules', 'rife')}`);
+    }
+  }
+
+  if (!rifeExe) {
+    return sendErr('Impossible de trouver rife-ncnn-vulkan.exe après installation. Vérifiez le dossier .orbit/modules/rife/');
+  }
+
+  const jobId = 'interp_' + Date.now();
+  const framesIn = path.join(modulesDir, `${jobId}_in`);
+  const framesOut = path.join(modulesDir, `${jobId}_out`);
+  fs.mkdirSync(framesIn, { recursive: true });
+  fs.mkdirSync(framesOut, { recursive: true });
+
+  // Normalize multiplier to a positive integer (x2 / x4 / x8 / custom).
+  const mult = Math.max(2, Math.round(Number(multiplier) || 2));
+
+  // ── Step 0: detect the SOURCE frame rate first (needed to keep speed) ───────
+  // ffprobe isn't bundled, so parse it from ffmpeg's stderr. Prefer the exact
+  // rational (e.g. 30000/1001) so 23.976/29.97 fps stay perfectly in sync.
+  const detectFps = () => new Promise(resolve => {
+    const p = spawn(ffmpegLocation, ['-i', inputPath]);
+    let out = '';
+    p.stderr.on('data', d => out += d.toString());
+    p.on('close', () => {
+      // "... , 30 fps, 30 tbr, ..."  — tbr is usually the truest rational source
+      const tbr = out.match(/(\d+(?:\.\d+)?)\s+tbr/);
+      const fps = out.match(/(\d+(?:\.\d+)?)\s+fps/);
+      const v = parseFloat((fps && fps[1]) || (tbr && tbr[1]) || '30');
+      resolve(v > 0 ? v : 30);
+    });
+  });
+
+  sendP('Extraction des frames source...');
+  // Force constant frame rate on extraction so frame count ↔ duration stays exact.
+  const extract = spawn(ffmpegLocation, ['-y', '-i', inputPath, '-vsync', 'cfr', path.join(framesIn, 'frame%08d.png')]);
+  let extractErrorLog = '';
+  extract.stderr.on('data', d => extractErrorLog += d.toString());
+  extract.on('error', (err) => sendErr('Erreur FFmpeg: ' + err.message));
+  extract.on('close', async (code) => {
+    if (code !== 0) return sendErr(`Erreur extraction frames (code ${code}): \n${extractErrorLog.slice(-500)}`);
+
+    // ── Count the extracted frames so we can request an EXACT output count ────
+    let inFrameCount = 0;
+    try { inFrameCount = fs.readdirSync(framesIn).filter(f => f.toLowerCase().endsWith('.png')).length; } catch(e) {}
+    if (inFrameCount < 2) return sendErr('Pas assez de frames extraites pour interpoler.');
+
+    const originalFps = await detectFps();
+    // Exact target output frame count and frame rate — this is what keeps the
+    // video at its ORIGINAL speed/duration instead of slowing or speeding up.
+    const targetFrameCount = inFrameCount * mult;
+    const targetFps = originalFps * mult;
+
+    sendP(`Interpolation IA x${mult} en cours (RIFE) — ${inFrameCount} → ${targetFrameCount} frames. Cela peut prendre plusieurs minutes selon votre GPU.`);
+
+    // Find the best rife-v4 model available (required for arbitrary multipliers)
+    const rifeExeDir = path.dirname(rifeExe);
+    let modelPath = null;
+    const preferredModels = ['rife-v4.6', 'rife-v4.5', 'rife-v4.4', 'rife-v4.3', 'rife-v4.2', 'rife-v4.1', 'rife-v4.0', 'rife-v4'];
+    for (const modelName of preferredModels) {
+      const candidate = path.join(rifeExeDir, modelName);
+      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'flownet.param'))) {
+        modelPath = candidate;
+        sendP(`Modèle utilisé : ${modelName}`);
+        break;
+      }
+    }
+    if (!modelPath) {
+      sendP('Aucun modèle rife-v4 trouvé, utilisation du modèle par défaut...');
+    }
+
+    // CRITICAL: use -n (target frame count), NOT -s. In directory mode -s is the
+    // time-step and is ignored for multipliers >2, which made x4/x8 play too fast.
+    const rifeArgs = ['-i', framesIn, '-o', framesOut, '-n', String(targetFrameCount)];
+    if (modelPath) rifeArgs.push('-m', modelPath);
+    if (gpu !== undefined && gpu !== 'auto') rifeArgs.push('-g', String(gpu));
+
+    const rifeProc = spawn(rifeExe, rifeArgs, { cwd: rifeExeDir });
+    activeDownloads.set(jobId, { kill: () => rifeProc.kill('SIGINT') });
+    rifeProc.on('error', (err) => sendErr('Erreur lancement RIFE: ' + err.message));
+    rifeProc.stdout.on('data', d => { const s = d.toString().trim(); if (s) sendP(s); });
+    rifeProc.stderr.on('data', d => { const s = d.toString().trim(); if (s) sendP(s); });
+    rifeProc.on('close', async (rc) => {
+      if (rc !== 0) return sendErr('Erreur interpolation RIFE (code ' + rc + ').');
+
+      const ext = (outputFormat || 'mp4').toLowerCase();
+      const baseName = path.basename(inputPath, path.extname(inputPath));
+
+      // Detect what RIFE actually named its output frames (00000000 or 00000001).
+      let outFiles = [];
+      try { outFiles = fs.readdirSync(framesOut).filter(f => f.toLowerCase().endsWith('.png')).sort(); } catch(e) {}
+      if (!outFiles.length) return sendErr('RIFE n\'a produit aucune frame.');
+      const startNum = parseInt(outFiles[0], 10);
+
+      const fpsStr = Number.isFinite(targetFps) ? targetFps.toFixed(3).replace(/\.?0+$/, '') : '60';
+      const finalOut = path.join(outputDir, `${baseName}_x${mult}_${Math.round(targetFps)}fps.${ext}`);
+      sendP('Recomposition de la vidéo finale...');
+      const codecMap = { 'h264': 'libx264', 'h265 (hevc)': 'libx265', 'vp9': 'libvpx-vp9', 'av1': 'libaom-av1' };
+      const vcodec = codecMap[(codec || 'h264').toLowerCase()] || 'libx264';
+      const reenc = spawn(ffmpegLocation, [
+        '-y',
+        '-framerate', fpsStr,
+        '-start_number', String(startNum),
+        '-i', path.join(framesOut, '%08d.png'),
+        '-i', inputPath,
+        '-map', '0:v:0', '-map', '1:a?',
+        '-c:v', vcodec, '-pix_fmt', 'yuv420p', '-crf', '18',
+        '-r', fpsStr,            // force output CFR so players read the right speed
+        '-c:a', 'copy',
+        finalOut
+      ]);
+      let reencErrorLog = '';
+      reenc.stderr.on('data', d => { reencErrorLog += d.toString(); });
+      reenc.on('error', (err) => sendErr('Erreur recomposition: ' + err.message));
+      reenc.on('close', (rc2) => {
+        try { fs.rmSync(framesIn, { recursive: true }); } catch(e) {}
+        try { fs.rmSync(framesOut, { recursive: true }); } catch(e) {}
+        activeDownloads.delete(jobId);
+        if (rc2 === 0) {
+          sendP(`✅ Vidéo interpolée sauvegardée : ${path.basename(finalOut)} (${Math.round(targetFps)} fps, vitesse normale)`);
+          win?.webContents.send('ai-interpolate-complete', { filePath: finalOut });
+          if (whenDone === 'Open Output Folder') shell.openPath(outputDir);
+        } else {
+          sendErr(`Erreur recomposition vidéo finale (code ${rc2}): \n${reencErrorLog.slice(-500)}`);
+        }
+      });
+    });
+  });
+});
+
+
+// Helper: get video duration in seconds via ffprobe
+function getVideoDuration(ffmpegPath, inputPath) {
+  return new Promise((resolve) => {
+    const ffprobe = ffmpegPath.replace('ffmpeg.exe', 'ffprobe.exe');
+    // Fallback: use ffmpeg itself to get duration
+    const proc = spawn(ffmpegPath, ['-i', inputPath, '-f', 'null', '-']);
+    let stderr = '';
+    proc.stderr.on('data', d => stderr += d.toString());
+    proc.on('close', () => {
+      const match = stderr.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
+      if (match) {
+        const duration = parseInt(match[1]) * 3600 + parseInt(match[2]) * 60 + parseFloat(match[3]);
+        resolve(duration);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Helper: download AI module
+function downloadModule(url, destPath, progressId) {
+  return new Promise((resolve, reject) => {
+    const tmpPath = destPath + '.tmp';
+    const file = fs.createWriteStream(tmpPath);
+    const handleResponse = (response) => {
+      if (response.statusCode === 302 || response.statusCode === 301) {
+        https.get(response.headers.location, handleResponse).on('error', reject);
+        return;
+      }
+      const total = parseInt(response.headers['content-length'] || '0');
+      let downloaded = 0;
+      response.on('data', chunk => {
+        downloaded += chunk.length;
+        if (total > 0) {
+          const pct = Math.round(downloaded / total * 100);
+          BrowserWindow.getAllWindows()[0]?.webContents.send('convert-progress', { id: progressId, time: `Téléchargement module IA: ${pct}%` });
+        }
+      });
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close(() => {
+          fs.renameSync(tmpPath, destPath);
+          resolve(destPath);
+        });
+      });
+    };
+    https.get(url, handleResponse).on('error', reject);
+  });
+}
+
+// ─── Transcription (Whisper → SRT → every editor format) ─────────────────────
+const WHISPER_MODELS = {
+  base:   { file: 'ggml-base.bin',     url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',     size: '~142 Mo', minBytes: 130000000 },
+  small:  { file: 'ggml-small.bin',    url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin',    size: '~466 Mo', minBytes: 450000000 },
+  medium: { file: 'ggml-medium.bin',   url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin',   size: '~1.5 Go', minBytes: 1400000000 },
+  large:  { file: 'ggml-large-v3.bin', url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin', size: '~2.9 Go', minBytes: 2800000000 },
+};
+
+ipcMain.handle('select-media-file', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Médias', extensions: ['mp4','mkv','avi','mov','webm','flv','wmv','mp3','wav','flac','aac','ogg','m4a'] }]
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.on('transcribe', async (event, { id, inputPath, language, model, outputDir, formats, style, burnIn }) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const sendP = (msg) => win?.webContents.send('transcribe-progress', { id, message: msg });
+  const sendErr = (e) => win?.webContents.send('transcribe-error', { id, error: e });
+  const sendDone = (files) => win?.webContents.send('transcribe-complete', { id, files });
+
+  try {
+    let ffmpegLocation = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
+    if (!fs.existsSync(ffmpegLocation)) ffmpegLocation = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
+
+    const modulesDir = path.join(ORBIT_DIR, 'modules');
+    const whisperDir = path.join(modulesDir, 'whisper');
+    if (!fs.existsSync(whisperDir)) fs.mkdirSync(whisperDir, { recursive: true });
+
+    // Locate (or fetch) the whisper CLI executable.
+    const findWhisperExe = (dir) => {
+      const want = ['main.exe', 'whisper-cli.exe', 'whisper.exe', 'whisper-cpp.exe'];
+      const walk = (d) => {
+        let found = null;
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+          const full = path.join(d, e.name);
+          if (e.isDirectory()) { found = walk(full); if (found) return found; }
+          else if (want.includes(e.name.toLowerCase())) return full;
+        }
+        return found;
+      };
+      try { return walk(dir); } catch (e) { return null; }
+    };
+
+    let whisperExe = findWhisperExe(whisperDir);
+
+    // Validate: the installed CLI must be whisper.cpp (ggerganov), which supports -osrt.
+    // Const-me's cli.zip ships a DirectML binary with different flags — it silently
+    // ignores -osrt and exits with code 3. Detect this by checking the help text.
+    if (whisperExe) {
+      const isCompatible = await new Promise(resolve => {
+        try {
+          const probe = spawn(whisperExe, [], { cwd: path.dirname(whisperExe) });
+          let out = '';
+          probe.stdout.on('data', d => out += d.toString());
+          probe.stderr.on('data', d => out += d.toString());
+          probe.on('close', () => resolve(out.includes('osrt')));
+          probe.on('error', () => resolve(false));
+          setTimeout(() => { try { probe.kill(); } catch(e){} resolve(false); }, 4000);
+        } catch(e) { resolve(false); }
+      });
+      if (!isCompatible) {
+        sendP('Moteur Whisper incompatible détecté — mise à jour automatique…');
+        // Remove old CLI files but keep .bin model files.
+        try {
+          for (const entry of fs.readdirSync(whisperDir, { withFileTypes: true })) {
+            if (entry.name.endsWith('.bin')) continue;
+            const fp = path.join(whisperDir, entry.name);
+            try { fs.rmSync(fp, { recursive: true, force: true }); } catch(e) {}
+          }
+        } catch(e) {}
+        whisperExe = null;
+      }
+    }
+
+    if (!whisperExe) {
+      sendP('Téléchargement du moteur Whisper (whisper.cpp officiel)…');
+      // whisper.cpp (ggerganov) releases Windows binaries compatible with -osrt and ggml models.
+      const candidates = [
+        'https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-blas-bin-x64.zip',
+        'https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-bin-x64.zip',
+        'https://github.com/Const-me/Whisper/releases/latest/download/cli.zip',
+        'https://github.com/Const-me/Whisper/releases/latest/download/Cli.zip',
+      ];
+      const { execSync } = require('child_process');
+      for (const url of candidates) {
+        try {
+          const zip = path.join(whisperDir, 'whisper-cli.zip');
+          await downloadModule(url, zip, id);
+          if (!fs.existsSync(zip) || fs.statSync(zip).size < 100000) { try { fs.unlinkSync(zip); } catch (e) {} continue; }
+          execSync(`powershell -Command "Expand-Archive -Path '${zip}' -DestinationPath '${whisperDir}' -Force"`, { timeout: 120000 });
+          try { fs.unlinkSync(zip); } catch (e) {}
+          whisperExe = findWhisperExe(whisperDir);
+          if (whisperExe) break;
+        } catch (e) { /* try next candidate */ }
+      }
+    }
+    if (!whisperExe) return sendErr('Impossible d\'installer la CLI Whisper. Téléchargez « whisper-blas-bin-x64.zip » depuis github.com/ggerganov/whisper.cpp/releases et extrayez-le dans : ' + whisperDir);
+
+    // Ensure the chosen model is present AND complete. A partial/corrupt model
+    // is the #1 cause of whisper exit code 3 ("failed to load model"), and an
+    // earlier incomplete download to the same path would otherwise be reused.
+    const modelInfo = WHISPER_MODELS[model] || WHISPER_MODELS.base;
+    const modelPath = path.join(whisperDir, modelInfo.file);
+    const modelValid = () => {
+      try { return fs.existsSync(modelPath) && fs.statSync(modelPath).size >= modelInfo.minBytes; }
+      catch (e) { return false; }
+    };
+    if (!modelValid()) {
+      if (fs.existsSync(modelPath)) {
+        sendP('Modèle incomplet détecté — re-téléchargement…');
+        try { fs.unlinkSync(modelPath); } catch (e) {}
+      }
+      sendP(`Téléchargement du modèle IA « ${model} » (${modelInfo.size})…`);
+      try { await downloadModule(modelInfo.url, modelPath, id); }
+      catch (e) { return sendErr('Erreur téléchargement modèle : ' + e.message); }
+      if (!modelValid()) {
+        try { fs.unlinkSync(modelPath); } catch (e) {}
+        return sendErr('Le modèle téléchargé est incomplet. Vérifie ta connexion et réessaie.');
+      }
+    }
+
+    // Extract audio → 16 kHz mono WAV (what whisper expects).
+    sendP('Extraction de l\'audio…');
+    const tmpWav = path.join(modulesDir, `${id}_audio.wav`);
+    await new Promise((resolve, reject) => {
+      const p = spawn(ffmpegLocation, ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', tmpWav]);
+      let err = '';
+      p.stderr.on('data', d => err += d.toString());
+      p.on('close', c => c === 0 ? resolve() : reject(new Error(err.slice(-300))));
+      p.on('error', reject);
+    });
+
+    // Run Whisper → SRT.
+    sendP('Transcription en cours (IA Whisper)… cela peut prendre quelques minutes.');
+    const wArgs = ['-m', modelPath, '-f', tmpWav, '-osrt'];
+    if (language && language !== 'auto') wArgs.push('-l', language);
+    // No -l flag = auto-detect (whisper.cpp default)
+    let whisperLog = '';
+    await new Promise((resolve, reject) => {
+      const wp = spawn(whisperExe, wArgs, { cwd: path.dirname(whisperExe) });
+      activeDownloads.set(id, { kill: () => { try { wp.kill('SIGINT'); } catch (e) {} } });
+      wp.stdout.on('data', d => { const s = d.toString(); whisperLog += s; const t = s.trim(); if (t) sendP('Whisper : ' + t.slice(-80)); });
+      wp.stderr.on('data', d => { const s = d.toString(); whisperLog += s; const t = s.trim(); if (t) sendP('Whisper : ' + t.slice(-80)); });
+      wp.on('close', c => {
+        if (c === 0) return resolve();
+        const tail = whisperLog.trim().slice(-300);
+        let hint = '';
+        if (c === 3) hint = ' — échec du chargement du modèle (modèle corrompu/incompatible).';
+        reject(new Error(`code ${c}${hint}${tail ? '\n' + tail : ''}`));
+      });
+      wp.on('error', reject);
+    });
+
+    // Whisper writes <wav>.srt (Const-me) or <wav-without-ext>.srt — find it.
+    const srtCandidates = [tmpWav + '.srt', tmpWav.replace(/\.wav$/i, '.srt')];
+    const srtPath = srtCandidates.find(p => fs.existsSync(p));
+    if (!srtPath) { try { fs.unlinkSync(tmpWav); } catch (e) {} return sendErr('Whisper n\'a pas généré de transcription.'); }
+
+    const srtRaw = fs.readFileSync(srtPath, 'utf8');
+    const { parseSrt, GENERATORS } = require('./transcription.js');
+    const cues = parseSrt(srtRaw);
+    if (!cues.length) { return sendErr('Transcription vide — audio inaudible ou langue non détectée.'); }
+
+    sendP(`Génération des fichiers (${cues.length} segments)…`);
+    const baseName = path.basename(inputPath, path.extname(inputPath));
+    const outDir = outputDir || path.dirname(inputPath);
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+
+    // Detect source resolution/fps for FCPXML & AE comp sizing (best effort).
+    const opts = { style: style || {}, width: 1920, height: 1080, fps: 30 };
+
+    const written = [];
+    const wanted = Array.isArray(formats) && formats.length ? formats : ['srt'];
+    for (const key of wanted) {
+      const gen = GENERATORS[key];
+      if (!gen) continue;
+      const outFile = path.join(outDir, `${baseName}.${gen.ext}`);
+      try {
+        fs.writeFileSync(outFile, gen.build(cues, opts), 'utf8');
+        written.push({ format: key, ext: gen.ext, path: outFile });
+      } catch (e) { sendP(`⚠ Échec ${key} : ${e.message}`); }
+    }
+
+    // Optionally burn subtitles into the video.
+    if (burnIn) {
+      sendP('Incrustation des sous-titres dans la vidéo…');
+      const burnOut = path.join(outDir, `${baseName}_sous-titres.mp4`);
+      // ffmpeg subtitles filter needs an escaped path on Windows.
+      const srtForFilter = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+      const force = `FontSize=${(style && style.fontSize) || 24},PrimaryColour=&H00FFFFFF,Outline=2`;
+      await new Promise((resolve) => {
+        const p = spawn(ffmpegLocation, [
+          '-y', '-i', inputPath,
+          '-vf', `subtitles='${srtForFilter}':force_style='${force}'`,
+          '-c:a', 'copy', burnOut
+        ]);
+        let err = '';
+        p.stderr.on('data', d => err += d.toString());
+        p.on('close', c => { if (c === 0) written.push({ format: 'burned', ext: 'mp4', path: burnOut }); else sendP('⚠ Incrustation échouée : ' + err.slice(-200)); resolve(); });
+        p.on('error', () => resolve());
+      });
+    }
+
+    // Cleanup temp files.
+    try { fs.unlinkSync(tmpWav); } catch (e) {}
+    try { fs.unlinkSync(srtPath); } catch (e) {}
+    activeDownloads.delete(id);
+
+    if (!written.length) return sendErr('Aucun fichier généré.');
+    sendP(`✅ ${written.length} fichier(s) généré(s).`);
+    sendDone(written);
+  } catch (e) {
+    sendErr(e.message || String(e));
+  }
+});
+
+ipcMain.on('convert-file', async (event, { id, inputPath, outputPath, targetFormat, metadata }) => {
+  let ffmpegLocation = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
+  if (!fs.existsSync(ffmpegLocation)) ffmpegLocation = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
+  const modulesDir = path.join(ORBIT_DIR, 'modules');
+  if (!fs.existsSync(modulesDir)) fs.mkdirSync(modulesDir, { recursive: true });
+
+  const sendProgress = (msg) => BrowserWindow.getAllWindows()[0]?.webContents.send('convert-progress', { id, time: msg });
+  const sendComplete = (filePath) => BrowserWindow.getAllWindows()[0]?.webContents.send('convert-complete', { id, filePath });
+  const sendError = (err) => BrowserWindow.getAllWindows()[0]?.webContents.send('convert-error', { id, error: err });
+
+  // ---- SMART COMPRESSOR ----
+  if (targetFormat === 'COMPRESS_DISCORD' || targetFormat === 'COMPRESS_WHATSAPP') {
+    const targetMB = targetFormat === 'COMPRESS_DISCORD' ? 24.5 : 15.5;
+    const targetBytes = targetMB * 1024 * 1024;
+    sendProgress('Analyse de la vidéo...');
+    const duration = await getVideoDuration(ffmpegLocation, inputPath);
+    if (!duration) return sendError('Impossible de lire la durée de la vidéo.');
+    const audioBitrate = 96; // kbps
+    const totalBitrateKbps = Math.floor((targetBytes * 8) / duration / 1000);
+    const videoBitrate = Math.max(totalBitrateKbps - audioBitrate, 100);
+    sendProgress(`Compression vers ${targetMB}MB (${videoBitrate}kbps)...`);
+    const compressedOutput = outputPath.replace(/\.[^.]+$/, '_compressed.mp4');
+    const args = ['-y', '-i', inputPath, '-c:v', 'libx264', '-b:v', `${videoBitrate}k`, '-pass', '1', '-an', '-f', 'null', '-'];
+    const pass1 = spawn(ffmpegLocation, args);
+    pass1.on('close', () => {
+      const pass2args = ['-y', '-i', inputPath, '-c:v', 'libx264', '-b:v', `${videoBitrate}k`, '-pass', '2', '-c:a', 'aac', '-b:a', `${audioBitrate}k`, compressedOutput];
+      const pass2 = spawn(ffmpegLocation, pass2args);
+      activeDownloads.set(id, { kill: () => pass2.kill('SIGINT') });
+      pass2.stderr.on('data', d => {
+        const m = d.toString().match(/time=(\d{2}:\d{2}:\d{2})/);
+        if (m) sendProgress(`Compression: ${m[1]}`);
+      });
+      pass2.on('close', (code) => {
+        // cleanup passlog files
+        ['ffmpeg2pass-0.log', 'ffmpeg2pass-0.log.mbtree'].forEach(f => { try { fs.unlinkSync(f); } catch(e){} });
+        if (code === 0) sendComplete(compressedOutput);
+        else sendError('Erreur lors de la compression 2-pass.');
+      });
+    });
+    return;
+  }
+
+  // ---- AI WHISPER SUBTITLES ----
+  if (targetFormat === 'AI_WHISPER') {
+    const whisperDir = path.join(modulesDir, 'whisper');
+    const whisperExe = path.join(whisperDir, 'whisper.exe');
+    const modelPath = path.join(whisperDir, 'ggml-base.bin');
+    if (!fs.existsSync(whisperDir)) fs.mkdirSync(whisperDir, { recursive: true });
+
+    if (!fs.existsSync(whisperExe)) {
+      sendProgress('Téléchargement du moteur Whisper...');
+      try {
+        await downloadModule('https://github.com/Const-me/Whisper/releases/latest/download/WhisperDesktop.zip', path.join(whisperDir, 'whisper.zip'), id);
+        const { execSync } = require('child_process');
+        execSync(`powershell -Command "Expand-Archive -Path '${path.join(whisperDir, 'whisper.zip')}' -DestinationPath '${whisperDir}' -Force"`);
+        fs.unlinkSync(path.join(whisperDir, 'whisper.zip'));
+      } catch(e) {
+        return sendError('Erreur téléchargement Whisper: ' + e.message);
+      }
+    }
+    if (!fs.existsSync(modelPath)) {
+      sendProgress('Téléchargement du modèle IA (base ~142MB)...');
+      try {
+        await downloadModule('https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin', modelPath, id);
+      } catch(e) {
+        return sendError('Erreur téléchargement modèle Whisper: ' + e.message);
+      }
+    }
+
+    // Extract audio first
+    sendProgress('Extraction de l\'audio pour transcription...');
+    const tmpAudio = path.join(modulesDir, `${id}_audio.wav`);
+    const extractArgs = ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', tmpAudio];
+    const extractProc = spawn(ffmpegLocation, extractArgs);
+    extractProc.on('close', (code) => {
+      if (code !== 0) return sendError('Erreur extraction audio.');
+      sendProgress('Transcription en cours (IA Whisper)...');
+      // whisper.cpp CLI
+      const wProc = spawn(whisperExe, ['--model', modelPath, '--language', 'auto', '--output-srt', '--file', tmpAudio]);
+      activeDownloads.set(id, { kill: () => wProc.kill('SIGINT') });
+      wProc.stdout.on('data', d => sendProgress('Whisper: ' + d.toString().substring(0, 60)));
+      wProc.on('close', (wCode) => {
+        try { fs.unlinkSync(tmpAudio); } catch(e) {}
+        const srtPath = tmpAudio + '.srt';
+        const finalSrt = outputPath.replace(/\.[^.]+$/, '.srt');
+        if (wCode === 0 && fs.existsSync(srtPath)) {
+          fs.renameSync(srtPath, finalSrt);
+          sendComplete(finalSrt);
+        } else {
+          sendError('Whisper n\'a pas pu générer les sous-titres.');
+        }
+      });
+    });
+    return;
+  }
+
+  // ---- AI VOCAL REMOVER (Spleeter via Python) ----
+  if (targetFormat === 'AI_VOCAL_REMOVER') {
+    const pythonDir = path.join(modulesDir, 'python');
+    const pythonExe = path.join(pythonDir, 'python.exe');
+    
+    if (!fs.existsSync(pythonExe)) {
+      sendProgress('Téléchargement de Python portable (nécessaire pour Spleeter)...');
+      try {
+        const pythonZip = path.join(modulesDir, 'python.zip');
+        await downloadModule('https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip', pythonZip, id);
+        const { execSync } = require('child_process');
+        if (!fs.existsSync(pythonDir)) fs.mkdirSync(pythonDir, { recursive: true });
+        execSync(`powershell -Command "Expand-Archive -Path '${pythonZip}' -DestinationPath '${pythonDir}' -Force"`);
+        fs.unlinkSync(pythonZip);
+        // Install spleeter
+        sendProgress('Installation de Spleeter IA (première utilisation, 2-3 minutes)...');
+        execSync(`"${pythonExe}" -m pip install spleeter 2>&1`, { timeout: 300000 });
+      } catch(e) {
+        return sendError('Erreur installation Spleeter: ' + e.message);
+      }
+    }
+
+    sendProgress('Séparation vocale en cours (IA Spleeter)...');
+    const outputFolder = path.dirname(outputPath);
+    const spleeterProc = spawn(pythonExe, ['-m', 'spleeter', 'separate', '-o', outputFolder, '-p', 'spleeter:2stems', inputPath]);
+    activeDownloads.set(id, { kill: () => spleeterProc.kill('SIGINT') });
+    spleeterProc.stdout.on('data', d => sendProgress('Spleeter: ' + d.toString().substring(0, 60)));
+    spleeterProc.stderr.on('data', d => sendProgress('Spleeter: ' + d.toString().substring(0, 60)));
+    spleeterProc.on('close', (code) => {
+      if (code === 0) {
+        sendProgress('Séparation terminée !');
+        sendComplete(outputFolder);
+      } else {
+        sendError('Erreur lors de la séparation vocale.');
+      }
+    });
+    return;
+  }
+
+  // ---- AI UPSCALER 60FPS (RIFE-NCNN) ----
+  if (targetFormat === 'AI_UPSCALER') {
+    const rifeDir = path.join(modulesDir, 'rife');
+    const rifeExe = path.join(rifeDir, 'rife-ncnn-vulkan.exe');
+
+    if (!fs.existsSync(rifeExe)) {
+      sendProgress('Téléchargement du moteur RIFE (interpolation IA 60FPS)...');
+      try {
+        const rifeZip = path.join(modulesDir, 'rife.zip');
+        await downloadModule('https://github.com/nihui/rife-ncnn-vulkan/releases/latest/download/rife-ncnn-vulkan-windows.zip', rifeZip, id);
+        const { execSync } = require('child_process');
+        if (!fs.existsSync(rifeDir)) fs.mkdirSync(rifeDir, { recursive: true });
+        execSync(`powershell -Command "Expand-Archive -Path '${rifeZip}' -DestinationPath '${rifeDir}' -Force"`);
+        fs.unlinkSync(rifeZip);
+      } catch(e) {
+        return sendError('Erreur téléchargement RIFE: ' + e.message);
+      }
+    }
+
+    sendProgress('Extraction des frames (IA Upscaler)...');
+    const framesDir = path.join(modulesDir, `${id}_frames`);
+    const outputFramesDir = path.join(modulesDir, `${id}_frames_out`);
+    if (!fs.existsSync(framesDir)) fs.mkdirSync(framesDir, { recursive: true });
+    if (!fs.existsSync(outputFramesDir)) fs.mkdirSync(outputFramesDir, { recursive: true });
+
+    // Step 1: Extract frames
+    const extractFrames = spawn(ffmpegLocation, ['-y', '-i', inputPath, path.join(framesDir, 'frame%08d.png')]);
+    extractFrames.on('close', (code) => {
+      if (code !== 0) return sendError('Erreur extraction des frames.');
+      sendProgress('Interpolation IA 60FPS en cours (RIFE)...');
+      // Step 2: Run RIFE
+      const rifeProc = spawn(rifeExe, ['-i', framesDir, '-o', outputFramesDir]);
+      activeDownloads.set(id, { kill: () => rifeProc.kill('SIGINT') });
+      rifeProc.stdout.on('data', d => sendProgress('RIFE: ' + d.toString().substring(0, 60)));
+      rifeProc.on('close', (rifeCode) => {
+        if (rifeCode !== 0) return sendError('Erreur RIFE interpolation.');
+        sendProgress('Recomposition de la vidéo 60FPS...');
+        // Step 3: Re-encode with original audio
+        const upscaledOutput = outputPath.replace(/\.[^.]+$/, '_60fps.mp4');
+        const reencodeProc = spawn(ffmpegLocation, ['-y', '-framerate', '60', '-i', path.join(outputFramesDir, 'frame%08d.png'), '-i', inputPath, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'copy', upscaledOutput]);
+        reencodeProc.on('close', (reCode) => {
+          // Cleanup temp frames
+          try { fs.rmSync(framesDir, { recursive: true }); } catch(e) {}
+          try { fs.rmSync(outputFramesDir, { recursive: true }); } catch(e) {}
+          if (reCode === 0) sendComplete(upscaledOutput);
+          else sendError('Erreur recomposition vidéo 60FPS.');
+        });
+      });
+    });
+    return;
+  }
+
+  // ---- STANDARD CONVERT ----
+  let args = ['-y', '-i', inputPath];
+  
+  if (metadata?.coverArtPath) {
+    args.push('-i', metadata.coverArtPath, '-map', '0:a', '-map', '1', '-c', 'copy', '-id3v2_version', '3', '-metadata:s:v', 'title=Album cover');
+  }
+  
+  if (metadata?.title) args.push('-metadata', `title=${metadata.title}`);
+  if (metadata?.artist) args.push('-metadata', `artist=${metadata.artist}`);
+  if (metadata?.album) args.push('-metadata', `album=${metadata.album}`);
+  if (metadata?.year) args.push('-metadata', `date=${metadata.year}`);
+  
+  if (targetFormat === 'MP3') {
+     if (!metadata?.coverArtPath) args.push('-vn');
+     args.push('-ar', '44100', '-ac', '2', '-b:a', '192k');
+  } else if (targetFormat === 'MP4') {
+     args.push('-c:v', 'libx264', '-c:a', 'aac');
+  } else if (targetFormat === 'WAV') {
+     args.push('-c:a', 'pcm_s16le');
+  } else if (targetFormat === 'FLAC') {
+     args.push('-c:a', 'flac');
+  }
+  
+  args.push(outputPath);
+
+  const ffmpegProcess = spawn(ffmpegLocation, args);
+  activeDownloads.set(id, { kill: () => ffmpegProcess.kill('SIGINT') });
+  
+  ffmpegProcess.on('error', (err) => {
+    activeDownloads.delete(id);
+    BrowserWindow.getAllWindows()[0]?.webContents.send('convert-error', { id, error: `Erreur FFmpeg: ${err.message}` });
+  });
+
+  ffmpegProcess.stderr.on('data', (data) => {
+    const output = data.toString();
+    const timeMatch = output.match(/time=(\d{2}:\d{2}:\d{2}.\d{2})/);
+    if (timeMatch) {
+       BrowserWindow.getAllWindows()[0]?.webContents.send('convert-progress', { id, time: timeMatch[1] });
+    }
+  });
+
+  ffmpegProcess.on('close', (code) => {
+    activeDownloads.delete(id);
+    if (code === 0) {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('convert-complete', { id, filePath: outputPath });
+    } else {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('convert-error', { id, error: `FFmpeg exited with code ${code}` });
+    }
+  });
+});
+
+// --- SUBSCRIPTIONS SYSTEM ---
+const subsFile = path.join(ORBIT_DIR, 'subscriptions.json');
+
+function getSubscriptions() {
+  if (!fs.existsSync(subsFile)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(subsFile, 'utf8'));
+  } catch(e) { return []; }
+}
+
+function saveSubscriptions(subs) {
+  fs.writeFileSync(subsFile, JSON.stringify(subs, null, 2));
+}
+
+ipcMain.handle('get-subscriptions', () => getSubscriptions());
+
+ipcMain.handle('add-subscription', async (event, url) => {
+  try {
+    // To be fast, we use yt-dlp to just get the title
+    const info = await youtubedl(url, { dumpSingleJson: true, playlistEnd: 1, flatPlaylist: true });
+    const title = info.uploader || info.channel || info.title || url;
+    const subs = getSubscriptions();
+    if (!subs.find(s => s.url === url)) {
+      subs.push({ id: Date.now().toString(), url, title, dateAdded: new Date().toISOString() });
+      saveSubscriptions(subs);
+    }
+    return subs;
+  } catch(e) {
+    console.error(e);
+    throw new Error("Impossible de récupérer la chaîne. Vérifiez l'URL.");
+  }
+});
+
+ipcMain.handle('delete-subscription', (event, id) => {
+  const subs = getSubscriptions().filter(s => s.id !== id);
+  saveSubscriptions(subs);
+  return subs;
+});
+
+function checkSubscriptions() {
+  const subs = getSubscriptions();
+  if (subs.length === 0) return;
+  
+  const archivePath = path.join(ORBIT_DIR, 'orbit_archive.txt');
+  const subOutDir = path.join(app.getPath('downloads'), 'Orbit_Abonnements');
+  if (!fs.existsSync(subOutDir)) fs.mkdirSync(subOutDir, { recursive: true });
+
+  const template = path.join(subOutDir, '%(uploader)s', '%(title)s.%(ext)s');
+
+  subs.forEach(sub => {
+    // Fix: use youtubedl(url, options) signature, not youtubedl.exec(array)
+    const ytdlpBin = getYtDlpBin();
+    const args = [
+      '--download-archive', archivePath,
+      '--playlist-end', '5',
+      '-o', template,
+      '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+      '--merge-output-format', 'mp4',
+      '--no-warnings'
+    ];
+    const child = spawn(ytdlpBin, [sub.url, ...args], { detached: false, windowsHide: true });
+    child.on('error', (e) => console.error('Auto-dl spawn error for', sub.url, e.message));
+    child.on('close', (code) => {
+      if (code && code !== 0) console.error('Auto-dl exit code', code, 'for', sub.url);
+      else console.log('Auto-dl done for', sub.url);
+    });
+  });
+}
+
+// Check every 6 hours
+setInterval(checkSubscriptions, 6 * 60 * 60 * 1000);
+// Check 10 seconds after launch
+setTimeout(checkSubscriptions, 10000);
+
+ipcMain.handle('check-subscriptions-now', () => {
+  checkSubscriptions();
+  return true;
+});
+
+// ─── Topaz Video AI bridge ───────────────────────────────────────────────────
+// Drives a locally-installed, licensed Topaz Video engine through Orbit's UI.
+const topaz = require('./topaz.js');
+const TOPAZ_DIR = path.join(ORBIT_DIR, 'topaz');
+
+function ensureTopazDir() { try { if (!fs.existsSync(TOPAZ_DIR)) fs.mkdirSync(TOPAZ_DIR, { recursive: true }); } catch (e) {} }
+function topazReadJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return fallback; } }
+function topazWriteJson(file, data) { ensureTopazDir(); try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); return true; } catch (e) { return false; } }
+
+// CPU utilisation sampled between polls.
+let _topazLastCpu = null;
+function topazCpuPercent() {
+  const cpus = os.cpus();
+  let idle = 0, total = 0;
+  for (const c of cpus) { for (const k in c.times) total += c.times[k]; idle += c.times.idle; }
+  const cur = { idle, total };
+  if (!_topazLastCpu) { _topazLastCpu = cur; return 0; }
+  const idleD = cur.idle - _topazLastCpu.idle;
+  const totalD = cur.total - _topazLastCpu.total;
+  _topazLastCpu = cur;
+  if (totalD <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((1 - idleD / totalD) * 100)));
+}
+
+function topazNvidiaStats() {
+  return new Promise(resolve => {
+    try {
+      execFile('nvidia-smi',
+        ['--query-gpu=utilization.gpu,memory.used,memory.total,name', '--format=csv,noheader,nounits'],
+        { timeout: 4000 }, (err, out) => {
+          if (err || !out) return resolve(null);
+          const line = out.trim().split('\n')[0];
+          const parts = line.split(',').map(s => s.trim());
+          if (parts.length < 4) return resolve(null);
+          resolve({
+            gpuUtil: Number(parts[0]),
+            vramUsed: Number(parts[1]),
+            vramTotal: Number(parts[2]),
+            name: parts.slice(3).join(',').trim(),
+          });
+        });
+    } catch (e) { resolve(null); }
+  });
+}
+
+ipcMain.handle('topaz-detect', async () => {
+  try {
+    const det = topaz.detectTopaz(true);
+    if (!det.installed) return { installed: false, reason: det.reason };
+    const models = topaz.listModels(det.modelDir);
+    let encoders = [];
+    try { encoders = Array.from(await topaz.listEncoders(det.ffmpeg)); } catch (e) {}
+    const nv = await topazNvidiaStats();
+    return {
+      installed: true, install: det.install, version: det.version, modelDir: det.modelDir,
+      models, encoders,
+      hasNvenc: encoders.some(e => /nvenc/.test(e)),
+      nvidia: nv ? nv.name : null,
+    };
+  } catch (e) {
+    return { installed: false, reason: 'Erreur de détection Topaz : ' + (e && e.message) };
+  }
+});
+
+ipcMain.handle('topaz-select-files', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Vidéos', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'mpg', 'mpeg', 'ts', 'm2ts', 'gif'] }],
+  });
+  return result.canceled ? [] : result.filePaths;
+});
+
+ipcMain.handle('topaz-probe', async (event, file) => {
+  const det = topaz.detectTopaz();
+  if (!det.installed) return { error: 'Topaz introuvable.' };
+  return topaz.probeFile(det.ffprobe, file);
+});
+
+ipcMain.handle('topaz-thumbnail', async (event, file) => {
+  const det = topaz.detectTopaz();
+  if (!det.installed || !file || !fs.existsSync(file)) return null;
+  const out = path.join(os.tmpdir(), `orbit_thumb_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+  return new Promise(resolve => {
+    execFile(det.ffmpeg, ['-hide_banner', '-y', '-ss', '1', '-i', file, '-frames:v', '1', '-vf', 'scale=320:-1', out],
+      { timeout: 15000 }, (err) => {
+        if (err || !fs.existsSync(out)) return resolve(null);
+        try { const b = fs.readFileSync(out); fs.unlinkSync(out); resolve('data:image/jpeg;base64,' + b.toString('base64')); }
+        catch (e) { resolve(null); }
+      });
+  });
+});
+
+ipcMain.handle('topaz-gpus', async () => {
+  return new Promise(resolve => {
+    try {
+      execFile('powershell',
+        ['-NoProfile', '-Command', 'Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name'],
+        { timeout: 6000 }, (err, out) => {
+          const gpus = [];
+          if (!err && out) {
+            out.split('\n').map(s => s.trim()).filter(Boolean).forEach((name, i) => gpus.push({ id: String(i), name }));
+          }
+          resolve(gpus);
+        });
+    } catch (e) { resolve([]); }
+  });
+});
+
+ipcMain.handle('topaz-gpu-stats', async () => {
+  const nv = await topazNvidiaStats();
+  const totalmem = os.totalmem(), freemem = os.freemem();
+  return {
+    cpu: topazCpuPercent(),
+    ramUsed: Math.round((totalmem - freemem) / 1048576),
+    ramTotal: Math.round(totalmem / 1048576),
+    gpu: nv ? nv.gpuUtil : null,
+    vramUsed: nv ? nv.vramUsed : null,
+    vramTotal: nv ? nv.vramTotal : null,
+    gpuName: nv ? nv.name : null,
+  };
+});
+
+// Presets & queue persistence (auto-save, resumable).
+ipcMain.handle('topaz-presets-load', () => topazReadJson(path.join(TOPAZ_DIR, 'presets.json'), []));
+ipcMain.handle('topaz-presets-save', (e, presets) => topazWriteJson(path.join(TOPAZ_DIR, 'presets.json'), presets));
+ipcMain.handle('topaz-queue-load', () => topazReadJson(path.join(TOPAZ_DIR, 'queue.json'), []));
+ipcMain.handle('topaz-queue-save', (e, queue) => topazWriteJson(path.join(TOPAZ_DIR, 'queue.json'), queue));
+
+ipcMain.on('topaz-cancel', (event, id) => {
+  const job = activeDownloads.get(id);
+  if (job && job.kill) job.kill();
+});
+
+// Quick before/after preview: render a short clip with the current settings.
+ipcMain.handle('topaz-preview', async (event, job) => {
+  try {
+    const det = topaz.detectTopaz();
+    if (!det.installed) return { error: det.reason || 'Topaz introuvable.' };
+    const models = topaz.listModels(det.modelDir);
+    const encoders = await topaz.listEncoders(det.ffmpeg);
+    const built = topaz.buildCommand({ ...job, preview: job.preview || { start: 0, duration: 3 } },
+      { detect: det, models, encoders, preferGpu: false });
+    if (!built.ok) return { error: built.error };
+    const env = {
+      ...process.env,
+      TVAI_MODEL_DIR: det.modelDir, TVAI_MODEL_DATA_DIR: det.modelDir,
+      PATH: det.install + path.delimiter + (process.env.PATH || ''),
+    };
+    for (const pass of built.passes) {
+      await new Promise((resolve, reject) => {
+        const p = spawn(det.ffmpeg, pass.args, { cwd: pass.cwd || det.install, env, windowsHide: true });
+        let log = '';
+        p.stderr.on('data', d => log += d.toString());
+        p.on('error', reject);
+        p.on('close', c => c === 0 ? resolve() : reject(new Error('code ' + c + '\n' + log.slice(-300))));
+      });
+    }
+    if (built.workDir) { try { fs.rmSync(built.workDir, { recursive: true, force: true }); } catch (e) {} }
+    if (!fs.existsSync(built.outputPath)) return { error: 'Aperçu non généré.' };
+    return { outputPath: built.outputPath };
+  } catch (e) {
+    return { error: 'Aperçu impossible : ' + (e && e.message) };
+  }
+});
+
+ipcMain.on('topaz-start', async (event, job) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const id = job.id;
+  const sendP = (data) => win?.webContents.send('topaz-progress', { id, ...data });
+  const sendErr = (msg, log) => win?.webContents.send('topaz-error', { id, error: msg, log });
+  const sendDone = (data) => win?.webContents.send('topaz-complete', { id, ...data });
+
+  try {
+    const det = topaz.detectTopaz();
+    if (!det.installed) return sendErr(det.reason || 'Moteur Topaz introuvable.');
+    const models = topaz.listModels(det.modelDir);
+    const encoders = await topaz.listEncoders(det.ffmpeg);
+    const nv = await topazNvidiaStats();
+    const ctx = { detect: det, models, encoders, preferGpu: !!nv && job.useGpuEncoder !== false };
+
+    const meta = await topaz.probeFile(det.ffprobe, job.inputPath);
+    const totalDuration = (meta && meta.duration) || 0;
+
+    const built = topaz.buildCommand(job, ctx);
+    if (!built.ok) return sendErr(built.error);
+    (built.warnings || []).forEach(w => sendP({ log: '⚠ ' + w }));
+    sendP({ log: `Modèles : ${JSON.stringify(built.resolved)}` });
+    sendP({ log: `Encodeur : ${built.encoder}` });
+
+    const env = {
+      ...process.env,
+      TVAI_MODEL_DIR: det.modelDir, TVAI_MODEL_DATA_DIR: det.modelDir,
+      PATH: det.install + path.delimiter + (process.env.PATH || ''),
+    };
+
+    let cancelled = false;
+    let currentProc = null;
+    activeDownloads.set(id, { kill: () => { cancelled = true; try { currentProc && currentProc.kill('SIGKILL'); } catch (e) {} } });
+
+    const totalWeight = built.passes.reduce((a, p) => a + (p.weight || 1), 0);
+    let doneWeight = 0;
+    let fullLog = '';
+
+    for (const pass of built.passes) {
+      if (cancelled) break;
+      sendP({ stage: pass.label, percent: Math.round((doneWeight / totalWeight) * 100) });
+      const passTotal = (pass.label === 'Traitement IA' && built.slowmo !== 1) ? totalDuration * built.slowmo : totalDuration;
+      await new Promise((resolve, reject) => {
+        const proc = spawn(det.ffmpeg, pass.args, { cwd: pass.cwd || det.install, env, windowsHide: true });
+        currentProc = proc;
+        const onData = (d) => {
+          const s = d.toString(); fullLog += s;
+          const tm = s.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+          if (tm && passTotal > 0) {
+            const secs = (+tm[1]) * 3600 + (+tm[2]) * 60 + (+tm[3]);
+            const passFrac = Math.max(0, Math.min(1, secs / passTotal));
+            const overall = ((doneWeight + (pass.weight || 1) * passFrac) / totalWeight) * 100;
+            const speed = (s.match(/speed=\s*([\d.]+x)/) || [])[1] || '';
+            const fps = (s.match(/fps=\s*([\d.]+)/) || [])[1] || '';
+            sendP({ percent: Math.min(99, Math.round(overall)), stage: pass.label, speed, fps });
+          }
+          const trimmed = s.trim();
+          if (/download|loading model|out of memory|error|failed/i.test(trimmed)) {
+            const last = trimmed.split('\n').pop().slice(-140);
+            if (last) sendP({ log: last });
+          }
+        };
+        proc.stdout.on('data', onData);
+        proc.stderr.on('data', onData);
+        proc.on('error', reject);
+        proc.on('close', code => {
+          if (cancelled) return resolve();
+          if (code === 0) { doneWeight += (pass.weight || 1); resolve(); }
+          else reject(new Error('code ' + code));
+        });
+      });
+    }
+
+    if (built.workDir) { try { fs.rmSync(built.workDir, { recursive: true, force: true }); } catch (e) {} }
+    activeDownloads.delete(id);
+
+    if (cancelled) return sendErr('Annulé par l\'utilisateur.');
+
+    if (!fs.existsSync(built.outputPath) || fs.statSync(built.outputPath).size < 2000) {
+      return sendErr('La sortie est vide ou n\'a pas été créée.', fullLog.slice(-700));
+    }
+    sendP({ percent: 100, stage: 'Terminé' });
+    sendDone({ outputPath: built.outputPath });
+    if (job.whenDone === 'open') { try { shell.showItemInFolder(built.outputPath); } catch (e) {} }
+  } catch (e) {
+    try { activeDownloads.delete(job.id); } catch (er) {}
+    const msg = (e && e.message) || String(e);
+    let hint = '';
+    if (/code 1\b/.test(msg)) hint = ' — vérifiez que Topaz Video est activé et connecté à votre compte.';
+    else if (/out of memory|vram/i.test(msg)) hint = ' — mémoire GPU insuffisante : réduisez la résolution cible ou la VRAM max.';
+    sendErr('Échec du traitement Topaz : ' + msg + hint);
+  }
+});
+
+// ─── Orbit Enhance — free, bundled AI engine (Real-ESRGAN + RIFE + ffmpeg) ────
+const enhanceLib = require('./enhance.js');
+const ENHANCE_DIR = path.join(ORBIT_DIR, 'enhance');
+const IS_WIN = os.platform() === 'win32';
+
+function ensureEnhanceDir() { try { if (!fs.existsSync(ENHANCE_DIR)) fs.mkdirSync(ENHANCE_DIR, { recursive: true }); } catch (e) {} }
+function enhanceReadJson(f, fb) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return fb; } }
+function enhanceWriteJson(f, d) { ensureEnhanceDir(); try { fs.writeFileSync(f, JSON.stringify(d, null, 2)); return true; } catch (e) { return false; } }
+
+// Lightweight metadata probe via ffmpeg stderr (ffprobe isn't bundled in .orbit).
+function enhanceProbe(ff, file) {
+  return new Promise(res => {
+    if (!ff || !file || !fs.existsSync(file)) return res({ error: 'Fichier introuvable.' });
+    const p = spawn(ff, ['-hide_banner', '-i', file]);
+    let out = '';
+    p.stderr.on('data', d => out += d.toString());
+    p.stdout.on('data', d => out += d.toString());
+    p.on('error', () => res({ error: 'ffmpeg indisponible.' }));
+    p.on('close', () => {
+      const dim = out.match(/,\s(\d{2,5})x(\d{2,5})/);
+      const fpsM = out.match(/(\d+(?:\.\d+)?)\s+fps/) || out.match(/(\d+(?:\.\d+)?)\s+tbr/);
+      const durM = out.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
+      const vcodec = out.match(/Video:\s*([a-z0-9_]+)/i);
+      const acodec = out.match(/Audio:\s*([a-z0-9_]+)/i);
+      let size = 0; try { size = fs.statSync(file).size; } catch (e) {}
+      res({
+        width: dim ? +dim[1] : 0, height: dim ? +dim[2] : 0,
+        fps: fpsM ? parseFloat(fpsM[1]) : 0,
+        duration: durM ? (+durM[1] * 3600 + +durM[2] * 60 + parseFloat(durM[3])) : 0,
+        codec: vcodec ? vcodec[1] : '', hasAudio: !!acodec, audioCodec: acodec ? acodec[1] : '', size,
+      });
+    });
+  });
+}
+
+async function installRealEsrgan(onLine) {
+  const dir = path.join(ORBIT_DIR, 'modules', 'realesrgan');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  let exe = enhanceLib.findExe(dir, enhanceLib.REALESRGAN.exe);
+  if (exe) return exe;
+  onLine && onLine('Téléchargement de Real-ESRGAN (~45 Mo, première utilisation)…');
+  const zip = path.join(dir, 'realesrgan.zip');
+  await new Promise((resolve, reject) => {
+    const c = spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', enhanceLib.REALESRGAN.url]);
+    c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
+    c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLine && onLine('Real-ESRGAN: ' + s.replace(/\r/g, '').split('\n').pop()); });
+    c.on('close', code => {
+      if (code !== 0) return reject(new Error('Téléchargement échoué (curl ' + code + ')'));
+      try { if (fs.statSync(zip).size < enhanceLib.REALESRGAN.minZipBytes) { fs.unlinkSync(zip); return reject(new Error('archive incomplète')); } }
+      catch (e) { return reject(e); }
+      resolve();
+    });
+  });
+  onLine && onLine('Extraction de Real-ESRGAN…');
+  require('child_process').execSync(`powershell -Command "Expand-Archive -Path '${zip}' -DestinationPath '${dir}' -Force"`, { timeout: 120000 });
+  try { fs.unlinkSync(zip); } catch (e) {}
+  exe = enhanceLib.findExe(dir, enhanceLib.REALESRGAN.exe);
+  if (!exe) throw new Error('Real-ESRGAN introuvable après extraction.');
+  return exe;
+}
+
+// The staged pipeline: restoration+stabilize → upscale → interpolate → encode.
+async function runEnhancePipeline(job, opts) {
+  const onProgress = opts.onProgress || (() => {});
+  const onLog = opts.onLog || (() => {});
+  const isCancelled = opts.isCancelled || (() => false);
+  const setProc = opts.setProc || (() => {});
+
+  const eng = enhanceLib.detectEngines(ORBIT_DIR);
+  if (!eng.ffmpeg) throw new Error('ffmpeg introuvable.');
+  const ff = eng.ffmpeg;
+  const modulesDir = eng.modulesDir;
+  if (!fs.existsSync(modulesDir)) fs.mkdirSync(modulesDir, { recursive: true });
+
+  const encoders = await topaz.listEncoders(ff);
+  const nv = await topazNvidiaStats();
+  const s = job.settings || {};
+  // Real-ESRGAN & RIFE are Vulkan-only (no CPU mode). 'cpu' / 'auto' → let the
+  // engine pick its default GPU; a numeric index selects a specific GPU.
+  const ncnnGpu = (s.device === 'cpu' || s.device === 'auto' || s.device == null) ? null : String(s.device);
+  if (s.device === 'cpu' && (s.upscaleEnabled || s.interpEnabled)) onLog('Note : l\'upscale/interpolation IA nécessitent un GPU Vulkan ; le CPU ne s\'applique qu\'à l\'encodage final.');
+  const preferGpu = !!nv && s.device !== 'cpu';
+
+  const meta = await enhanceProbe(ff, job.inputPath);
+  const srcFps = meta.fps || 30;
+  const totalDur = meta.duration || 0;
+
+  const jobId = 'enh_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const temps = [];
+  let workInput = job.inputPath;
+
+  // ── stage list + overall progress reporter ──
+  const active = [];
+  if (s.restoreEnabled || s.stabEnabled) active.push('restore');
+  if (s.upscaleEnabled) active.push('upscale');
+  if (s.interpEnabled) active.push('interp');
+  active.push('final');
+  let stageIdx = 0;
+  const total = active.length;
+  const report = (stage, frac) => onProgress({ percent: Math.min(99, Math.round(((stageIdx + (frac || 0)) / total) * 100)), stage });
+
+  // helper: run an ffmpeg pass with progress + cancel support
+  const runFF = (args, cwd, label, dur) => new Promise((resolve, reject) => {
+    if (isCancelled()) return reject(new Error('cancelled'));
+    const p = spawn(ff, args, { cwd: cwd || undefined, windowsHide: true });
+    setProc(p);
+    let log = '';
+    const ond = d => {
+      const str = d.toString(); log += str;
+      const tm = str.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+      if (tm && dur > 0) { const sec = (+tm[1]) * 3600 + (+tm[2]) * 60 + (+tm[3]); report(label, Math.min(1, sec / dur)); }
+    };
+    p.stdout.on('data', ond); p.stderr.on('data', ond);
+    p.on('error', reject);
+    p.on('close', c => c === 0 ? resolve(log) : reject(new Error(label + ' (code ' + c + ')\n' + log.slice(-400))));
+  });
+  const runTool = (exe, args, cwd, label, parse) => new Promise((resolve, reject) => {
+    if (isCancelled()) return reject(new Error('cancelled'));
+    const p = spawn(exe, args, { cwd, windowsHide: true });
+    setProc(p);
+    let log = '';
+    const ond = d => { const str = d.toString(); log += str; const m = parse && str.match(parse); if (m) { const frac = m[2] ? (parseFloat(m[1]) / parseFloat(m[2])) : (parseFloat(m[1]) / 100); report(label, Math.min(1, frac)); } };
+    p.stdout.on('data', ond); p.stderr.on('data', ond);
+    p.on('error', reject);
+    p.on('close', c => c === 0 ? resolve(log) : reject(new Error(label + ' (code ' + c + ')\n' + log.slice(-300))));
+  });
+
+  // ── preview: cut a short clip first ──
+  if (opts.previewClip) {
+    const clip = path.join(modulesDir, jobId + '_clip.mp4'); temps.push(clip);
+    await runFF(['-hide_banner', '-y', '-ss', String(opts.previewClip.start || 0), '-t', String(opts.previewClip.duration || 3), '-i', job.inputPath, '-c:v', 'libx264', '-crf', '16', '-an', clip], undefined, 'Préparation aperçu', 0);
+    workInput = clip;
+  }
+
+  // ── Stage 1: restoration + stabilization ──
+  if (s.restoreEnabled || s.stabEnabled) {
+    report('Restauration', 0);
+    let workDir = null;
+    const restoreFilters = s.restoreEnabled ? enhanceLib.buildRestoreFilters(s.restore || {}) : [];
+    const vf = [...restoreFilters];
+    if (s.stabEnabled) {
+      workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit_vs_'));
+      await runFF(['-hide_banner', '-nostdin', '-y', '-i', workInput, '-vf', enhanceLib.buildVidstabDetect(s.stab || {}, 'transforms.trf'), '-f', 'null', IS_WIN ? 'NUL' : '/dev/null'], workDir, 'Stabilisation (analyse)', totalDur);
+      vf.push(enhanceLib.buildVidstabTransform(s.stab || {}, 'transforms.trf'));
+    }
+    if (vf.length) {
+      const outp = path.join(modulesDir, jobId + '_restored.mp4'); temps.push(outp);
+      await runFF(['-hide_banner', '-nostdin', '-y', '-i', workInput, '-vf', vf.join(','), '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-an', outp], workDir || undefined, 'Restauration', totalDur);
+      workInput = outp;
+    }
+    if (workDir) { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch (e) {} }
+    if (isCancelled()) throw new Error('cancelled');
+    stageIdx++;
+  }
+
+  // ── Stage 2: AI upscale (Real-ESRGAN, frame-based) ──
+  if (s.upscaleEnabled) {
+    report('Upscale IA', 0);
+    const esrExe = await installRealEsrgan(onLog);
+    const framesIn = path.join(modulesDir, jobId + '_uin');
+    const framesOut = path.join(modulesDir, jobId + '_uout');
+    fs.mkdirSync(framesIn, { recursive: true }); fs.mkdirSync(framesOut, { recursive: true });
+    temps.push(framesIn, framesOut);
+    await runFF(['-hide_banner', '-y', '-i', workInput, '-vsync', 'cfr', path.join(framesIn, 'frame%08d.png')], undefined, 'Extraction (upscale)', totalDur);
+    if (isCancelled()) throw new Error('cancelled');
+    const wantScale = s.scaleMode === 'scale' ? (s.scale || 2) : 4;
+    const { model, native } = enhanceLib.resolveEsrgan(s.upscaleModel || 'video', wantScale);
+    onLog('Upscale : modèle ' + model + ' ×' + native);
+    await runTool(esrExe, enhanceLib.esrganArgs({ inDir: framesIn, outDir: framesOut, model, native, tile: s.tile || 0, tta: s.tta, gpu: ncnnGpu }), path.dirname(esrExe), 'Upscale IA', /([\d.]+)%/);
+    if (isCancelled()) throw new Error('cancelled');
+    let outFiles = []; try { outFiles = fs.readdirSync(framesOut).filter(f => f.toLowerCase().endsWith('.png')).sort(); } catch (e) {}
+    if (!outFiles.length) throw new Error('Upscale : aucune frame produite.');
+    const startNum = parseInt(outFiles[0], 10) || 1;
+    const tgt = enhanceLib.resolveTarget(meta, s.scaleMode, s.scale, s.resPreset, s.targetW, s.targetH);
+    const upOut = path.join(modulesDir, jobId + '_up.mp4'); temps.push(upOut);
+    await runFF(['-hide_banner', '-y', '-framerate', String(srcFps), '-start_number', String(startNum), '-i', path.join(framesOut, 'frame%08d.png'), '-vf', `scale=${tgt.w}:${tgt.h}:flags=lanczos`, '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', upOut], undefined, 'Recomposition (upscale)', totalDur);
+    try { fs.rmSync(framesIn, { recursive: true, force: true }); fs.rmSync(framesOut, { recursive: true, force: true }); } catch (e) {}
+    workInput = upOut;
+    stageIdx++;
+  }
+
+  // ── Stage 3: AI interpolation (RIFE, frame-based) ──
+  if (s.interpEnabled) {
+    report('Interpolation IA', 0);
+    const rifeExe = eng.rifeExe || enhanceLib.findExe(path.join(modulesDir, 'rife'), 'rife-ncnn-vulkan.exe');
+    if (!rifeExe) throw new Error('Moteur RIFE absent — ouvrez une fois l\'onglet « Interpolateur IA » pour l\'installer, puis réessayez.');
+    const framesIn = path.join(modulesDir, jobId + '_iin');
+    const framesOut = path.join(modulesDir, jobId + '_iout');
+    fs.mkdirSync(framesIn, { recursive: true }); fs.mkdirSync(framesOut, { recursive: true });
+    temps.push(framesIn, framesOut);
+    await runFF(['-hide_banner', '-y', '-i', workInput, '-vsync', 'cfr', path.join(framesIn, 'frame%08d.png')], undefined, 'Extraction (interpolation)', totalDur);
+    if (isCancelled()) throw new Error('cancelled');
+    let inCount = 0; try { inCount = fs.readdirSync(framesIn).filter(f => f.toLowerCase().endsWith('.png')).length; } catch (e) {}
+    if (inCount < 2) throw new Error('Pas assez de frames pour interpoler.');
+    const targetFps = enhanceLib.clamp(s.fps || 60, 1, 480, 60);
+    const slowmo = enhanceLib.clamp(s.slowmo || 1, 1, 16, 1);
+    const outCount = Math.max(inCount + 1, Math.round(inCount * (targetFps / srcFps) * slowmo));
+    // pick best rife-v4 model
+    const rifeDir = path.dirname(rifeExe);
+    let modelPath = null;
+    for (const m of ['rife-v4.6', 'rife-v4.4', 'rife-v4.3', 'rife-v4']) {
+      const c = path.join(rifeDir, m);
+      if (fs.existsSync(path.join(c, 'flownet.param'))) { modelPath = c; break; }
+    }
+    const rifeArgs = ['-i', framesIn, '-o', framesOut, '-n', String(outCount)];
+    if (modelPath) rifeArgs.push('-m', modelPath);
+    if (ncnnGpu) rifeArgs.push('-g', ncnnGpu); // specific GPU index; omitted = default GPU
+    await runTool(rifeExe, rifeArgs, rifeDir, 'Interpolation IA', /(\d+)\/(\d+)/);
+    if (isCancelled()) throw new Error('cancelled');
+    let outFiles = []; try { outFiles = fs.readdirSync(framesOut).filter(f => f.toLowerCase().endsWith('.png')).sort(); } catch (e) {}
+    if (!outFiles.length) throw new Error('Interpolation : aucune frame produite.');
+    const startNum = parseInt(outFiles[0], 10);
+    const fpsStr = targetFps.toFixed(3).replace(/\.?0+$/, '');
+    const ipOut = path.join(modulesDir, jobId + '_ip.mp4'); temps.push(ipOut);
+    await runFF(['-hide_banner', '-y', '-framerate', fpsStr, '-start_number', String(startNum), '-i', path.join(framesOut, '%08d.png'), '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', '-r', fpsStr, ipOut], undefined, 'Recomposition (interpolation)', totalDur * slowmo);
+    try { fs.rmSync(framesIn, { recursive: true, force: true }); fs.rmSync(framesOut, { recursive: true, force: true }); } catch (e) {}
+    workInput = ipOut;
+    stageIdx++;
+  }
+
+  // ── Stage 4: final encode (sharpen + codec + audio) ──
+  report('Encodage final', 0);
+  const codec = (s.codec || 'h264').toLowerCase();
+  const enc = enhanceLib.pickVideoEncoder(codec, encoders, preferGpu);
+  // The encoder may differ from the requested codec (unavailable on this build);
+  // derive everything downstream from what will ACTUALLY be produced.
+  const realCodec = enhanceLib.encoderCodec(enc);
+  if (realCodec !== codec) onLog(`Codec ${codec.toUpperCase()} indisponible → ${realCodec.toUpperCase()} (${enc})`);
+  const qargs = enhanceLib.encoderQualityArgs(realCodec, enc, s.quality != null ? s.quality : 75);
+  const sharpen = enhanceLib.buildSharpenFilter(s.sharpen || 0);
+  // Auto-correct impossible container/codec combos (e.g. H.264-in-WEBM, ProRes-in-MP4).
+  const reqFmt = (s.format || 'MP4').toUpperCase();
+  const safeFmt = enhanceLib.safeContainer(reqFmt, realCodec);
+  if (safeFmt !== reqFmt) onLog(`Conteneur ${reqFmt} incompatible avec ${realCodec.toUpperCase()} → ${safeFmt}`);
+  const ext = enhanceLib.CONTAINER_EXT[safeFmt] || 'mp4';
+  const faststart = safeFmt === 'MP4' || safeFmt === 'MOV';
+  const slowmoActive = s.interpEnabled && (s.slowmo || 1) > 1;
+  let outputPath;
+  if (opts.previewClip) outputPath = path.join(os.tmpdir(), 'orbit_enh_preview_' + Date.now() + '.mp4');
+  else {
+    const outDir = (s.outputDir && fs.existsSync(s.outputDir)) ? s.outputDir : path.dirname(job.inputPath);
+    const base = path.basename(job.inputPath, path.extname(job.inputPath));
+    outputPath = path.join(outDir, base + '_orbit.' + ext);
+    if (path.resolve(outputPath) === path.resolve(job.inputPath)) outputPath = path.join(outDir, base + '_orbit_out.' + ext);
+  }
+  // Honour the "keep audio" toggle; drop audio when slow-motion changes the timeline.
+  const useOrigAudio = !slowmoActive && meta.hasAudio && s.audioCopy !== false && !opts.previewClip;
+  // WEBM only accepts Opus/Vorbis audio; everything else takes AAC.
+  const audioCodec = safeFmt === 'WEBM' ? 'libopus' : 'aac';
+  const finalArgs = ['-hide_banner', '-nostdin', '-y', '-i', workInput];
+  if (useOrigAudio) finalArgs.push('-i', job.inputPath);
+  if (sharpen) finalArgs.push('-vf', sharpen);
+  finalArgs.push('-map', '0:v:0');
+  if (useOrigAudio) finalArgs.push('-map', '1:a:0?', '-c:a', audioCodec, '-b:a', '192k'); else finalArgs.push('-an');
+  if (opts.previewClip) finalArgs.push('-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', '-pix_fmt', 'yuv420p');
+  else finalArgs.push('-c:v', enc, ...qargs);
+  if (faststart) finalArgs.push('-movflags', '+faststart');
+  finalArgs.push(outputPath);
+  await runFF(finalArgs, undefined, 'Encodage final', totalDur * (slowmoActive ? (s.slowmo || 1) : 1));
+  stageIdx++;
+
+  for (const t of temps) { try { fs.rmSync(t, { recursive: true, force: true }); } catch (e) {} }
+  if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 2000) throw new Error('La sortie est vide.');
+  return { outputPath };
+}
+
+ipcMain.handle('enhance-detect', async () => {
+  try {
+    const eng = enhanceLib.detectEngines(ORBIT_DIR);
+    let encoders = [];
+    try { encoders = Array.from(await topaz.listEncoders(eng.ffmpeg)); } catch (e) {}
+    const nv = await topazNvidiaStats();
+    return {
+      ready: !!eng.ffmpeg,
+      ffmpeg: !!eng.ffmpeg,
+      esrganInstalled: !!eng.esrganExe,
+      rifeInstalled: !!eng.rifeExe,
+      models: enhanceLib.ESRGAN_MODELS,
+      encoders,
+      availableCodecs: enhanceLib.availableCodecs(encoders),
+      hasNvenc: encoders.some(e => /nvenc/.test(e)),
+      nvidia: nv ? nv.name : null,
+    };
+  } catch (e) { return { ready: false, reason: (e && e.message) }; }
+});
+
+ipcMain.handle('enhance-install', async () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  try {
+    await installRealEsrgan((m) => win?.webContents.send('enhance-progress', { id: 'install', log: m }));
+    return { ok: true };
+  } catch (e) { return { ok: false, error: (e && e.message) }; }
+});
+
+ipcMain.handle('enhance-select-files', async () => {
+  const r = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Vidéos', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'mpg', 'mpeg', 'ts', 'm2ts', 'gif'] }],
+  });
+  return r.canceled ? [] : r.filePaths;
+});
+
+ipcMain.handle('enhance-probe', async (e, file) => {
+  const eng = enhanceLib.detectEngines(ORBIT_DIR);
+  return enhanceProbe(eng.ffmpeg, file);
+});
+
+ipcMain.handle('enhance-thumbnail', async (e, file) => {
+  const eng = enhanceLib.detectEngines(ORBIT_DIR);
+  if (!eng.ffmpeg || !file || !fs.existsSync(file)) return null;
+  const out = path.join(os.tmpdir(), `orbit_ethumb_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+  return new Promise(resolve => {
+    execFile(eng.ffmpeg, ['-hide_banner', '-y', '-ss', '1', '-i', file, '-frames:v', '1', '-vf', 'scale=320:-1', out], { timeout: 15000 }, (err) => {
+      if (err || !fs.existsSync(out)) return resolve(null);
+      try { const b = fs.readFileSync(out); fs.unlinkSync(out); resolve('data:image/jpeg;base64,' + b.toString('base64')); }
+      catch (e) { resolve(null); }
+    });
+  });
+});
+
+ipcMain.handle('enhance-gpus', async () => {
+  return new Promise(resolve => {
+    try {
+      execFile('powershell', ['-NoProfile', '-Command', 'Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name'], { timeout: 6000 }, (err, out) => {
+        const gpus = [];
+        if (!err && out) out.split('\n').map(s => s.trim()).filter(Boolean).forEach((name, i) => gpus.push({ id: String(i), name }));
+        resolve(gpus);
+      });
+    } catch (e) { resolve([]); }
+  });
+});
+
+ipcMain.handle('enhance-gpu-stats', async () => {
+  const nv = await topazNvidiaStats();
+  const totalmem = os.totalmem(), freemem = os.freemem();
+  return {
+    cpu: topazCpuPercent(),
+    ramUsed: Math.round((totalmem - freemem) / 1048576),
+    ramTotal: Math.round(totalmem / 1048576),
+    gpu: nv ? nv.gpuUtil : null, vramUsed: nv ? nv.vramUsed : null, vramTotal: nv ? nv.vramTotal : null, gpuName: nv ? nv.name : null,
+  };
+});
+
+ipcMain.handle('enhance-presets-load', () => enhanceReadJson(path.join(ENHANCE_DIR, 'presets.json'), []));
+ipcMain.handle('enhance-presets-save', (e, p) => enhanceWriteJson(path.join(ENHANCE_DIR, 'presets.json'), p));
+ipcMain.handle('enhance-queue-load', () => enhanceReadJson(path.join(ENHANCE_DIR, 'queue.json'), []));
+ipcMain.handle('enhance-queue-save', (e, q) => enhanceWriteJson(path.join(ENHANCE_DIR, 'queue.json'), q));
+
+ipcMain.on('enhance-cancel', (e, id) => { const j = activeDownloads.get(id); if (j && j.kill) j.kill(); });
+
+ipcMain.handle('enhance-preview', async (e, job) => {
+  try {
+    const r = await runEnhancePipeline(job, { previewClip: job.preview || { start: 0, duration: 3 } });
+    return r;
+  } catch (e2) { return { error: 'Aperçu impossible : ' + (e2 && e2.message) }; }
+});
+
+ipcMain.on('enhance-start', async (event, job) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const id = job.id;
+  const sendP = (d) => win?.webContents.send('enhance-progress', { id, ...d });
+  const sendErr = (msg) => win?.webContents.send('enhance-error', { id, error: msg });
+  const sendDone = (d) => win?.webContents.send('enhance-complete', { id, ...d });
+  let cancelled = false, currentProc = null;
+  activeDownloads.set(id, { kill: () => { cancelled = true; try { currentProc && currentProc.kill('SIGKILL'); } catch (e) {} } });
+  try {
+    const s = job.settings || {};
+    if (!s.upscaleEnabled && !s.interpEnabled && !s.restoreEnabled && !s.stabEnabled && !(s.sharpen > 0)) {
+      activeDownloads.delete(id);
+      return sendErr('Activez au moins un traitement (upscale, interpolation, restauration, stabilisation ou netteté).');
+    }
+    const r = await runEnhancePipeline(job, {
+      onProgress: (d) => sendP(d),
+      onLog: (m) => sendP({ log: m }),
+      isCancelled: () => cancelled,
+      setProc: (p) => { currentProc = p; },
+    });
+    activeDownloads.delete(id);
+    if (cancelled) return sendErr('Annulé par l\'utilisateur.');
+    sendP({ percent: 100, stage: 'Terminé' });
+    sendDone({ outputPath: r.outputPath });
+    if (job.whenDone === 'open') { try { shell.showItemInFolder(r.outputPath); } catch (e) {} }
+  } catch (e) {
+    activeDownloads.delete(id);
+    const msg = (e && e.message) || String(e);
+    if (/cancelled/i.test(msg)) return sendErr('Annulé par l\'utilisateur.');
+    let hint = '';
+    if (/out of memory|vram|VK_ERROR/i.test(msg)) hint = ' — mémoire GPU insuffisante : réduisez l\'échelle ou activez « tile size », ou passez en CPU.';
+    sendErr('Échec : ' + msg + hint);
+  }
+});
+
+// ─── HandBrake — genuine HandBrakeCLI engine, auto-downloaded & wrapped ────────
+const handbrake = require('./handbrake.js');
+
+async function installHandBrake(onLine) {
+  const dir = path.join(ORBIT_DIR, 'modules', 'handbrake');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  let det = handbrake.detect(ORBIT_DIR);
+  if (det.installed) return det.exe;
+  onLine && onLine('Recherche de la dernière version de HandBrake…');
+  const rel = await new Promise((res, rej) => {
+    https.get(handbrake.HB_API_LATEST, { headers: { 'User-Agent': 'Orbit' } }, r => {
+      let b = ''; r.on('data', d => b += d); r.on('end', () => { try { res(JSON.parse(b)); } catch (e) { rej(e); } });
+    }).on('error', rej);
+  });
+  const asset = (rel.assets || []).find(a => /HandBrakeCLI.*win.*x86_64\.zip$/i.test(a.name)) || (rel.assets || []).find(a => /HandBrakeCLI.*win.*\.zip$/i.test(a.name));
+  if (!asset) throw new Error('Archive HandBrakeCLI introuvable dans la dernière release.');
+  onLine && onLine(`Téléchargement de HandBrake ${rel.tag_name} (~26 Mo, première utilisation)…`);
+  const zip = path.join(dir, 'handbrake.zip');
+  await new Promise((resolve, reject) => {
+    const c = spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', asset.browser_download_url]);
+    c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
+    c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLine && onLine('HandBrake: ' + s.replace(/\r/g, '').split('\n').pop()); });
+    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+  });
+  onLine && onLine('Extraction de HandBrake…');
+  require('child_process').execSync(`powershell -Command "Expand-Archive -Path '${zip}' -DestinationPath '${dir}' -Force"`, { timeout: 120000 });
+  try { fs.unlinkSync(zip); } catch (e) {}
+  det = handbrake.detect(ORBIT_DIR);
+  if (!det.installed) throw new Error('HandBrakeCLI introuvable après extraction.');
+  return det.exe;
+}
+
+function hbReadPresets(exe) {
+  return new Promise(resolve => {
+    execFile(exe, ['--preset-list'], { maxBuffer: 1024 * 1024 * 8 }, (e, so, se) => {
+      resolve(handbrake.parsePresetList((so || '') + '\n' + (se || '')));
+    });
+  });
+}
+
+ipcMain.handle('hb-detect', async () => {
+  const det = handbrake.detect(ORBIT_DIR);
+  const base = { encoders: handbrake.ENCODERS, encoderPresets: handbrake.ENCODER_PRESETS, nvencPresets: handbrake.NVENC_PRESETS, denoise: handbrake.DENOISE, sharpen: handbrake.SHARPEN };
+  if (!det.installed) return { installed: false, ...base };
+  let presets = { groups: {}, flat: [] };
+  try { presets = await hbReadPresets(det.exe); } catch (e) {}
+  return { installed: true, presets, ...base };
+});
+
+ipcMain.handle('hb-install', async () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  try {
+    const exe = await installHandBrake(m => win?.webContents.send('hb-progress', { id: 'install', log: m }));
+    const presets = await hbReadPresets(exe);
+    return { ok: true, presets };
+  } catch (e) { return { ok: false, error: (e && e.message) }; }
+});
+
+ipcMain.on('hb-cancel', (e, id) => { const j = activeDownloads.get(id); if (j && j.kill) j.kill(); });
+ipcMain.handle('hb-queue-load', () => enhanceReadJson(path.join(ENHANCE_DIR, 'hb-queue.json'), []));
+ipcMain.handle('hb-queue-save', (e, q) => enhanceWriteJson(path.join(ENHANCE_DIR, 'hb-queue.json'), q));
+ipcMain.handle('hb-presets-load', () => enhanceReadJson(path.join(ENHANCE_DIR, 'hb-presets.json'), []));
+ipcMain.handle('hb-presets-save', (e, p) => enhanceWriteJson(path.join(ENHANCE_DIR, 'hb-presets.json'), p));
+
+ipcMain.on('hb-start', async (event, job) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const id = job.id;
+  const sendP = (d) => win?.webContents.send('hb-progress', { id, ...d });
+  const sendErr = (msg) => win?.webContents.send('hb-error', { id, error: msg });
+  const sendDone = (d) => win?.webContents.send('hb-complete', { id, ...d });
+  let cancelled = false, proc = null;
+  activeDownloads.set(id, { kill: () => { cancelled = true; try { proc && proc.kill('SIGKILL'); } catch (e) {} } });
+  try {
+    const exe = await installHandBrake(m => sendP({ log: m }));
+    const container = (job.container || 'mp4').toLowerCase();
+    const outDir = (job.outputDir && fs.existsSync(job.outputDir)) ? job.outputDir : path.dirname(job.inputPath);
+    const base = path.basename(job.inputPath, path.extname(job.inputPath));
+    let outputPath = path.join(outDir, `${base}_hb.${container}`);
+    if (path.resolve(outputPath) === path.resolve(job.inputPath)) outputPath = path.join(outDir, `${base}_hb_out.${container}`);
+    const { args } = handbrake.buildArgs(job, outputPath);
+    sendP({ log: 'HandBrakeCLI ' + args.join(' ') });
+
+    const attempt = () => new Promise((resolve, reject) => {
+      try { fs.unlinkSync(outputPath); } catch (e) {}
+      proc = spawn(exe, args, { cwd: path.dirname(exe), windowsHide: true });
+      let log = '';
+      const ond = d => { const s = d.toString(); log += s; const m = s.match(/([\d.]+)\s*%/); if (m) sendP({ percent: Math.min(99, Math.round(parseFloat(m[1]))), stage: 'Encodage' }); };
+      proc.stdout.on('data', ond); proc.stderr.on('data', ond);
+      proc.on('error', reject);
+      proc.on('close', c => { if (cancelled) return resolve('cancelled'); if (c === 0) return resolve('ok'); reject(new Error('code ' + c + (/initialize job/i.test(log) ? ' (init)' : '') + '\n' + log.slice(-300))); });
+    });
+
+    let res;
+    try { res = await attempt(); }
+    catch (e) {
+      if (!cancelled && /init/i.test(e.message)) { sendP({ log: 'Initialisation échouée — nouvelle tentative…' }); await new Promise(r => setTimeout(r, 1200)); res = await attempt(); }
+      else throw e;
+    }
+    activeDownloads.delete(id);
+    if (cancelled || res === 'cancelled') return sendErr('Annulé par l\'utilisateur.');
+    if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 2000) return sendErr('La sortie est vide ou n\'a pas été créée.');
+    sendP({ percent: 100, stage: 'Terminé' });
+    sendDone({ outputPath });
+    try {
+      let gs = {}; try { gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); } catch (e) {}
+      if (gs.notifications) { const { Notification } = require('electron'); if (Notification.isSupported()) new Notification({ title: 'Orbit — HandBrake terminé', body: path.basename(outputPath) }).show(); }
+    } catch (e) {}
+    if (job.whenDone === 'open') { try { shell.showItemInFolder(outputPath); } catch (e) {} }
+  } catch (e) {
+    activeDownloads.delete(id);
+    sendErr('Échec HandBrake : ' + ((e && e.message) || String(e)));
+  }
+});

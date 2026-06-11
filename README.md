@@ -3,19 +3,19 @@
 </p>
 
 <p align="center">
-  <strong>🚀 Next-Gen Media Downloader & AI Studio</strong>
+  <strong>🚀 Téléchargeur multimédia & studio vidéo IA tout-en-un</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest"><img src="https://img.shields.io/github/v/release/ThomasDM40-dev/orbit-releases?style=for-the-badge&color=ff2a6d&label=Version" alt="Version"/></a>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest"><img src="https://img.shields.io/github/downloads/ThomasDM40-dev/orbit-releases/total?style=for-the-badge&color=a855f7&label=Downloads" alt="Downloads"/></a>
   <img src="https://img.shields.io/badge/Platform-Windows-blue?style=for-the-badge&logo=windows&logoColor=white" alt="Platform"/>
-  <img src="https://img.shields.io/badge/License-Proprietary-gray?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/Electron-React_19-22d3ee?style=for-the-badge&logo=electron&logoColor=white" alt="Stack"/>
 </p>
 
 <p align="center">
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest">
-    <img src="https://img.shields.io/badge/⬇️_Télécharger-Orbit_Setup.exe-ff2a6d?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0yMSAxNXY0YTIgMiAwIDAgMS0yIDJINWEyIDIgMCAwIDEtMi0ydi00Ii8+PHBvbHlsaW5lIHBvaW50cz0iNyAxMCAxMiAxNSAxNyAxMCIvPjxsaW5lIHgxPSIxMiIgeTE9IjE1IiB4Mj0iMTIiIHkyPSIzIi8+PC9zdmc+" alt="Download"/>
+    <img src="https://img.shields.io/badge/⬇️_Télécharger-Orbit_Setup.exe-ff2a6d?style=for-the-badge" alt="Download"/>
   </a>
 </p>
 
@@ -23,195 +23,140 @@
 
 ## ✨ Qu'est-ce qu'Orbit ?
 
-**Orbit** est une application desktop tout-en-un qui combine un **téléchargeur multimédia puissant**, un **convertisseur audio/vidéo**, et un **studio d'IA** — le tout dans une interface premium au design "Liquid Glass".
+**Orbit** est une application desktop tout-en-un qui réunit un **téléchargeur multimédia**, un **convertisseur**, et un véritable **studio vidéo par IA** — le tout dans une interface premium « Liquid Glass ».
 
-Pensez à un mélange entre **JDownloader**, **HandBrake**, **Flowframes** et **Topaz Video AI**… mais gratuit, open-source, et avec une interface magnifique.
+Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper**, dans une seule app.
+
+> Le code principal est publié sur la branche `main` à chaque release. Les binaires bundlés (yt-dlp, FFmpeg, Real-ESRGAN, RIFE, HandBrakeCLI, Whisper) sont téléchargés automatiquement au premier usage.
 
 <br/>
 
 ## 🎯 Fonctionnalités
 
-### ⬇️ Téléchargeur Multimédia
-- Téléchargement depuis **1000+ sites** (YouTube, Twitter/X, TikTok, Instagram, Twitch, SoundCloud...)
-- File d'attente intelligente avec **téléchargements parallèles**
-- Choix de la qualité (4K, 1080p, 720p, audio uniquement)
-- Extraction audio MP3/FLAC/WAV depuis n'importe quelle vidéo
-- Miniatures et métadonnées automatiques
-- 3 modes d'affichage : grille, liste, compact
+### ⬇️ Téléchargeur multimédia
+- **1000+ sites** (YouTube, X/Twitter, TikTok, Instagram, Twitch, SoundCloud…) via **yt-dlp**
+- File d'attente avec téléchargements parallèles, qualité jusqu'au **8K**, extraction audio (MP3/FLAC/WAV/M4A…)
+- Navigateur-renifleur intégré pour capturer les flux (HLS/DASH/MP4), cookies, métadonnées & miniatures
+- SponsorBlock (marquer / supprimer), archive anti-doublons, sous-titres
 
-### 🎬 Convertisseur & Tags
-- Conversion entre **tous les formats** : MP4, MKV, AVI, MOV, MP3, FLAC, WAV, OGG...
-- Éditeur de **tags ID3** (titre, artiste, album, pochette)
-- Prévisualisation audio intégrée
-- Support du drag & drop
+### 🔃 Convertisseur & Tags
+- Conversion entre tous formats (MP4, MKV, AVI, MOV, MP3, FLAC, WAV, OGG…)
+- Éditeur de tags ID3 (titre, artiste, album, pochette), drag & drop
 
-### ⚡ Interpolateur IA (Style Flowframes / Topaz Video)
-- **Interpolation vidéo** par IA pour transformer n'importe quelle vidéo en 60FPS, 120FPS ou 240FPS
-- Moteur **RIFE-NCNN** (accélération GPU Vulkan — NVIDIA, AMD, Intel)
-- Multiplicateurs : x2, x4, x8
-- Préréglages rapides : Anime 60FPS, Film Fluide, Slow Motion, Discord GIF
-- Console de logs en temps réel avec barre de progression
-- Téléchargement automatique du moteur IA (~30MB) à la première utilisation
+### 🚀 Amélioration IA (moteur libre, gratuit)
+- **Upscale** Real-ESRGAN (vidéo / photo / anime) jusqu'à 8× + résolutions cibles 720p→8K
+- **Interpolation** RIFE jusqu'à 120 fps + ralenti IA
+- **Restauration** : débruitage temporel/spatial, deblock, deband, désentrelacement, colorimétrie
+- **Stabilisation** vidstab 2-passes, netteté CAS, comparaison Avant/Après, moniteur GPU/VRAM/CPU/RAM
 
-### 📡 Abonnements
-- Surveillance automatique de chaînes YouTube
-- Notification et téléchargement automatique des nouvelles vidéos
-- Gestion complète des abonnements
+### 🔥 HandBrake
+- Le **vrai moteur HandBrakeCLI** (open-source) auto-téléchargé et piloté par Orbit
+- **100+ préréglages officiels**, encodeurs x264 / x265 / AV1 (SVT) + **NVENC** matériel
+- Qualité constante (RF) ou débit moyen 2-passes, conteneurs MP4 / MKV / WEBM
+- Filtres NLMeans, Lapsharp, decomb, deblock, rotation, file par lot
 
-### 🎮 Discord Rich Presence
-- Statut dynamique selon l'onglet actif
-- Compteur de téléchargements en temps réel
-- Boutons "Télécharger Orbit" et "GitHub" sur votre profil
-- Temps de session affiché
+### ✨ Topaz Video AI *(pour les détenteurs d'une licence Topaz)*
+- Pilote une installation **Topaz Video AI** licenciée : Proteus, Iris, Artemis, Gaia, Nyx, Dione…
+- Upscale, interpolation (Chronos/Apollo/Aion), stabilisation 2-passes — sans ouvrir Topaz
+
+### 📝 Transcription IA
+- Transcription **Whisper** locale → export SRT / VTT / TXT, et vers **Premiere Pro, After Effects, CapCut, DaVinci, Final Cut**…
+
+### 📡 Abonnements & 🎮 Discord Rich Presence
+- Surveillance automatique de chaînes, téléchargement des nouvelles vidéos
+- Statut Discord dynamique selon l'onglet actif
 
 <br/>
 
-## 📸 Aperçu
-
-| Téléchargements | Convertisseur | Interpolateur IA |
-|:---:|:---:|:---:|
-| File d'attente intelligente | Conversion tous formats | RIFE-NCNN 60FPS |
-| Qualité jusqu'au 4K | Tags ID3 & pochette | Barre de progression |
-| 1000+ sites supportés | Drag & drop | Préréglages rapides |
+## ⚙️ Paramètres (réellement fonctionnels)
+Téléchargements (audio, miniatures, métadonnées, SponsorBlock, cookies navigateur, args yt-dlp perso…), **apparence** (thèmes Sombre/AMOLED/Minuit/Clair + 7 accents), **système** (lancement au démarrage, notifications, vidage du cache, proxy + test), **IA & performance** (GPU & dossier de sortie par défaut). Tout est persisté et appliqué au moteur.
 
 <br/>
 
 ## 💻 Installation
 
-### Prérequis
-- **Windows 10/11** (64-bit)
-- **GPU** compatible Vulkan (recommandé pour l'interpolation IA)
-- Connexion Internet (pour le premier lancement)
+1. **Téléchargez** le dernier installateur → [**Orbit Setup.exe**](https://github.com/ThomasDM40-dev/orbit-releases/releases/latest)
+2. **Lancez** l'installateur (Windows 10/11 64-bit). Un **GPU Vulkan** (NVIDIA/AMD/Intel) est recommandé pour l'IA.
+3. Orbit télécharge automatiquement les moteurs nécessaires au premier usage. Mises à jour automatiques intégrées.
 
-### Installation rapide
-
-1. **Téléchargez** le dernier installateur :
-
-   👉 [**Orbit Setup.exe**](https://github.com/ThomasDM40-dev/orbit-releases/releases/latest)
-
-2. **Lancez** l'installateur et suivez les instructions
-3. **C'est prêt !** Orbit télécharge automatiquement FFmpeg et yt-dlp au premier démarrage
-
-### Mise à jour
-Orbit se met à jour automatiquement ! Vous pouvez aussi vérifier manuellement :
-> **Paramètres** → **À Propos** → **🔍 Vérifier les mises à jour**
+### Construire depuis les sources
+```bash
+npm install
+npm run dev            # développement (Vite + Electron)
+npm run electron:build # build de l'installateur Windows
+```
 
 <br/>
 
-## 🛠️ Stack Technique
+## 🛠️ Stack technique
 
-| Technologie | Utilisation |
+| Technologie | Rôle |
 |:---|:---|
-| **Electron** | Framework desktop cross-platform |
-| **React 19** | Interface utilisateur |
-| **TypeScript** | Typage statique |
-| **Tailwind CSS 4** | Styling utility-first |
-| **Framer Motion** | Animations fluides |
-| **yt-dlp** | Moteur de téléchargement (1000+ sites) |
-| **FFmpeg** | Conversion audio/vidéo |
-| **RIFE-NCNN** | Interpolation IA (GPU Vulkan) |
-| **discord-rpc** | Discord Rich Presence |
-| **electron-updater** | Mises à jour automatiques |
+| **Electron + React 19 + TypeScript** | Application desktop & UI |
+| **Vite 8 · Tailwind CSS 4 · Framer Motion** | Build & design « Liquid Glass » |
+| **yt-dlp · FFmpeg** | Téléchargement & conversion |
+| **Real-ESRGAN · RIFE (ncnn-Vulkan)** | Upscale & interpolation IA |
+| **HandBrakeCLI** | Compression / transcodage |
+| **whisper.cpp** | Transcription locale |
+| **Topaz Video AI** | Modèles IA propriétaires (licence requise) |
+| **electron-updater · discord-rpc** | MAJ auto & Rich Presence |
 
 <br/>
 
-## 📦 Structure du Projet
+## 📦 Structure du projet
 
 ```
 orbit/
-├── main.js              # Process principal Electron
+├── main.js              # Process principal Electron (IPC, moteurs)
 ├── preload.js           # Bridge IPC sécurisé
+├── enhance.js           # Moteur libre (Real-ESRGAN + RIFE + ffmpeg)
+├── handbrake.js         # Bridge HandBrakeCLI
+├── topaz.js             # Bridge Topaz Video AI
+├── transcription.js     # Whisper → formats d'export
+├── changelog.html       # Notes de version in-app
 ├── src/
-│   ├── App.tsx           # Application principale
-│   ├── components/
-│   │   ├── DownloadInterface.tsx   # Téléchargeur
-│   │   ├── Converter.tsx           # Convertisseur & Tags
-│   │   ├── AIInterpolator.tsx      # Interpolateur IA
-│   │   ├── Subscriptions.tsx       # Abonnements
-│   │   ├── SettingsModal.tsx       # Paramètres
-│   │   └── ImportModal.tsx         # Import fichiers
-│   └── index.css         # Styles globaux & thèmes
-├── public/
-│   └── icon.ico          # Icône application
-└── package.json          # Configuration & build
+│   ├── App.tsx
+│   └── components/       # DownloadInterface, Converter, OrbitEnhance,
+│                         # HandBrake, TopazVideoAI, Transcription,
+│                         # AIInterpolator, Subscriptions, SettingsModal…
+└── package.json
 ```
 
 <br/>
 
-## ⌨️ Raccourcis Clavier
-
-| Raccourci | Action |
-|:---|:---|
-| `Ctrl + V` | Coller une URL et lancer le téléchargement |
-| `Ctrl + O` | Ouvrir le dossier de téléchargements |
-| `Ctrl + ,` | Ouvrir les paramètres |
-| `Ctrl + I` | Importer un fichier |
-| `Ctrl + T` | Terminal intégré |
-| `Escape` | Fermer la fenêtre active |
+## ⌨️ Raccourcis clavier
+`Ctrl + ,` Paramètres · `Ctrl + I` Importer · `Escape` Fermer
 
 <br/>
 
 ## 🗺️ Roadmap
 
-- [x] Téléchargeur multimédia (1000+ sites)
-- [x] Convertisseur audio/vidéo
-- [x] Éditeur de tags ID3
-- [x] Système d'abonnements
-- [x] Interpolateur IA (RIFE-NCNN)
-- [x] Discord Rich Presence
-- [x] Mises à jour automatiques
-- [x] Système de logs
-- [ ] Séparateur de pistes audio (Vocal Remover / Stems)
-- [ ] Générateur de sous-titres (OpenAI Whisper)
-- [ ] Smart Compressor (Discord / WhatsApp)
-- [ ] Upscaling vidéo IA (Real-ESRGAN)
-- [ ] Bibliothèque & lecteur intégré
+- [x] Téléchargeur multimédia (1000+ sites) & convertisseur + tags
+- [x] Interpolation IA (RIFE) & abonnements & Discord Rich Presence
+- [x] Transcription Whisper + export montage (Premiere/AE/CapCut/DaVinci/FCP)
+- [x] Amélioration IA (Real-ESRGAN upscale, restauration, stabilisation)
+- [x] HandBrake intégré (compression pro)
+- [x] Topaz Video AI (licence utilisateur)
+- [x] Paramètres complets + thèmes & couleurs d'accent
+- [ ] Séparateur de pistes audio (stems / vocal remover)
+- [ ] Restauration de visages (GFPGAN)
 - [ ] Support macOS & Linux
 
 <br/>
 
 ## 📄 Changelog
+Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
-### v0.2.8 — *7 Juin 2026*
-- ⚡ Interpolateur IA avec RIFE-NCNN et barre de progression
-- 🎮 Discord Rich Presence dynamique
-- 🔄 Bouton "Vérifier les mises à jour" dans À Propos
-- 🎨 Suppression des scrollbars horizontales
-- 🐛 Fix crash ENOENT sur RIFE
-- 🐛 Fix releases GitHub (Draft → Published)
-
-### v0.1.6 — *7 Juin 2026*
-- 🎨 Design "Liquid Glass" complet
-- ✨ Sélection de texte désactivée
-- 🧹 Suppression de la barre de statut
-
-### v0.1.0 — *6 Juin 2026*
-- 🎉 Première release publique
-- ⬇️ Téléchargeur multimédia
-- 🎬 Convertisseur & éditeur de tags
-- 📡 Système d'abonnements
-
-<br/>
-
-## 🤝 Contribuer
-
-Ce projet est actuellement en développement actif. Les contributions, suggestions et rapports de bugs sont les bienvenus !
-
-1. Ouvrez une **Issue** pour signaler un bug ou proposer une fonctionnalité
-2. Consultez les **Logs** : `Paramètres → À Propos → Voir les Logs`
-
-<br/>
-
-## 📝 Licence
-
-Orbit est un projet propriétaire. Tous droits réservés.
+- **v0.12.0** — Onglet HandBrake (moteur officiel) + code source public sur `main`
+- **v0.11.x** — Amélioration IA (Real-ESRGAN/RIFE) + paramètres refaits et fonctionnels
+- **v0.10.0** — Onglet Topaz Video AI
+- **v0.9.x** — Transcription IA & exports montage
 
 <br/>
 
 ---
 
 <p align="center">
-  <strong>Développé avec ❤️ et beaucoup de ☕</strong>
-  <br/>
+  <strong>Développé avec ❤️ et beaucoup de ☕</strong><br/>
   <sub>© 2026 Orbit — ThomasDM40-dev</sub>
 </p>

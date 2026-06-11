@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbit — Changelog</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink:    #ec4899;
+      --purple:  #a855f7;
+      --green:   #22c55e;
+      --orange:  #f97316;
+      --blue:    #3b82f6;
+      --bg:      #080808;
+      --surface: rgba(255,255,255,0.04);
+      --border:  rgba(255,255,255,0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% -10%, rgba(236,72,153,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 110%, rgba(168,85,247,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(59,130,246,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Hero header ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px 60px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .hero-logo svg { filter: drop-shadow(0 0 16px rgba(236,72,153,0.6)); }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #fff 30%, rgba(236,72,153,0.9) 70%, rgba(168,85,247,0.9) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .hero-sub {
+      font-size: 1rem;
+      color: #6b7280;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      background: rgba(236,72,153,0.12);
+      border: 1px solid rgba(236,72,153,0.3);
+      color: var(--pink);
+    }
+
+    .hero-badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--pink);
+      box-shadow: 0 0 6px var(--pink);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Layout ── */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 60px 24px 120px;
+    }
+
+    /* ── Timeline ── */
+    .timeline {
+      position: relative;
+      padding-left: 36px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--pink), var(--purple), transparent);
+      opacity: 0.3;
+    }
+
+    /* ── Release block ── */
+    .release {
+      position: relative;
+      margin-bottom: 52px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .release:nth-child(1) { animation-delay: 0.05s; }
+    .release:nth-child(2) { animation-delay: 0.10s; }
+    .release:nth-child(3) { animation-delay: 0.15s; }
+    .release:nth-child(4) { animation-delay: 0.20s; }
+    .release:nth-child(5) { animation-delay: 0.25s; }
+    .release:nth-child(6) { animation-delay: 0.30s; }
+
+    /* timeline dot */
+    .release::before {
+      content: '';
+      position: absolute;
+      left: -31px;
+      top: 12px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--pink);
+      box-shadow: 0 0 0 3px rgba(236,72,153,0.2), 0 0 14px rgba(236,72,153,0.5);
+    }
+
+    .release-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .release-version {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff, #9ca3af);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .release-version span {
+      font-family: 'Consolas', 'SF Mono', monospace;
+      font-size: 0.9em;
+    }
+
+    .release-version.latest span {
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .release-date {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #4b5563;
+      font-family: 'Consolas', 'SF Mono', monospace;
+      letter-spacing: 0.04em;
+    }
+
+    .release-badge-latest {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: rgba(236,72,153,0.15);
+      border: 1px solid rgba(236,72,153,0.35);
+      color: var(--pink);
+      vertical-align: middle;
+    }
+
+    /* glass card */
+    .release-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      backdrop-filter: blur(12px);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .release-card:hover {
+      border-color: rgba(236,72,153,0.25);
+      box-shadow: 0 0 30px rgba(236,72,153,0.06), 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    /* category label */
+    .category {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      margin-top: 16px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .category:first-child { margin-top: 0; }
+    .category::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .category.feat  { color: var(--green); }
+    .category.fix   { color: var(--orange); }
+    .category.perf  { color: var(--blue); }
+
+    /* change item */
+    .change {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d1d5db;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .change:last-child { border-bottom: none; }
+
+    .change-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      margin-top: 3px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+    }
+
+    .change-icon.feat  { background: rgba(34,197,94,0.15);  color: var(--green);  }
+    .change-icon.fix   { background: rgba(249,115,22,0.15); color: var(--orange); }
+    .change-icon.perf  { background: rgba(59,130,246,0.15); color: var(--blue);   }
+
+    .change strong { color: #f9fafb; font-weight: 600; }
+
+    /* ── Footer ── */
+    .footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 32px 24px 60px;
+      border-top: 1px solid var(--border);
+      color: #374151;
+      font-size: 0.8rem;
+    }
+
+    .footer a {
+      color: var(--pink);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer a:hover { text-decoration: underline; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(236,72,153,0.4); }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-logo">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="22" stroke="url(#grad)" stroke-width="2"/>
+        <circle cx="24" cy="24" r="12" fill="url(#grad)" opacity="0.15"/>
+        <circle cx="24" cy="24" r="5" fill="url(#grad)"/>
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48">
+            <stop offset="0%" stop-color="#ec4899"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span style="font-size:2rem;font-weight:900;letter-spacing:-0.04em;background:linear-gradient(135deg,#fff,rgba(236,72,153,0.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Orbit</span>
+    </div>
+    <h1 class="hero-title">Changelog</h1>
+    <p class="hero-sub">Historique des versions &amp; nouveautés</p>
+    <div class="hero-badge">
+      <span class="dot"></span>
+      Version actuelle : 0.12.0
+    </div>
+  </header>
+
+  <!-- TIMELINE -->
+  <main class="container">
+    <div class="timeline">
+
+      <!-- v0.12.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version latest">
+            <span>v0.12.0</span>
+            <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">10 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Nouvel onglet « HandBrake » :</strong> le vrai moteur HandBrake (open-source) intégré à Orbit — téléchargé et piloté automatiquement, accessible à tous les membres sans installation manuelle.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Compression pro :</strong> 100+ préréglages HandBrake officiels, encodeurs x264 / x265 / AV1 (SVT) + NVENC matériel, qualité constante (RF) ou débit moyen avec 2-passes, conteneurs MP4 / MKV / WEBM.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Filtres &amp; réglages :</strong> débruitage NLMeans, netteté Lapsharp, désentrelacement decomb, deblock, noir &amp; blanc, rotation, limite de résolution &amp; FPS, audio (copie / AAC / Opus), sous-titres, optimisation web.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Workflow :</strong> file d'attente par lot avec reprise, vignettes &amp; métadonnées, préréglages rapides (YouTube, 4K HEVC, Discord, Archivage, AV1, NVENC) et personnalisés, progression en direct.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon perf">⬡</div>
+            <div><strong>Code source public :</strong> le code principal d'Orbit est désormais publié sur la branche <code>main</code> du dépôt GitHub à chaque release.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.11.2 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.11.2</span>
+          </div>
+          <span class="release-date">10 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Paramètres de l'application — refaits et fonctionnels</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Les paramètres fonctionnent enfin :</strong> ils n'étaient jamais enregistrés ni transmis au moteur. Désormais tout est persisté dans <code>settings.json</code> et appliqué réellement aux téléchargements et à l'IA.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Interface repensée, pro et épurée :</strong> 7 onglets clairs (Général, Téléchargements, Apparence, IA &amp; Performance, Réseau, Système, À propos), cartes, animations.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Téléchargements :</strong> audio seul, intégration miniature/métadonnées/sous-titres, SponsorBlock (marquer/supprimer), archive, limite de vitesse, fragments simultanés, cookies du navigateur, noms restreints, arguments yt-dlp personnalisés.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Apparence :</strong> thèmes (Sombre, AMOLED, Minuit, Clair) + 7 couleurs d'accent appliquées en direct.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Système (réellement fonctionnels) :</strong> lancement au démarrage de Windows, notifications bureau, désactivation de l'accélération matérielle, vidage du cache temporaire (avec taille affichée), ouverture du dossier de données, accélération réseau & test du proxy.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>IA &amp; Performance :</strong> dossier de sortie IA et GPU par défaut, téléchargements simultanés max.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.11.1 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.11.1</span>
+          </div>
+          <span class="release-date">10 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections — « Amélioration IA » : toutes les options fonctionnent</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Audio :</strong> le bouton « Conserver la piste audio » est désormais respecté, et l'audio utilise automatiquement le bon codec selon le conteneur (Opus pour WEBM, AAC ailleurs).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Conteneur / codec :</strong> les combinaisons impossibles sont corrigées automatiquement (H.264→WEBM, ProRes→MP4, AV1→MOV…) vers un conteneur compatible. Seuls les codecs réellement encodables par votre machine sont proposés.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Device :</strong> l'upscale (Real-ESRGAN) et l'interpolation (RIFE) nécessitent un GPU Vulkan ; le mode CPU s'applique maintenant correctement à l'encodage uniquement, avec repli d'encodeur automatique.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Validé de bout en bout :</strong> chaque modèle d'upscale (×2/×4/×8 + résolutions), chaque filtre de restauration, la stabilisation, l'interpolation, la netteté et les 40 combinaisons codec × conteneur × audio ont été testés et fonctionnent.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.11.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.11.0</span>
+          </div>
+          <span class="release-date">10 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Nouvel onglet « Amélioration IA » — gratuit pour tous les membres :</strong> un moteur 100 % libre et redistribuable, sans aucune licence tierce. Real-ESRGAN s'installe automatiquement à la première utilisation (~45 Mo).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Upscale IA</strong> (Real-ESRGAN : Vidéo / Photo / Anime) jusqu'à 8×, résolutions cibles 720p→8K, gestion VRAM (tile size) et mode TTA qualité maximale.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Restauration vidéo pro :</strong> débruitage temporel + spatial, récupération de compression (deblock), anti-banding, récupération de détail, désentrelacement, et correction colorimétrique (luminosité / contraste / saturation / gamma).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Stabilisation 2-passes (vidstab)</strong> avec lissage de trajectoire, sensibilité, zoom auto — et <strong>interpolation d'images (RIFE)</strong> jusqu'à 120 fps + ralenti IA.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Workflow pro :</strong> chaînage complet débruit → upscale → interpolation → netteté (CAS), file d'attente par lot avec reprise, préréglages (Anime, Gaming, Film, Vieilles vidéos, TikTok, Qualité Max…), comparaison Avant/Après + zoom, moniteur GPU/VRAM/CPU/RAM, encodage NVENC, export H.264/H.265/AV1/VP9/ProRes.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Pipeline validé de bout en bout</strong> sur le vrai matériel : upscale, restauration, stabilisation, interpolation et combos testés et fonctionnels.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.10.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.10.0</span>
+          </div>
+          <span class="release-date">10 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Nouvel onglet « Topaz Video AI » :</strong> Orbit pilote désormais votre installation Topaz Video AI directement depuis l'interface — plus besoin d'ouvrir Topaz. Détection automatique du moteur, de vos modèles installés et de votre GPU.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Tous les modèles IA Topaz :</strong> Proteus (réglages manuels complets : compression, détail, netteté, bruit, dehalo, anti-alias, grain), Iris, Artemis, Gaia, Nyx, Dione, Theia, Rhea, Hyperion… La liste se construit automatiquement selon les modèles installés (architecture extensible).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Upscale, Interpolation & Stabilisation :</strong> Échelles 1× à 8× + résolutions cibles (720p → 8K), interpolation d'images (Chronos, Apollo, Aion) jusqu'à 120 fps avec ralenti IA, et stabilisation IA en 2 passes (analyse du mouvement + correction, rolling shutter inclus).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>File d'attente & traitement par lot :</strong> Glisser-déposer multi-fichiers, vignettes, métadonnées (résolution, FPS, codec, durée, taille), réglages globaux ou par fichier, reprise automatique après fermeture, et préréglages (Anime, Gaming, YouTube, TikTok, Film, Qualité Max…) personnalisables.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Aperçu Avant/Après & moniteur GPU :</strong> Comparaison split en temps réel avec zoom, génération d'aperçu rapide (3 s), et suivi en direct GPU / VRAM / CPU / RAM. Encodage matériel NVENC automatique, export H.264 / H.265 / AV1 / ProRes.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Robustesse :</strong> Tous les paramètres sont validés et bornés avant lancement, gestion d'erreurs GPU/mémoire explicite, et l'interface ne se bloque jamais pendant le rendu.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.9.4 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.9.4</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Transcription — erreur « code 3 » (vrai fix) :</strong> Le moteur Const-me Whisper téléchargé ne reconnaissait pas le flag <code>-osrt</code> (propre à whisper.cpp), ce qui causait l'erreur code 3. Orbit détecte désormais automatiquement si le binary installé est incompatible, le supprime et télécharge la CLI officielle <strong>whisper.cpp</strong> (ggerganov) qui est 100 % compatible avec les modèles ggml.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.9.3 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.9.3</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Transcription — erreur « code 3 » :</strong> Whisper échouait à charger le modèle (code 3) à cause d'un fichier modèle incomplet réutilisé. Orbit valide désormais la taille du modèle, re-télécharge automatiquement s'il est corrompu, et affiche l'erreur réelle de Whisper au lieu d'un simple code.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.9.2 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.9.2</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Transcription — Whisper introuvable :</strong> L'installation téléchargeait <code>WhisperDesktop.zip</code> (interface graphique, sans <code>main.exe</code>). Orbit récupère désormais <code>cli.zip</code> qui contient la véritable ligne de commande, avec validation de la taille et plusieurs URL de secours.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.9.1 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.9.1</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Barre de chargement « Liquid Glass » :</strong> Nouvelle barre de progression fluide façon Apple — faisceau lumineux rose/violet/bleu glissant sur un verre dépoli, affichée pendant les tâches globales.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Menu Onglets animé :</strong> Le menu de gestion des onglets s'ouvre et se ferme avec une animation fluide (framer-motion) et se referme automatiquement au clic en dehors.</div>
+          </div>
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Onglet Crunchyroll retiré :</strong> Le téléchargement Crunchyroll ne fonctionnait pas (DRM Widevine) — l'onglet a été supprimé et nettoyé automatiquement de la configuration existante.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.9.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.9.0</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveauté majeure</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Transcription IA complète :</strong> Nouvel onglet 📝 Transcription. Transcris n'importe quelle vidéo/audio par IA (Whisper), puis exporte vers <strong>Premiere Pro</strong> (.srt), <strong>After Effects</strong> (script .jsx créant les calques texte), <strong>CapCut</strong>, <strong>DaVinci Resolve</strong> (.srt), <strong>Final Cut</strong> (.fcpxml), YouTube/Web (.srt + .vtt), sous-titres stylés (.ass), texte (.txt), données (.json/.csv) et paroles (.lrc).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Modèles IA au choix :</strong> Base, Small, Medium ou Large v3, téléchargés à la demande. Choix de la langue (ou détection auto) parmi 12 langues.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Incrustation de sous-titres :</strong> Option pour graver les sous-titres directement dans la vidéo (police, taille, couleur réglables).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.9 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.9</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Interpolation IA — vitesse corrigée :</strong> Les multiplicateurs x4/x8 accéléraient ou ralentissaient la vidéo. Le mauvais flag RIFE (<code>-s</code>) est remplacé par <code>-n</code> (nombre de frames exact) et le framerate de sortie est calculé sans arrondi. La vidéo garde désormais sa vitesse d'origine, parfaitement synchronisée.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Audio & framerate :</strong> Extraction en framerate constant (CFR), détection précise du fps source, audio conservé sans désynchronisation sur les vidéos 23.976/29.97 fps.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.8 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.8</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Page d'accueil du navigateur :</strong> La page d'accueil restait noire (<code>data:</code> URI bloqué dans le webview). Elle est désormais un vrai overlay HTML natif — toujours affichée, avec recherche et 12 accès rapides.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.7 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.7</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveauté</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Nom de fichier = titre de la vidéo :</strong> Les vidéos captées par le sniffer sont nommées d'après le vrai titre de la page (au lieu d'un hash d'URL). Le titre est nettoyé des caractères interdits et affiché partout — dans la file et sur le fichier final.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.6 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.6</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Téléchargement des flux protégés (Mux, etc.) :</strong> Les CDN vérifient le Referer du domaine. Orbit capture désormais le vrai Referer de la page (et l'Origin) au lieu de l'URL du flux, ce qui débloque les téléchargements qui échouaient en erreur.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Cookies automatiques :</strong> Fusion des cookies du domaine média et du domaine de la page, écrits dans un fichier au format Netscape — plus besoin d'activer manuellement les cookies.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Format HLS & logs :</strong> Sélecteur de format adapté aux flux directs (les filtres mp4 cassaient les variantes HLS) et erreurs yt-dlp désormais visibles dans les logs.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.5 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.5</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Cookies Chrome :</strong> Orbit vérifie maintenant que Chrome est installé avant de passer <code>--cookies-from-browser</code> à yt-dlp, supprimant l'erreur parasite « could not find chrome cookies database ».</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.4 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.4</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Cookies au format Netscape :</strong> Les cookies sont écrits dans un fichier temporaire (<code>--cookies</code>) plutôt que via <code>--add-header</code>, plus fiable pour les longues sessions.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.2 / v0.8.3 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.2 — 0.8.3</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveauté</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Navigateur personnalisé « Orbit Browser » :</strong> Le sniffer devient un vrai navigateur intégré — barre d'adresse, navigation, bouton « Analyser », détection automatique des vidéos sur n'importe quel site, et téléchargement en un clic.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Rendu du webview corrigé :</strong> Zone de contenu qui restait noire — résolu (flexbox <code>min-height</code>).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.1 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.1</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Antivirus :</strong> Suppression du téléchargement de binaires à l'exécution (comportement type « dropper » qui déclenchait l'antivirus). Orbit utilise désormais les binaires signés et embarqués (yt-dlp, ffmpeg) via <code>asarUnpack</code>.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.8.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.8.0</span></div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveauté</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Téléchargeur Crunchyroll :</strong> Ajout d'un onglet dédié (retiré depuis en v0.9.1, le contenu principal étant protégé par DRM Widevine).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.9 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.7.9</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Téléchargeur — yt-dlp ENOENT :</strong> Les téléchargements échouaient avec <code>spawn ... yt-dlp.exe ENOENT</code> car le binaire était cherché dans l'archive <code>.asar</code> (non exécutable). yt-dlp est maintenant correctement redirigé vers la version locale dans <code>~/.orbit/</code> dès qu'elle est disponible.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.8 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.7.8</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveau</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Convertisseur — Dossier de sortie personnalisé :</strong> Ajout d'un bouton "Dossier de sortie" permettant de choisir dans quel dossier enregistrer les fichiers convertis. Un bouton de réinitialisation remet le comportement par défaut (même dossier que la source).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.7 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.7.7</span>
+          </div>
+          <span class="release-date">9 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Convertisseur — Extensions fichiers :</strong> Les formats AI Studio et Smart Compressor généraient des extensions invalides (ex: <code>.compress_discord</code>). Corrigé avec une table de correspondance explicite.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Convertisseur — Messages d'erreur :</strong> Les erreurs de conversion s'affichent désormais directement sous le fichier concerné au lieu d'afficher uniquement "Erreur".</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>AI Upscaler (RIFE) — Son perdu :</strong> La vidéo 60FPS produite par RIFE était silencieuse. L'audio original est désormais remappé dans le fichier final.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Convertisseur — Éditeur de tags :</strong> La section Titre/Artiste/Album/Pochette ne s'affiche plus pour les formats AI et Smart Compressor où elle était ignorée.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Convertisseur — Bouton Parcourir :</strong> Ajout d'un bouton "Parcourir les fichiers" dans la zone de dépôt pour sélectionner des fichiers sans glisser-déposer.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.3 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.7.3</span>
+          </div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Liens web mis à jour :</strong> Les boutons "Donate to Orbit", "Open Orbit Homepage" et "GitHub" redirigent désormais vers <a href="https://skeavisuals.com" style="color:var(--pink)">skeavisuals.com</a>.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.2 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.7.2</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Modale Changelog :</strong> Nouvelle fenêtre en glassmorphism "Morph Glass Liquid" accessible depuis les paramètres, avec timeline verticale et icônes de catégories.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>CHANGELOG.md :</strong> Fichier d'historique complet créé pour tracer toutes les versions.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>README.md :</strong> Documentation entièrement réécrite pour décrire Orbit correctement.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>release.bat :</strong> Script de publication automatique — double-cliquez pour publier une nouvelle version sans l'agent.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.1 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.7.1</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Convertisseur :</strong> Orbit utilise désormais son moteur FFmpeg interne par défaut si l'utilisateur n'a pas encore mis à jour manuellement les moteurs. Fin des conversions silencieusement bloquées.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.7.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.7.0</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Convertisseur — dossier de sortie :</strong> Si aucun dossier de destination n'est configuré dans les paramètres, le fichier converti est enregistré automatiquement dans le même dossier que le fichier source.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.6.9 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.6.9</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Sniffer Patreon/Mux :</strong> Refonte majeure du filtre. Seul le flux maître est conservé — les "renditions" secondaires (audio séparé, variantes de qualité) sont ignorées pour éviter les doublons.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Remuxing automatique en MP4 :</strong> Les flux HLS (.m3u8) sont désormais automatiquement assemblés et remuxés en un seul fichier .mp4 propre.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.6.8 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.6.8</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Panneau de Logs :</strong> Capture et affichage des erreurs internes de yt-dlp directement dans l'interface. Vous pouvez maintenant voir pourquoi un téléchargement a échoué.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.6.6 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.6.6</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Corrections</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>UnhandledRejection :</strong> Capture silencieuse du crash yt-dlp qui empêchait les logs de s'afficher.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Cookies Chrome :</strong> Si le Sniffer intercepte déjà les cookies de session (ex: Patreon), la recherche dans la base de données Google Chrome est désactivée — évite le crash sur les systèmes sans Chrome.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.6.5 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version"><span>v0.6.5</span></div>
+          <span class="release-date">8 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouveautés</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Persistance des Logs :</strong> Le panneau de logs conserve l'historique entre les sessions.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Bouton d'erreur UI :</strong> Un bouton rouge "Erreur — Voir logs" apparaît sous la vidéo quand un téléchargement échoue.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /timeline -->
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p>Orbit est développé par <a href="https://skeavisuals.com">Skea Visuals</a>. Tous droits réservés.</p>
+    <p style="margin-top:8px;">Pour signaler un bug ou suggérer une fonctionnalité, visitez <a href="https://skeavisuals.com">skeavisuals.com</a>.</p>
+  </footer>
+
+</body>
+</html>

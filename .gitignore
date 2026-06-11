@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+out/
+build/win-unpacked/
+
+# Secrets & local config (never commit)
+release.bat
+*.local
+.env
+.env.*
+
+# Temp / scratch
+tmp_upload.json
+*.tmp
+*.log
+00000001.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

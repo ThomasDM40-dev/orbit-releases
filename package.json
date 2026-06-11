@@ -1,0 +1,92 @@
+{
+    "name":  "frontend",
+    "version":  "0.12.0",
+    "private":  true,
+    "main":  "main.js",
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "vite build",
+                    "start":  "vite preview",
+                    "electron:dev":  "concurrently -k \"npm run dev\" \"wait-on tcp:5173 \u0026\u0026 electron .\"",
+                    "electron:build":  "npm run build \u0026\u0026 electron-builder build --win",
+                    "lint":  "eslint ."
+                },
+    "build":  {
+                  "appId":  "com.orbit.app",
+                  "productName":  "Orbit",
+                  "directories":  {
+                                      "output":  "release"
+                                  },
+                  "files":  [
+                                "dist/**/*",
+                                "main.js",
+                                "preload.js",
+                                "browser.html",
+                                "browser-preload.js",
+                                "transcription.js",
+                                "topaz.js",
+                                "enhance.js",
+                                "handbrake.js",
+                                "package.json",
+                                "changelog.html"
+                            ],
+                  "asarUnpack":  [
+                                    "node_modules/youtube-dl-exec/bin/**",
+                                    "node_modules/ffmpeg-static/**",
+                                    "node_modules/@ffmpeg-installer/**"
+                                ],
+                  "win":  {
+                              "target":  [
+                                             "nsis"
+                                         ],
+                              "icon":  "public/icon.ico",
+                              "requestedExecutionLevel":  "asInvoker",
+                              "signAndEditExecutable":  true
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "installerSidebar":  "build/installerSidebar.bmp",
+                               "uninstallerSidebar":  "build/installerSidebar.bmp",
+                               "installerHeader":  "build/installerHeader.bmp",
+                               "unicode":  true,
+                               "warningsAsErrors":  false
+                           },
+                  "publish":  [
+                                  {
+                                      "provider":  "github",
+                                      "owner":  "ThomasDM40-dev",
+                                      "repo":  "orbit-releases",
+                                      "releaseType":  "release"
+                                  }
+                              ]
+              },
+    "dependencies":  {
+                         "discord-rpc":  "^4.0.1",
+                         "electron-is-dev":  "^3.0.1",
+                         "electron-serve":  "^3.0.1",
+                         "electron-updater":  "^6.8.9",
+                         "ffmpeg-static":  "^5.3.0",
+                         "framer-motion":  "^12.40.0",
+                         "lucide-react":  "^1.16.0",
+                         "react":  "19.2.4",
+                         "react-dom":  "19.2.4",
+                         "youtube-dl-exec":  "^3.1.7"
+                     },
+    "devDependencies":  {
+                            "@tailwindcss/postcss":  "^4",
+                            "@tailwindcss/vite":  "^4.3.0",
+                            "@types/node":  "^20",
+                            "@types/react":  "^19",
+                            "@types/react-dom":  "^19",
+                            "@vitejs/plugin-react":  "^6.0.2",
+                            "concurrently":  "^9.2.1",
+                            "electron":  "^42.2.0",
+                            "electron-builder":  "^26.8.1",
+                            "eslint":  "^9",
+                            "tailwindcss":  "^4",
+                            "typescript":  "^5",
+                            "vite":  "^8.0.14",
+                            "wait-on":  "^9.0.10"
+                        }
+}

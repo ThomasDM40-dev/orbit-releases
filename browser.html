@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Orbit Browser</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: #060608;
+    color: #e5e7eb;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Toolbar ─────────────────────────────────────────────────────── */
+  #toolbar {
+    height: 48px;
+    min-height: 48px;
+    background: #0a0a12;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    flex-shrink: 0;
+    -webkit-app-region: no-drag;
+  }
+
+  .logo-mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, rgba(236,72,153,0.3), rgba(168,85,247,0.3));
+    border: 1px solid rgba(236,72,153,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+
+  .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.07); flex-shrink: 0; margin: 0 2px; }
+
+  .nav-btn {
+    width: 30px; height: 30px; border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: #5b6278;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+  }
+  .nav-btn svg { width: 14px; height: 14px; }
+  .nav-btn:hover:not([disabled]) { background: rgba(255,255,255,0.08); color: #e5e7eb; }
+  .nav-btn[disabled] { opacity: 0.2; cursor: default; pointer-events: none; }
+
+  /* URL bar */
+  #url-wrap {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 9px;
+    padding: 0 10px; height: 33px; gap: 7px;
+    cursor: text;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #url-wrap:focus-within {
+    border-color: rgba(236,72,153,0.55);
+    background: rgba(255,255,255,0.07);
+  }
+  #url-lock { font-size: 11px; flex-shrink: 0; color: #374151; }
+  #url-input {
+    flex: 1; min-width: 0;
+    background: none; border: none; outline: none;
+    color: #e5e7eb; font-size: 13px;
+    -webkit-user-select: text; user-select: text;
+  }
+  #url-input::placeholder { color: #2d3748; }
+
+  /* Analyze button */
+  #btn-analyze {
+    flex-shrink: 0; height: 30px; padding: 0 13px;
+    border-radius: 8px;
+    border: 1px solid rgba(236,72,153,0.3);
+    background: rgba(236,72,153,0.1);
+    color: #ec4899; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.13s;
+  }
+  #btn-analyze:hover:not([disabled]) { background: rgba(236,72,153,0.2); }
+  #btn-analyze[disabled] { opacity: 0.4; cursor: default; }
+
+  /* ── Detection banner ────────────────────────────────────────────── */
+  #det-bar {
+    min-height: 0; max-height: 0; overflow: hidden;
+    background: rgba(236,72,153,0.08);
+    border-bottom: 1px solid transparent;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px;
+    flex-shrink: 0;
+    transition: max-height 0.2s ease, padding 0.2s ease, border-color 0.2s;
+  }
+  #det-bar.show {
+    max-height: 44px;
+    padding: 9px 14px;
+    border-color: rgba(236,72,153,0.2);
+  }
+  .det-icon { font-size: 17px; flex-shrink: 0; }
+  .det-text { flex: 1; min-width: 0; }
+  .det-title { font-size: 12px; font-weight: 600; color: #f3f4f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .det-sub   { font-size: 10px; color: #6b7280; margin-top: 1px; }
+  #btn-dl {
+    flex-shrink: 0; padding: 5px 13px;
+    border-radius: 7px; border: none;
+    background: linear-gradient(135deg, #ec4899, #a855f7);
+    color: #fff; font-size: 11px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(236,72,153,0.35);
+    transition: opacity 0.12s;
+  }
+  #btn-dl:hover { opacity: 0.85; }
+  #btn-dismiss {
+    flex-shrink: 0; background: none; border: none;
+    color: #4b5563; cursor: pointer; font-size: 15px;
+    padding: 3px 5px; border-radius: 5px;
+    transition: color 0.12s, background 0.12s;
+  }
+  #btn-dismiss:hover { color: #9ca3af; background: rgba(255,255,255,0.05); }
+
+  /* ── Content area (webview + home overlay) ──────────────────────── */
+  #content {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+  }
+  webview {
+    display: flex;   /* required */
+    flex: 1 1 0;     /* grow + shrink, basis 0 */
+    min-height: 0;   /* allow shrinking below content */
+    width: 100%;
+    border: none;
+  }
+
+  /* ── Home overlay ───────────────────────────────────────────────── */
+  #home {
+    position: absolute; inset: 0; z-index: 5;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(168,85,247,0.10), transparent 60%), #060608;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start;
+    gap: 26px; padding: 56px 40px; overflow-y: auto;
+  }
+  #home.hidden { display: none; }
+
+  .home-hero { text-align: center; }
+  .home-logo {
+    width: 60px; height: 60px; margin: 0 auto 14px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(236,72,153,0.25), rgba(168,85,247,0.25));
+    border: 1px solid rgba(236,72,153,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    box-shadow: 0 8px 40px rgba(168,85,247,0.25);
+  }
+  .home-title {
+    font-size: 30px; font-weight: 800; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ec4899, #a855f7);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .home-sub { color: #5b6278; font-size: 13px; margin-top: 8px; }
+  .home-sub strong { color: #ec4899; font-weight: 600; }
+
+  .home-search {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; max-width: 600px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 6px 6px 6px 16px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .home-search:focus-within { border-color: rgba(236,72,153,0.55); background: rgba(255,255,255,0.07); }
+  .home-search-icon { font-size: 14px; color: #4b5563; flex-shrink: 0; }
+  .home-search input {
+    flex: 1; min-width: 0; background: none; border: none; outline: none;
+    color: #e5e7eb; font-size: 14px; padding: 8px 0;
+  }
+  .home-search input::placeholder { color: #374151; }
+  .home-search button {
+    flex-shrink: 0; padding: 10px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #ec4899, #a855f7);
+    color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+    transition: opacity 0.12s;
+  }
+  .home-search button:hover { opacity: 0.88; }
+
+  .home-section {
+    width: 100%; max-width: 720px;
+    color: #374151; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .home-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 10px; width: 100%; max-width: 720px;
+  }
+  .home-card {
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 16px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 9px;
+    cursor: pointer; color: #9ca3af; font-size: 12px; font-weight: 500;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  }
+  .home-card:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(236,72,153,0.35);
+    color: #f3f4f6; transform: translateY(-2px);
+  }
+  .home-card .ic { font-size: 26px; }
+
+  /* ── Status bar ──────────────────────────────────────────────────── */
+  #statusbar {
+    height: 20px; min-height: 20px;
+    background: #040408;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    display: flex; align-items: center;
+    padding: 0 10px; gap: 6px;
+    flex-shrink: 0;
+  }
+  #loading-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #ec4899; flex-shrink: 0; display: none;
+    animation: blink 0.9s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+  #status-text { font-size: 10px; color: #2d3748; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Toast ───────────────────────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: rgba(12,12,20,0.96); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 8px 18px;
+    font-size: 12px; color: #9ca3af;
+    display: none; white-space: nowrap;
+    backdrop-filter: blur(16px); z-index: 999;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <div class="logo-mark">🌐</div>
+  <div class="sep"></div>
+
+  <!-- Back -->
+  <button class="nav-btn" id="btn-back" disabled onclick="goBack()" title="Retour (Alt+←)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </button>
+
+  <!-- Forward -->
+  <button class="nav-btn" id="btn-fwd" disabled onclick="goFwd()" title="Suivant (Alt+→)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </button>
+
+  <!-- Refresh / Stop -->
+  <button class="nav-btn" id="btn-refresh" onclick="doRefresh()" title="Actualiser (F5)">
+    <svg id="ico-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/>
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+    <svg id="ico-stop" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Home -->
+  <button class="nav-btn" id="btn-home" onclick="goHome()" title="Page d'accueil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </button>
+
+  <div class="sep"></div>
+
+  <!-- URL bar -->
+  <div id="url-wrap" onclick="urlInput.focus()">
+    <span id="url-lock">🔒</span>
+    <input id="url-input" type="text" autocomplete="off" spellcheck="false"
+           placeholder="Entrez une adresse ou recherchez sur Google…" />
+  </div>
+
+  <!-- Analyze -->
+  <button id="btn-analyze" onclick="analyzePage()" title="Vérifier si cette page est téléchargeable avec yt-dlp">
+    🔍 Analyser
+  </button>
+</div>
+
+<!-- ── Detection banner ── -->
+<div id="det-bar">
+  <span class="det-icon">🎬</span>
+  <div class="det-text">
+    <div class="det-title" id="det-title">Vidéo détectée</div>
+    <div class="det-sub"  id="det-sub"></div>
+  </div>
+  <button id="btn-dl" onclick="downloadDetected()">⬇ Télécharger</button>
+  <button id="btn-dismiss" onclick="dismissDetection()" title="Ignorer">✕</button>
+</div>
+
+<!-- ── Web content ── -->
+<div id="content">
+  <webview id="wv" partition="persist:sniffer" allowpopups src="about:blank"></webview>
+
+  <!-- Native home page overlay (not loaded inside the webview) -->
+  <div id="home">
+    <div class="home-hero">
+      <div class="home-logo">🌐</div>
+      <h1 class="home-title">Orbit Browser</h1>
+      <p class="home-sub">Navigue vers une page vidéo, puis clique <strong>🔍 Analyser</strong> pour la télécharger</p>
+    </div>
+
+    <form class="home-search" id="home-form">
+      <span class="home-search-icon">🔍</span>
+      <input id="home-q" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Rechercher sur Google ou saisir une adresse…" />
+      <button type="submit">Aller</button>
+    </form>
+
+    <div class="home-section">Accès rapides</div>
+    <div class="home-grid" id="home-grid"></div>
+  </div>
+</div>
+
+<!-- ── Status bar ── -->
+<div id="statusbar">
+  <div id="loading-dot"></div>
+  <div id="status-text">Orbit Browser · Prêt</div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<script>
+// ── Elements ──────────────────────────────────────────────────────────────────
+const wv         = document.getElementById('wv');
+const urlInput   = document.getElementById('url-input');
+const detBar     = document.getElementById('det-bar');
+const detTitle   = document.getElementById('det-title');
+const detSub     = document.getElementById('det-sub');
+const statusEl   = document.getElementById('status-text');
+const loadDot    = document.getElementById('loading-dot');
+const urlLock    = document.getElementById('url-lock');
+const icoRefresh = document.getElementById('ico-refresh');
+const icoStop    = document.getElementById('ico-stop');
+
+const home     = document.getElementById('home');
+
+let detected  = null;
+let isLoading = false;
+
+// ── Home page (native overlay) ────────────────────────────────────────────────
+const QUICK_LINKS = [
+  { ic: '▶',  name: 'YouTube',     url: 'https://www.youtube.com' },
+  { ic: '📺', name: 'Bilibili',    url: 'https://www.bilibili.tv/en' },
+  { ic: '🎮', name: 'Twitch',      url: 'https://www.twitch.tv' },
+  { ic: '🎁', name: 'Patreon',     url: 'https://www.patreon.com' },
+  { ic: '🎥', name: 'Vimeo',       url: 'https://vimeo.com' },
+  { ic: '🎵', name: 'TikTok',      url: 'https://www.tiktok.com' },
+  { ic: '📹', name: 'Dailymotion', url: 'https://www.dailymotion.com' },
+  { ic: '🍥', name: 'Crunchyroll', url: 'https://www.crunchyroll.com' },
+  { ic: '🎶', name: 'SoundCloud',  url: 'https://soundcloud.com' },
+  { ic: '📸', name: 'Instagram',   url: 'https://www.instagram.com' },
+  { ic: '🐦', name: 'X / Twitter', url: 'https://x.com' },
+  { ic: '🤖', name: 'Reddit',      url: 'https://www.reddit.com' },
+];
+
+(function buildHome() {
+  const grid = document.getElementById('home-grid');
+  QUICK_LINKS.forEach(l => {
+    const card = document.createElement('div');
+    card.className = 'home-card';
+    card.innerHTML = `<span class="ic">${l.ic}</span>${l.name}`;
+    card.onclick = () => navigate(l.url);
+    grid.appendChild(card);
+  });
+  document.getElementById('home-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const q = document.getElementById('home-q').value.trim();
+    if (q) navigate(q);
+  });
+})();
+
+function showHome() {
+  home.classList.remove('hidden');
+  wv.style.visibility = 'hidden';
+  urlInput.value = '';
+  urlLock.textContent = '🌐';
+  statusEl.textContent = 'Orbit Browser · Prêt';
+  setTimeout(() => { try { document.getElementById('home-q').focus(); } catch(e){} }, 50);
+}
+function hideHome() {
+  home.classList.add('hidden');
+  wv.style.visibility = 'visible';
+}
+function loadHome() { showHome(); }
+
+// ── Startup ───────────────────────────────────────────────────────────────────
+const params  = new URLSearchParams(location.search);
+const initUrl = params.get('url') || '';
+
+if (initUrl) {
+  navigate(initUrl);
+} else {
+  showHome();
+}
+
+// ── IPC ───────────────────────────────────────────────────────────────────────
+window.electronAPI.onVideoDetected(data => {
+  detected = data;
+  detTitle.textContent = data.title || 'Flux vidéo détecté';
+  detSub.textContent   = [data.type, data.site].filter(Boolean).join(' · ');
+  detBar.classList.add('show');
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navigate(url) {
+  url = (url || '').trim();
+  if (!url) { showHome(); return; }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = (url.includes('.') && !url.includes(' '))
+      ? 'https://' + url
+      : 'https://www.google.com/search?q=' + encodeURIComponent(url);
+  }
+  hideHome();
+  wv.src = url;
+  urlInput.value = url;
+  dismissDetection();
+}
+
+urlInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') navigate(urlInput.value);
+});
+urlInput.addEventListener('focus', () => urlInput.select());
+
+function goBack()  { if (wv.canGoBack())    wv.goBack(); }
+function goFwd()   { if (wv.canGoForward()) wv.goForward(); }
+function goHome()  { showHome(); }
+
+function doRefresh() {
+  if (!home.classList.contains('hidden')) return;   // nothing to refresh on home
+  if (isLoading) { wv.stop(); return; }
+  const url = wv.getURL();
+  if (!url || url === 'about:blank') { showHome(); return; }
+  wv.reload();
+}
+
+// ── Detection / Download ──────────────────────────────────────────────────────
+function dismissDetection() {
+  detBar.classList.remove('show');
+  detected = null;
+}
+
+function downloadDetected() {
+  if (!detected) return;
+  // Always attach the real page title so the file is named after the video.
+  const pageTitle = cleanPageTitle();
+  window.electronAPI.downloadVideo({
+    ...detected,
+    videoTitle: detected.videoTitle || pageTitle,
+    title: detected.videoTitle || pageTitle || detected.title,
+  });
+  showToast('✓ Ajouté à la file de téléchargement dans Orbit');
+  dismissDetection();
+}
+
+async function analyzePage() {
+  const url = wv.getURL();
+  if (!url || url.startsWith('data:') || url === 'about:blank') {
+    showToast('Navigue d\'abord vers une page vidéo');
+    return;
+  }
+
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  statusEl.textContent = 'Analyse de la page en cours…';
+
+  const info = await window.electronAPI.analyzeUrl(url).catch(() => null);
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Analyser';
+
+  if (info && info.title) {
+    const cookies = '';
+    detected = { url, title: info.title, videoTitle: info.title, type: info.extractor || 'yt-dlp', cookies, referer: url };
+    detTitle.textContent = info.title;
+    detSub.textContent   = info.extractor ? 'Extractor : ' + info.extractor : 'Vidéo trouvée via yt-dlp';
+    detBar.classList.add('show');
+    statusEl.textContent = '✓ ' + info.title;
+  } else {
+    showToast('✗ Aucune vidéo téléchargeable (Netflix / Amazon = DRM non supporté)');
+    statusEl.textContent = '✗ Page non supportée par yt-dlp';
+  }
+}
+
+// Report the current page (title + url) to the main process so downloads are
+// named after the real video page, not the stream-URL hash.
+function cleanPageTitle() {
+  let title = (wv.getTitle() || '').trim();
+  // Strip common site suffixes ("… - YouTube", "… | Bilibili", …)
+  title = title.replace(/\s*[-|–—]\s*(YouTube|Bilibili[^-|]*|Twitch|Vimeo|Dailymotion|TikTok|Crunchyroll|Patreon|SoundCloud|Reddit)\s*$/i, '').trim();
+  return title;
+}
+function reportPage() {
+  try {
+    const url = wv.getURL();
+    if (!url || url.startsWith('data:') || url === 'about:blank') return;
+    window.electronAPI.reportPage({ url, title: cleanPageTitle() });
+  } catch (e) {}
+}
+
+// ── Webview events ────────────────────────────────────────────────────────────
+wv.addEventListener('did-navigate', e => {
+  const url = e.url;
+  if (!url || url.startsWith('data:')) {
+    urlInput.value = '';
+    urlLock.textContent = '🌐';
+  } else {
+    urlInput.value = url;
+    urlLock.textContent = url.startsWith('https://') ? '🔒' : '⚠️';
+  }
+  dismissDetection();
+  syncNav();
+  reportPage();
+});
+
+wv.addEventListener('did-navigate-in-page', e => {
+  if (!e.isMainFrame) return;
+  const url = e.url;
+  if (url && !url.startsWith('data:')) {
+    urlInput.value = url;
+    urlLock.textContent = url.startsWith('https://') ? '🔒' : '⚠️';
+  }
+  syncNav();
+});
+
+wv.addEventListener('did-start-loading', () => {
+  isLoading = true;
+  loadDot.style.display = 'block';
+  statusEl.textContent = 'Chargement…';
+  icoRefresh.style.display = 'none';
+  icoStop.style.display = '';
+});
+
+wv.addEventListener('did-stop-loading', () => {
+  isLoading = false;
+  loadDot.style.display = 'none';
+  icoRefresh.style.display = '';
+  icoStop.style.display = 'none';
+  const title = wv.getTitle();
+  const url   = wv.getURL();
+  statusEl.textContent = (title && !url.startsWith('data:')) ? title : 'Orbit Browser · Prêt';
+  syncNav();
+  reportPage();
+});
+
+wv.addEventListener('page-title-updated', e => {
+  if (!wv.getURL().startsWith('data:')) statusEl.textContent = e.title;
+  reportPage();
+});
+
+wv.addEventListener('did-navigate-in-page', () => reportPage());
+
+wv.addEventListener('update-target-url', e => {
+  if (e.url && !e.url.startsWith('data:')) statusEl.textContent = e.url;
+  else statusEl.textContent = wv.getTitle() || 'Orbit Browser · Prêt';
+});
+
+// New window requests from webview — open in same webview
+wv.addEventListener('new-window', e => {
+  if (e.url && !e.url.startsWith('data:')) navigate(e.url);
+});
+
+function syncNav() {
+  document.getElementById('btn-back').disabled = !wv.canGoBack();
+  document.getElementById('btn-fwd').disabled  = !wv.canGoForward();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'l') { urlInput.focus(); urlInput.select(); e.preventDefault(); }
+  if (e.altKey && e.key === 'ArrowLeft')  goBack();
+  if (e.altKey && e.key === 'ArrowRight') goFwd();
+  if (e.key === 'F5') doRefresh();
+  if (e.key === 'Escape') dismissDetection();
+});
+</script>
+</body>
+</html>
