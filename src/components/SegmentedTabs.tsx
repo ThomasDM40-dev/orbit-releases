@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect, type ReactNode } from "react"
 
 interface Tab {
   id: string
@@ -12,6 +12,7 @@ interface SegmentedTabsProps {
   onTabChange: (id: string) => void
   onReorder?: (tabs: Tab[]) => void
   accentColor?: string
+  icons?: Record<string, ReactNode>
 }
 
 export default function SegmentedTabs({
@@ -20,6 +21,7 @@ export default function SegmentedTabs({
   onTabChange,
   onReorder,
   accentColor = "#e879f9",
+  icons,
 }: SegmentedTabsProps) {
   const visibleTabs = tabs.filter(t => t.visible)
   const activeIndex = visibleTabs.findIndex(t => t.id === activeTab)
@@ -102,7 +104,7 @@ export default function SegmentedTabs({
             onDrop={e => { e.preventDefault(); handleDrop(idx) }}
             onDragEnd={() => { setDragIndex(null); setDragOverIndex(null) }}
             onClick={() => onTabChange(tab.id)}
-            className={`relative z-10 shrink-0 px-4 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 select-none whitespace-nowrap ${
+            className={`relative z-10 shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 select-none whitespace-nowrap ${
               isActive ? "text-white" : "text-gray-400 hover:text-gray-200"
             } ${isDragging ? "opacity-40 scale-95" : ""} ${isDragOver ? "scale-105" : ""}`}
             style={{
@@ -110,6 +112,11 @@ export default function SegmentedTabs({
               textShadow: isActive ? "0 0 20px rgba(255,255,255,0.4)" : "none",
             }}
           >
+            {icons?.[tab.id] && (
+              <span className="shrink-0 transition-transform duration-200" style={{ opacity: isActive ? 1 : 0.8, color: isActive ? accentColor : "currentColor", filter: isActive ? `drop-shadow(0 0 6px ${accentColor}90)` : "none" }}>
+                {icons[tab.id]}
+              </span>
+            )}
             {tab.label}
           </button>
         )

@@ -12,22 +12,23 @@ import HandBrake from "@/components/HandBrake";
 import MediaLibrary from "@/components/MediaLibrary";
 import MattingStudio from "@/components/MattingStudio";
 import UpdatePrompt from "@/components/UpdatePrompt";
+import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function App() {
   const defaultMainTabs = [
-    { id: 'downloads', label: '⬇️ Téléchargements' },
-    { id: 'converter', label: '🎚️ Convertisseur & Tags' },
-    { id: 'subscriptions', label: '📡 Abonnements' },
-    { id: 'interpolator', label: '⚡ Interpolateur IA' },
-    { id: 'library', label: '🎞️ Médiathèque' },
-    { id: 'enhance', label: '✨ Amélioration IA' },
-    { id: 'matting', label: '✂️ Détourage IA' },
-    { id: 'handbrake', label: '🗜️ HandBrake' },
-    { id: 'topaz', label: '💎 Topaz Video AI' },
-    { id: 'transcription', label: '📝 Transcription' }
+    { id: 'downloads', label: 'Téléchargements' },
+    { id: 'converter', label: 'Convertisseur & Tags' },
+    { id: 'subscriptions', label: 'Abonnements' },
+    { id: 'interpolator', label: 'Interpolateur IA' },
+    { id: 'library', label: 'Médiathèque' },
+    { id: 'enhance', label: 'Amélioration IA' },
+    { id: 'matting', label: 'Détourage IA' },
+    { id: 'handbrake', label: 'HandBrake' },
+    { id: 'topaz', label: 'Topaz Video AI' },
+    { id: 'transcription', label: 'Transcription' }
   ];
 
   const [mainTabConfig, setMainTabConfig] = useState<{ id: string; label: string; visible: boolean }[]>(() => {
@@ -425,6 +426,7 @@ export default function App() {
               onTabChange={setActiveTab}
               onReorder={setMainTabConfig}
               accentColor="#e879f9"
+              icons={TAB_ICONS}
             />
           </div>
 
