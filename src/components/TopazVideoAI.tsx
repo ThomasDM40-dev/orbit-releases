@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, FolderOpen, Play, Square, Trash2, Plus, Cpu, HardDrive,
+  Sparkles, FolderOpen, Play, Pause, Square, Trash2, Plus, Cpu, HardDrive,
   Gauge, Layers, Film, Wand2, Crosshair, Download, Save,
   AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Eye, RotateCcw,
 } from 'lucide-react';
@@ -729,29 +729,54 @@ function BeforeAfter({ job, toSpec, electron, showToast }: any) {
   const [split, setSplit] = useState(50);
   const [zoom, setZoom] = useState(1);
   const [afterUrl, setAfterUrl] = useState('');
+  const [beforeUrl, setBeforeUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const beforeRef = useRef<HTMLVideoElement>(null);
   const afterRef = useRef<HTMLVideoElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
 
-  useEffect(() => { setAfterUrl(''); }, [job?.id]);
+  useEffect(() => { setAfterUrl(''); setBeforeUrl(''); setPlaying(false); setSplit(50); setZoom(1); }, [job?.id]);
+
+  // Drag the split handle anywhere over the viewer (relative to the video box).
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      if (!dragging.current || !boxRef.current) return;
+      const r = boxRef.current.getBoundingClientRect();
+      setSplit(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100)));
+    };
+    const up = () => { dragging.current = false; };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+  }, []);
 
   if (!job) return <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">Sélectionnez un fichier pour comparer</div>;
 
-  const beforeUrl = mediaUrl(job.outputPath ? job.inputPath : job.inputPath);
-  const compareUrl = afterUrl || (job.outputPath ? mediaUrl(job.outputPath) : '');
+  // After = generated preview (or finished render). Before = matching unprocessed
+  // clip from the preview (or the source for a finished render).
+  const aUrl = afterUrl || (job.outputPath ? mediaUrl(job.outputPath) : '');
+  const bUrl = beforeUrl || mediaUrl(job.inputPath);
+  const hasResult = !!aUrl;
+  const meta = job.meta;
+  const ar = meta && meta.width && meta.height ? meta.width / meta.height : 16 / 9;
 
   const genPreview = async () => {
-    setLoading(true);
+    setLoading(true); setAfterUrl(''); setBeforeUrl(''); setPlaying(false);
     const start = beforeRef.current ? Math.max(0, beforeRef.current.currentTime) : 0;
     const res = await electron.topazPreview?.({ ...toSpec(job, { start, duration: 3 }) }).catch((e: any) => ({ error: String(e) }));
     setLoading(false);
-    if (res?.outputPath) setAfterUrl(mediaUrl(res.outputPath));
+    if (res?.outputPath) { setAfterUrl(mediaUrl(res.outputPath)); if (res.beforePath) setBeforeUrl(mediaUrl(res.beforePath)); }
     else showToast('error', res?.error || 'Aperçu impossible.');
   };
 
-  const sync = (from: HTMLVideoElement | null, to: HTMLVideoElement | null) => {
-    if (from && to && Math.abs(from.currentTime - to.currentTime) > 0.05) to.currentTime = from.currentTime;
+  const togglePlay = () => {
+    const b = beforeRef.current, a = afterRef.current; if (!b) return;
+    if (b.paused) { b.play().catch(() => {}); a?.play().catch(() => {}); setPlaying(true); }
+    else { b.pause(); a?.pause(); setPlaying(false); }
   };
+  const onTime = () => { const b = beforeRef.current, a = afterRef.current; if (b && a && Math.abs(b.currentTime - a.currentTime) > 0.08) a.currentTime = b.currentTime; };
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col p-5 gap-4">
@@ -760,40 +785,54 @@ function BeforeAfter({ job, toSpec, electron, showToast }: any) {
           className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, rgba(217,70,239,0.7), rgba(168,85,247,0.7))', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-          {loading ? 'Génération…' : 'Générer un aperçu (3s)'}
+          {loading ? 'Génération…' : (hasResult ? 'Régénérer (3s)' : 'Générer un aperçu (3s)')}
         </button>
+        {hasResult && (
+          <button onClick={togglePlay} className="px-3 py-2 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-2">
+            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}{playing ? 'Pause' : 'Lecture'}
+          </button>
+        )}
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <span>Zoom</span>
           <input type="range" min={1} max={4} step={0.1} value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-28 accent-fuchsia-500" />
-          <span className="font-mono">{zoom.toFixed(1)}×</span>
+          <span className="font-mono w-8">{zoom.toFixed(1)}×</span>
         </div>
-        <p className="text-[11px] text-gray-500">Avant ⟷ Après. Placez la tête de lecture puis générez un aperçu du rendu IA.</p>
-      </div>
-
-      <div className="flex-1 relative rounded-2xl overflow-hidden bg-black border border-white/10 select-none">
-        {!compareUrl ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <video ref={beforeRef} src={beforeUrl} className="max-h-full max-w-full" style={{ transform: `scale(${zoom})` }} controls />
+        {hasResult && (
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span>Comparaison</span>
+            <input type="range" min={0} max={100} value={split} onChange={e => setSplit(Number(e.target.value))} className="w-32 accent-fuchsia-500" />
           </div>
-        ) : (
-          <>
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-              <video ref={beforeRef} src={beforeUrl} className="max-h-full max-w-full" style={{ transform: `scale(${zoom})` }}
-                onTimeUpdate={() => sync(beforeRef.current, afterRef.current)} controls
-                onPlay={() => afterRef.current?.play()} onPause={() => afterRef.current?.pause()} />
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden" style={{ clipPath: `inset(0 0 0 ${split}%)` }}>
-              <video ref={afterRef} src={compareUrl} className="max-h-full max-w-full" style={{ transform: `scale(${zoom})` }} muted />
-            </div>
-            {/* split handle */}
-            <div className="absolute top-0 bottom-0 w-0.5 bg-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.8)]" style={{ left: `${split}%` }} />
-            <input type="range" min={0} max={100} value={split} onChange={e => setSplit(Number(e.target.value))}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-2/3 accent-fuchsia-500" />
-            <span className="absolute top-3 left-3 px-2 py-1 rounded-md bg-black/60 text-[10px] text-gray-300">AVANT</span>
-            <span className="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 text-[10px] text-fuchsia-300">APRÈS</span>
-          </>
         )}
       </div>
+
+      <div className="flex-1 relative rounded-2xl overflow-hidden border border-white/10 flex items-center justify-center select-none" style={{ background: '#0a0a0a' }}>
+        {!hasResult ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <video ref={beforeRef} src={bUrl} className="max-h-full max-w-full" style={{ transform: `scale(${zoom})` }} controls />
+          </div>
+        ) : (
+          <div ref={boxRef} className="relative shadow-2xl"
+            style={{ aspectRatio: String(ar), width: '100%', height: 'auto', maxWidth: '100%', maxHeight: '100%', transform: `scale(${zoom})`, transition: dragging.current ? 'none' : 'transform 0.15s' }}>
+            {/* BEFORE (full) */}
+            <video ref={beforeRef} src={bUrl} className="absolute inset-0 w-full h-full object-contain" muted loop playsInline onTimeUpdate={onTime} onEnded={() => setPlaying(false)} />
+            {/* AFTER (clipped to the right of the handle) */}
+            <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 0 0 ${split}%)` }}>
+              <video ref={afterRef} src={aUrl} className="absolute inset-0 w-full h-full object-contain" muted loop playsInline />
+            </div>
+            {/* Handle */}
+            <div className="absolute top-0 bottom-0 z-10 cursor-ew-resize" style={{ left: `${split}%`, transform: 'translateX(-50%)', width: 28 }}
+              onPointerDown={(e) => { dragging.current = true; (e.target as HTMLElement).setPointerCapture?.(e.pointerId); e.preventDefault(); }}>
+              <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[2px] bg-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.9)]" />
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-fuchsia-500 border-2 border-white/90 flex items-center justify-center shadow-lg">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6-4 6 4 6" /><path d="m15 6 4 6-4 6" /></svg>
+              </div>
+            </div>
+            <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-md bg-black/70 text-[10px] font-semibold text-gray-200 tracking-wide z-10">AVANT</span>
+            <span className="absolute top-2.5 right-2.5 px-2 py-1 rounded-md bg-black/70 text-[10px] font-semibold text-fuchsia-300 tracking-wide z-10">APRÈS</span>
+          </div>
+        )}
+      </div>
+      {hasResult && <p className="text-[11px] text-gray-500 text-center">Glissez la poignée pour comparer · les deux clips (3 s, même segment) sont synchronisés.</p>}
     </div>
   );
 }

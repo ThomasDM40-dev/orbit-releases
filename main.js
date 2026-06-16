@@ -2427,7 +2427,22 @@ ipcMain.handle('topaz-preview', async (event, job) => {
     }
     if (built.workDir) { try { fs.rmSync(built.workDir, { recursive: true, force: true }); } catch (e) {} }
     if (!fs.existsSync(built.outputPath)) return { error: 'Aperçu non généré.' };
-    return { outputPath: built.outputPath };
+    // Also render a matching UNprocessed clip of the same segment so the
+    // before/after viewer compares identical frames at identical timing.
+    let beforePath = null;
+    try {
+      const pv = job.preview || { start: 0, duration: 3 };
+      // Topaz's ffmpeg lacks libx264 — use Orbit's bundled ffmpeg for the plain clip.
+      const orbitFf = enhanceLib.detectEngines(ORBIT_DIR).ffmpeg || det.ffmpeg;
+      const bp = path.join(os.tmpdir(), `orbit_tvai_before_${Date.now()}.mp4`);
+      await new Promise((resolve) => {
+        const p = spawn(orbitFf, ['-hide_banner', '-nostdin', '-y', '-ss', String(pv.start || 0), '-t', String(pv.duration || 3), '-i', job.inputPath, '-an', '-c:v', 'libx264', '-crf', '20', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', bp], { windowsHide: true });
+        p.stderr.on('data', () => {});
+        p.on('error', () => resolve()); p.on('close', () => resolve());
+      });
+      if (fs.existsSync(bp) && fs.statSync(bp).size > 1000) beforePath = bp;
+    } catch (e) {}
+    return { outputPath: built.outputPath, beforePath };
   } catch (e) {
     return { error: 'Aperçu impossible : ' + (e && e.message) };
   }
