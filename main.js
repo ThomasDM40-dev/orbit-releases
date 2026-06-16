@@ -153,9 +153,13 @@ console.error = (...args) => { originalConsoleError(...args); logToFile('[ERROR]
 
 // ── AI Assistant: proxy Claude API calls from renderer (avoids CORS) ──
 ipcMain.handle('ai-chat', async (event, { messages }) => {
-  // Dé-obfuscation basique de la clé (security by obscurity)
-  const encoded = "QUF3czFKakMtZ0JrT2JIWnlGWkJJT04yV0NyMlFmMFB5TzExQXk2ZS1jYnpJQ1N1YTBQU25HR2tlZjQyNC1IcTU4N29uQmxqbjRpR0NnU2ctT1B5SVBzMExZcGFIdlhfMC0zMGlwYS10bmEta3M=";
-  const apiKey = Buffer.from(encoded, 'base64').toString('utf8').split('').reverse().join('');
+  // The user supplies their OWN Anthropic API key (Paramètres → Assistant IA).
+  // Never ship a shared/hardcoded key — it leaks publicly and gets revoked.
+  let apiKey = '';
+  try { const gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); apiKey = (gs.aiApiKey || '').trim(); } catch (e) {}
+  if (!apiKey) {
+    return { error: "Aucune clé API. Ajoutez votre clé Anthropic (sk-ant-…) dans Paramètres → Assistant IA. Créez-en une sur console.anthropic.com." };
+  }
 
   const systemPrompt = `Tu es Orbit IA, l'assistant intelligent intégré au logiciel vidéo/audio Orbit.
 L'utilisateur peut te demander de l'aide sur la manière d'utiliser les différents outils.
@@ -188,7 +192,7 @@ Sois concis, clair et professionnel. Réponds toujours en français.`;
   }];
 
   const body = JSON.stringify({
-    model: 'claude-3-5-sonnet-20240620',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 1024,
     system: systemPrompt,
     tools,

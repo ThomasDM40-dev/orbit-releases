@@ -200,6 +200,14 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
       case 'ai':
         return (
           <div>
+            <Card title="Assistant IA" icon={<Cpu className="w-3.5 h-3.5" />}>
+              <div className="px-3 py-2.5">
+                <p className="text-sm text-gray-200 mb-1">Clé API Anthropic (Claude)</p>
+                <p className="text-[11px] text-gray-500 mb-2">Nécessaire pour l'Assistant IA. Crée une clé sur <span className="text-gray-300">console.anthropic.com</span>. Elle reste sur ta machine (jamais partagée).</p>
+                <input type="password" placeholder="sk-ant-..." className={INPUT + ' w-full font-mono'} value={settings.aiApiKey || ''} onChange={e => update('aiApiKey', e.target.value.trim())} />
+                {settings.aiApiKey ? <p className="text-[11px] text-green-400 mt-1.5">✓ Clé enregistrée ({settings.aiApiKey.slice(0, 7)}…{settings.aiApiKey.slice(-4)})</p> : null}
+              </div>
+            </Card>
             <Card title="Amélioration IA & Topaz" icon={<Cpu className="w-3.5 h-3.5" />}>
               <Row title="Dossier de sortie IA par défaut" desc={settings.enhanceOutputDir || 'Identique à la source'}>
                 <button onClick={() => handleDirSelect('enhanceOutputDir')} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5"><FolderOpen className="w-4 h-4" /> Choisir</button>

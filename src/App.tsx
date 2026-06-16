@@ -99,6 +99,8 @@ export default function App() {
     launchAtStartup: false, minimizeToTray: false, notifications: false, disableHardwareAccel: false,
     // IA
     enhanceOutputDir: '', defaultGpu: 'auto',
+    // Assistant IA — clé API Anthropic de l'utilisateur (jamais codée en dur)
+    aiApiKey: '',
   };
   const [settings, setSettings] = useState<any>(() => {
     try {
