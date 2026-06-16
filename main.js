@@ -45,6 +45,15 @@ const loadURL = (serve.default || serve)({ directory: 'dist' });
 
 let mainWindow;
 
+// Always target the MAIN UI window for progress/complete events. Using
+// uiWin() was a bug: when the sniffer/browser or
+// changelog window is open, [0] can be one of those (which have no listeners),
+// so AI renders (Topaz/Enhance/HandBrake/Library/Converter) appeared to "load
+// forever" because their completion events were delivered to the wrong window.
+function uiWin() {
+  return (mainWindow && !mainWindow.isDestroyed()) ? mainWindow : BrowserWindow.getAllWindows()[0];
+}
+
 // ---- DISCORD RICH PRESENCE ----
 // IMPORTANT: Replace with your Discord Application ID from:
 // https://discord.com/developers/applications
@@ -1472,7 +1481,7 @@ ipcMain.on('ai-interpolate', async (event, { inputPath, outputDir, engine, model
   const ffmpegLocation = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
   if (!fs.existsSync(modulesDir)) fs.mkdirSync(modulesDir, { recursive: true });
 
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const sendP = (msg) => win?.webContents.send('ai-interpolate-progress', { time: msg });
   const sendErr = (e) => win?.webContents.send('ai-interpolate-error', { error: e });
 
@@ -1718,7 +1727,7 @@ function downloadModule(url, destPath, progressId) {
         downloaded += chunk.length;
         if (total > 0) {
           const pct = Math.round(downloaded / total * 100);
-          BrowserWindow.getAllWindows()[0]?.webContents.send('convert-progress', { id: progressId, time: `Téléchargement module IA: ${pct}%` });
+          uiWin()?.webContents.send('convert-progress', { id: progressId, time: `Téléchargement module IA: ${pct}%` });
         }
       });
       response.pipe(file);
@@ -1750,7 +1759,7 @@ ipcMain.handle('select-media-file', async () => {
 });
 
 ipcMain.on('transcribe', async (event, { id, inputPath, language, model, outputDir, formats, style, burnIn }) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const sendP = (msg) => win?.webContents.send('transcribe-progress', { id, message: msg });
   const sendErr = (e) => win?.webContents.send('transcribe-error', { id, error: e });
   const sendDone = (files) => win?.webContents.send('transcribe-complete', { id, files });
@@ -1957,9 +1966,9 @@ ipcMain.on('convert-file', async (event, { id, inputPath, outputPath, targetForm
   const modulesDir = path.join(ORBIT_DIR, 'modules');
   if (!fs.existsSync(modulesDir)) fs.mkdirSync(modulesDir, { recursive: true });
 
-  const sendProgress = (msg) => BrowserWindow.getAllWindows()[0]?.webContents.send('convert-progress', { id, time: msg });
-  const sendComplete = (filePath) => BrowserWindow.getAllWindows()[0]?.webContents.send('convert-complete', { id, filePath });
-  const sendError = (err) => BrowserWindow.getAllWindows()[0]?.webContents.send('convert-error', { id, error: err });
+  const sendProgress = (msg) => uiWin()?.webContents.send('convert-progress', { id, time: msg });
+  const sendComplete = (filePath) => uiWin()?.webContents.send('convert-complete', { id, filePath });
+  const sendError = (err) => uiWin()?.webContents.send('convert-error', { id, error: err });
 
   // ---- SMART COMPRESSOR ----
   if (targetFormat === 'COMPRESS_DISCORD' || targetFormat === 'COMPRESS_WHATSAPP') {
@@ -2168,23 +2177,23 @@ ipcMain.on('convert-file', async (event, { id, inputPath, outputPath, targetForm
   
   ffmpegProcess.on('error', (err) => {
     activeDownloads.delete(id);
-    BrowserWindow.getAllWindows()[0]?.webContents.send('convert-error', { id, error: `Erreur FFmpeg: ${err.message}` });
+    uiWin()?.webContents.send('convert-error', { id, error: `Erreur FFmpeg: ${err.message}` });
   });
 
   ffmpegProcess.stderr.on('data', (data) => {
     const output = data.toString();
     const timeMatch = output.match(/time=(\d{2}:\d{2}:\d{2}.\d{2})/);
     if (timeMatch) {
-       BrowserWindow.getAllWindows()[0]?.webContents.send('convert-progress', { id, time: timeMatch[1] });
+       uiWin()?.webContents.send('convert-progress', { id, time: timeMatch[1] });
     }
   });
 
   ffmpegProcess.on('close', (code) => {
     activeDownloads.delete(id);
     if (code === 0) {
-      BrowserWindow.getAllWindows()[0]?.webContents.send('convert-complete', { id, filePath: outputPath });
+      uiWin()?.webContents.send('convert-complete', { id, filePath: outputPath });
     } else {
-      BrowserWindow.getAllWindows()[0]?.webContents.send('convert-error', { id, error: `FFmpeg exited with code ${code}` });
+      uiWin()?.webContents.send('convert-error', { id, error: `FFmpeg exited with code ${code}` });
     }
   });
 });
@@ -2449,7 +2458,7 @@ ipcMain.handle('topaz-preview', async (event, job) => {
 });
 
 ipcMain.on('topaz-start', async (event, job) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const id = job.id;
   const sendP = (data) => win?.webContents.send('topaz-progress', { id, ...data });
   const sendErr = (msg, log) => win?.webContents.send('topaz-error', { id, error: msg, log });
@@ -2829,7 +2838,7 @@ ipcMain.handle('enhance-detect', async () => {
 });
 
 ipcMain.handle('enhance-install', async () => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   try {
     await installRealEsrgan((m) => win?.webContents.send('enhance-progress', { id: 'install', log: m }));
     return { ok: true };
@@ -2900,7 +2909,7 @@ ipcMain.handle('enhance-preview', async (e, job) => {
 });
 
 ipcMain.on('enhance-start', async (event, job) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const id = job.id;
   const sendP = (d) => win?.webContents.send('enhance-progress', { id, ...d });
   const sendErr = (msg) => win?.webContents.send('enhance-error', { id, error: msg });
@@ -2984,7 +2993,7 @@ ipcMain.handle('hb-detect', async () => {
 });
 
 ipcMain.handle('hb-install', async () => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   try {
     const exe = await installHandBrake(m => win?.webContents.send('hb-progress', { id: 'install', log: m }));
     const presets = await hbReadPresets(exe);
@@ -2999,7 +3008,7 @@ ipcMain.handle('hb-presets-load', () => enhanceReadJson(path.join(ENHANCE_DIR, '
 ipcMain.handle('hb-presets-save', (e, p) => enhanceWriteJson(path.join(ENHANCE_DIR, 'hb-presets.json'), p));
 
 ipcMain.on('hb-start', async (event, job) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const id = job.id;
   const sendP = (d) => win?.webContents.send('hb-progress', { id, ...d });
   const sendErr = (msg) => win?.webContents.send('hb-error', { id, error: msg });
@@ -3100,7 +3109,7 @@ ipcMain.handle('lib-presets', () => ({ presets: library.PRESETS, prep: library.P
 ipcMain.on('lib-cancel', (e, id) => { const j = activeDownloads.get(id); if (j && j.kill) j.kill(); });
 
 ipcMain.on('lib-convert', async (event, job) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const id = job.id;
   const sendP = (d) => win?.webContents.send('lib-convert-progress', { id, ...d });
   const sendErr = (msg) => win?.webContents.send('lib-convert-error', { id, error: msg });
@@ -3168,7 +3177,7 @@ ipcMain.handle('matting-detect', async () => {
   return { ready, err, models };
 });
 ipcMain.handle('matting-install', async (e, modelKey) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   try { await installRvmModel(modelKey, m => win?.webContents.send('matting-progress', { id: 'install', log: m })); return { ok: true }; }
   catch (er) { return { ok: false, error: er.message }; }
 });
@@ -3271,7 +3280,7 @@ ipcMain.handle('matting-preview', async (e, job) => {
 });
 
 ipcMain.on('matting-start', async (event, job) => {
-  const win = BrowserWindow.getAllWindows()[0];
+  const win = uiWin();
   const id = job.id;
   const sendP = (d) => win?.webContents.send('matting-progress', { id, ...d });
   const sendErr = (msg) => win?.webContents.send('matting-error', { id, error: msg });

@@ -220,7 +220,7 @@ function probeFile(ffprobe, file) {
     execFile(ffprobe, [
       '-v', 'quiet', '-print_format', 'json',
       '-show_format', '-show_streams', file,
-    ], { maxBuffer: 1024 * 1024 * 8 }, (err, stdout) => {
+    ], { maxBuffer: 1024 * 1024 * 8, timeout: 20000, windowsHide: true }, (err, stdout) => {
       if (err) return resolve({ error: 'Lecture du fichier impossible.' });
       let j;
       try { j = JSON.parse(stdout); } catch (e) { return resolve({ error: 'Métadonnées illisibles.' }); }
