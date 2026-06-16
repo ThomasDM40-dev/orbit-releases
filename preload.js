@@ -152,4 +152,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMattingProgress: (cb) => { ipcRenderer.on('matting-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-progress'); },
   onMattingComplete: (cb) => { ipcRenderer.on('matting-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-complete'); },
   onMattingError: (cb) => { ipcRenderer.on('matting-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-error'); },
+
+  // ── AI Assistant ──
+  aiChat: (data) => ipcRenderer.invoke('ai-chat', data),
 });

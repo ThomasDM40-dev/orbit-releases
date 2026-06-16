@@ -15,7 +15,7 @@ const OPT = "bg-[#0d1414] text-gray-200";
 const CHECKER = { backgroundImage: 'linear-gradient(45deg,#2a2a2a 25%,transparent 25%),linear-gradient(-45deg,#2a2a2a 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2a2a2a 75%),linear-gradient(-45deg,transparent 75%,#2a2a2a 75%)', backgroundSize: '20px 20px', backgroundPosition: '0 0,0 10px,10px -10px,-10px 0', backgroundColor: '#1a1a1a' } as React.CSSProperties;
 
 type Meta = { width: number; height: number; fps: number; codec: string; duration: number; size: number; hasAudio: boolean };
-type S = { model: string; quality: string; mode: string; transparentFormat: string; color: string; blurStrength: number; bgImage: string; outputDir: string };
+type S = { model: string; quality: string; mode: string; transparentFormat: string; color: string; blurStrength: number; bgImage: string; choke: number; feather: number; outputDir: string };
 type Job = { id: string; inputPath: string; name: string; meta?: Meta; thumb?: string; status: 'idle' | 'running' | 'done' | 'error'; percent: number; stage?: string; outputPath?: string; error?: string; settings: S };
 
 const MODES = [
@@ -25,7 +25,7 @@ const MODES = [
   { v: 'blur', l: 'Flou', emoji: '🌫️' },
   { v: 'image', l: 'Image', emoji: '🖼️' },
 ];
-function defaults(outputDir: string): S { return { model: 'mobilenetv3', quality: 'balanced', mode: 'transparent', transparentFormat: 'webm', color: '#00ff00', blurStrength: 20, bgImage: '', outputDir }; }
+function defaults(outputDir: string): S { return { model: 'mobilenetv3', quality: 'balanced', mode: 'transparent', transparentFormat: 'webm', color: '#00ff00', blurStrength: 20, bgImage: '', choke: 0, feather: 0.6, outputDir }; }
 const fmtDur = (s?: number) => { if (!s) return '—'; const m = Math.floor(s / 60), x = Math.floor(s % 60); return `${m}:${String(x).padStart(2, '0')}`; };
 const hexToFF = (h: string) => '0x' + (h || '#000000').replace('#', '').toUpperCase();
 
@@ -70,7 +70,7 @@ export default function MattingStudio() {
   const patch = (p: Partial<S>) => { if (!selectedId) return; setJobs(prev => prev.map(j => j.id === selectedId ? { ...j, settings: { ...j.settings, ...p } } : j)); setPreviewUrl(''); };
   const applyToAll = () => { if (!selected) return; setJobs(prev => prev.map(j => ({ ...j, settings: { ...selected.settings } }))); showToast('info', 'Réglages appliqués à toute la file.'); };
 
-  const toSpec = (job: Job, preview?: any) => ({ id: job.id, inputPath: job.inputPath, model: job.settings.model, quality: job.settings.quality, mode: job.settings.mode, transparentFormat: job.settings.transparentFormat, color: hexToFF(job.settings.color), blurStrength: job.settings.blurStrength, bgImage: job.settings.bgImage || undefined, outputDir: job.settings.outputDir || outputDir, preview, whenDone: 'none' });
+  const toSpec = (job: Job, preview?: any) => ({ id: job.id, inputPath: job.inputPath, model: job.settings.model, quality: job.settings.quality, mode: job.settings.mode, transparentFormat: job.settings.transparentFormat, color: hexToFF(job.settings.color), blurStrength: job.settings.blurStrength, bgImage: job.settings.bgImage || undefined, choke: job.settings.choke, feather: job.settings.feather, outputDir: job.settings.outputDir || outputDir, preview, whenDone: 'none' });
   const startJob = (job: Job) => { setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'running', percent: 0, stage: 'Démarrage…', error: undefined } : j)); electron.mattingStart?.(toSpec(job)); };
   const runNext = () => { const l = jobsRef.current; if (l.some(j => j.status === 'running')) return; const n = l.find(j => j.status === 'idle'); if (n) startJob(n); };
   const startAll = () => { if (!jobs.some(j => j.status === 'running')) { const n = jobs.find(j => j.status === 'idle'); if (n) startJob(n); else showToast('info', 'Aucun élément en attente.'); } };
@@ -152,6 +152,13 @@ export default function MattingStudio() {
                   {s.mode === 'color' && <div><label className={LABEL}>Couleur de fond</label><div className="flex items-center gap-2 mt-1"><input type="color" value={s.color} onChange={e => patch({ color: e.target.value })} className="w-10 h-9 rounded-lg bg-transparent border border-white/10 cursor-pointer" /><input className={INPUT} value={s.color} onChange={e => patch({ color: e.target.value })} /></div></div>}
                   {s.mode === 'blur' && <Slider label="Intensité du flou" value={s.blurStrength} min={2} max={60} onChange={(v: number) => patch({ blurStrength: v })} />}
                   {s.mode === 'image' && <div><label className={LABEL}>Image de fond</label><div className="flex gap-2 mt-1"><input className={INPUT} value={s.bgImage} onChange={e => patch({ bgImage: e.target.value })} placeholder="Choisir une image…" /><button onClick={browseBg} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"><FolderOpen className="w-4 h-4" /></button></div></div>}
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-3">
+                  <span className="text-sm font-semibold text-gray-200">Affinage des bords</span>
+                  <Slider label="Adoucissement (anti-crénelage)" value={s.feather} min={0} max={4} step={0.1} onChange={(v: number) => patch({ feather: v })} suffix="px" />
+                  <Slider label="Resserrer ◀ / Élargir ▶ le masque" value={s.choke} min={-40} max={40} onChange={(v: number) => patch({ choke: v })} />
+                  <p className="text-[10px] text-gray-500">Resserrer enlève le liseré de fond autour du sujet ; adoucir lisse les contours.</p>
                 </div>
 
                 <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-3">

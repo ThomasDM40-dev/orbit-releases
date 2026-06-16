@@ -151,6 +151,99 @@ const originalConsoleError = console.error;
 console.log = (...args) => { originalConsoleLog(...args); logToFile('[INFO]', ...args); };
 console.error = (...args) => { originalConsoleError(...args); logToFile('[ERROR]', ...args); };
 
+// ── AI Assistant: proxy Claude API calls from renderer (avoids CORS) ──
+ipcMain.handle('ai-chat', async (event, { messages }) => {
+  // Dé-obfuscation basique de la clé (security by obscurity)
+  const encoded = "QUF3czFKakMtZ0JrT2JIWnlGWkJJT04yV0NyMlFmMFB5TzExQXk2ZS1jYnpJQ1N1YTBQU25HR2tlZjQyNC1IcTU4N29uQmxqbjRpR0NnU2ctT1B5SVBzMExZcGFIdlhfMC0zMGlwYS10bmEta3M=";
+  const apiKey = Buffer.from(encoded, 'base64').toString('utf8').split('').reverse().join('');
+
+  const systemPrompt = `Tu es Orbit IA, l'assistant intelligent intégré au logiciel vidéo/audio Orbit.
+L'utilisateur peut te demander de l'aide sur la manière d'utiliser les différents outils.
+Voici les outils disponibles dans Orbit :
+- Téléchargements (yt-dlp) — id: "downloads"
+- Convertisseur & Tags (ffmpeg) — id: "converter"
+- Abonnements — id: "subscriptions"
+- Interpolateur IA (DAIN / RIFE) — id: "interpolator"
+- Médiathèque — id: "library"
+- Amélioration IA (Upscale) — id: "enhance"
+- Détourage IA (Matting) — id: "matting"
+- HandBrake (Compression vidéo) — id: "handbrake"
+- Topaz Video AI — id: "topaz"
+- Transcription (Whisper) — id: "transcription"
+
+Tu as accès à un outil "dispatch_action" pour effectuer des actions (changer d'onglet, charger un fichier).
+Sois concis, clair et professionnel. Réponds toujours en français.`;
+
+  const tools = [{
+    name: "dispatch_action",
+    description: "Déclenche une action dans Orbit (changer d'onglet, charger un fichier).",
+    input_schema: {
+      type: "object",
+      properties: {
+        actionName: { type: "string", description: "Ex: 'switchTab', 'loadFile'" },
+        payload: { type: "object", description: "Ex: { tab: 'handbrake' }", additionalProperties: true }
+      },
+      required: ["actionName", "payload"]
+    }
+  }];
+
+  const body = JSON.stringify({
+    model: 'claude-3-5-sonnet-20240620',
+    max_tokens: 1024,
+    system: systemPrompt,
+    tools,
+    messages,
+    temperature: 0.7,
+  });
+
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            resolve({ error: parsed.error.message || 'Erreur API Claude.' });
+            return;
+          }
+          // Extract text + tool_use blocks
+          let text = '';
+          let functionCall = null;
+          if (parsed.content && Array.isArray(parsed.content)) {
+            for (const block of parsed.content) {
+              if (block.type === 'text') text += block.text;
+              else if (block.type === 'tool_use' && block.name === 'dispatch_action') {
+                functionCall = { name: block.name, arguments: block.input };
+              }
+            }
+          }
+          resolve({ text: text || (functionCall ? "J'exécute l'action :" : ''), functionCall });
+        } catch (e) {
+          resolve({ error: 'Erreur de parsing de la réponse Claude.' });
+        }
+      });
+    });
+
+    req.on('error', (e) => resolve({ error: e.message }));
+    req.setTimeout(30000, () => { req.destroy(); resolve({ error: 'Délai dépassé (30s).' }); });
+    req.write(body);
+    req.end();
+  });
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -3256,7 +3349,7 @@ async function runMatting(job, opts) {
   // ── Stage B: composite ──
   onProgress({ percent: 72, stage: 'Composition' });
   const outDir = opts.preview ? os.tmpdir() : ((job.outputDir && fs.existsSync(job.outputDir)) ? job.outputDir : path.dirname(job.inputPath));
-  const cOpts = { mode: opts.preview ? (job.mode === 'transparent' ? 'transparent' : job.mode) : job.mode, color: job.color, bgImage: job.bgImage, transparentFormat: job.transparentFormat || 'webm', blurStrength: job.blurStrength, hasAudio: !!meta.hasAudio, fps, outputDir: outDir };
+  const cOpts = { mode: opts.preview ? (job.mode === 'transparent' ? 'transparent' : job.mode) : job.mode, color: job.color, bgImage: job.bgImage, transparentFormat: job.transparentFormat || 'webm', blurStrength: job.blurStrength, choke: job.choke, feather: job.feather, hasAudio: !!meta.hasAudio, fps, outputDir: outDir };
   let outputPath = opts.preview ? path.join(os.tmpdir(), `orbit_rvm_preview_${Date.now()}.${job.mode === 'transparent' && (job.transparentFormat === 'prores') ? 'mov' : job.mode === 'transparent' ? 'webm' : 'mp4'}`) : matting.outputPathFor(job.inputPath, job.mode, job.transparentFormat || 'webm', outDir);
   const cArgs = matting.compositeArgs(input, alphaPath, W, H, cOpts, outputPath);
   await new Promise((resolve, reject) => {

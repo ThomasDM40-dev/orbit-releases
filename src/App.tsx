@@ -15,6 +15,8 @@ import UpdatePrompt from "@/components/UpdatePrompt";
 import OnboardingModal from "@/components/OnboardingModal";
 import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
+import AIAssistant from "@/components/AIAssistant";
+import { Bot, UploadCloud } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -76,6 +78,12 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('orbit-onboarded'));
+  
+  // AI Assistant & Drag & Drop State
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<string | null>(null);
+
   const SETTINGS_DEFAULTS: any = {
     outputDir: localStorage.getItem('app-output-dir') || "C:\\Users\\User\\Downloads",
     proxy: localStorage.getItem('app-proxy') || "",
@@ -180,6 +188,73 @@ export default function App() {
       window.removeEventListener('app-update-ready', onUpdateReady);
     };
   }, [language]);
+
+  // --- Drag & Drop ---
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer?.types.includes('Files')) {
+        setIsDragging(true);
+      }
+    };
+    
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.relatedTarget === null) {
+        setIsDragging(false);
+      }
+    };
+    
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const filePath = files[0].path;
+        setDroppedFile(filePath);
+        setShowAIAssistant(true);
+      }
+    };
+
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('drop', handleDrop);
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, []);
+
+  // --- AI Actions Dispatch ---
+  useEffect(() => {
+    const handleAIDispatch = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { actionName, payload } = customEvent.detail;
+      
+      if (actionName === 'switchTab' && payload?.tab) {
+        const tabExists = mainTabConfig.find(t => t.id === payload.tab);
+        if (tabExists) {
+          if (!tabExists.visible) toggleMainTab(payload.tab);
+          setActiveTab(payload.tab);
+        }
+      }
+      
+      if (actionName === 'loadFile') {
+        // Here you could send another event that the specific tool component listens to
+        // For example: window.dispatchEvent(new CustomEvent('load-file-transcription', { detail: payload.file }));
+        console.log("Loading file into tool", payload);
+      }
+    };
+
+    window.addEventListener('ai-dispatch', handleAIDispatch);
+    return () => window.removeEventListener('ai-dispatch', handleAIDispatch);
+  }, [mainTabConfig]);
 
   // Merge any settings already on disk (written by a previous session / the engine).
   useEffect(() => {
@@ -570,6 +645,46 @@ export default function App() {
 
       {/* First-run onboarding wizard (tailors visible tabs to the user's profile) */}
       {showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
+
+      {/* Floating AI Button */}
+      <button
+        onClick={() => setShowAIAssistant(!showAIAssistant)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-pink-500 rounded-full shadow-lg hover:shadow-pink-500/50 hover:bg-pink-600 transition-all flex items-center justify-center text-white z-40 group"
+      >
+        <Bot className="w-6 h-6 group-hover:scale-110 transition-transform" />
+      </button>
+
+      {/* AI Assistant */}
+      <AnimatePresence>
+        {showAIAssistant && (
+          <AIAssistant
+            onClose={() => {
+              setShowAIAssistant(false);
+              setDroppedFile(null);
+            }}
+            droppedFile={droppedFile}
+            activeTab={activeTab}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Drag & Drop Overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center border-[4px] border-dashed border-pink-500/50 pointer-events-none"
+          >
+            <div className="bg-pink-500/20 p-8 rounded-full mb-6">
+              <UploadCloud className="w-20 h-20 text-pink-500" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2">Déposez votre fichier ici</h2>
+            <p className="text-gray-300 text-lg">Orbit IA l'analysera et vous proposera des outils adaptés</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Launch update prompt (Orbit + bundled tools) */}
       <UpdatePrompt />

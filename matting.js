@@ -39,7 +39,15 @@ const CONTAINER_EXT = { mp4: 'mp4', mov: 'mov', webm: 'webm', png: 'png', mkv: '
 function compositeArgs(input, alphaPath, W, H, opts, outputPath) {
   const fps = opts.fps || 30;
   const a = ['-hide_banner', '-nostdin', '-y', '-i', input, '-i', alphaPath];
-  const alphaChain = `[1:v]scale=${W}:${H},format=gray[a];[0:v][a]alphamerge[fg]`;
+  // ── Edge refinement on the AI matte (cleaner cut-outs) ──
+  // choke (-40..40): >0 resserre le masque (enlève le halo de fond), <0 l'élargit.
+  // feather (0..3): adoucit/anti-crénelle les bords.
+  const choke = clamp(opts.choke || 0, -40, 40, 0);
+  const feather = clamp(opts.feather != null ? opts.feather : 0.6, 0, 4, 0.6);
+  let edge = `scale=${W}:${H},format=gray`;
+  if (choke) { const exp = round(1 + choke / 50, 2); edge += `,lut=y='pow(val/255\\,${exp})*255'`; }
+  if (feather > 0.05) edge += `,gblur=sigma=${round(feather, 2)}`;
+  const alphaChain = `[1:v]${edge}[a];[0:v][a]alphamerge[fg]`;
   let filter, vcodec = [], map = ['-map', '[o]'];
   // Audio codec MUST match the container: WebM → Opus, PNG seq → none, else AAC.
   const tf = opts.transparentFormat || 'webm';
