@@ -548,8 +548,12 @@ ipcMain.handle('check-updates', async () => {
   try {
     let localVersion = null;
     try {
-      if (ytDlpPath && fs.existsSync(ytDlpPath)) {
-        localVersion = await runCommand(ytDlpPath, ['--version']);
+      // Check the SAME binary that's actually used for downloads (the updated
+      // ~/.orbit/yt-dlp.exe when present), not the stale bundled one — otherwise
+      // it reports "update available" forever even after updating.
+      const ytBin = getYtDlpBin();
+      if (ytBin && fs.existsSync(ytBin)) {
+        localVersion = await runCommand(ytBin, ['--version']);
       }
     } catch (_) {}
 
