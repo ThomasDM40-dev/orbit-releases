@@ -517,11 +517,18 @@ function buildCommand(job, ctx) {
   else if (exp.audioCopy === false) audioArgs = ['-an'];
   else audioArgs = ['-c:a', 'copy'];
 
+  // Preserve the original frame timing so the result never speeds up/slows down.
+  // tvai_up/stb are 1:1, so passthrough keeps the exact frames + timestamps of the
+  // source (critical for variable-frame-rate inputs). When interpolating, the
+  // tvai_fi filter intentionally sets a new rate, so we let it through.
+  const fpsArgs = interp.enabled ? [] : ['-fps_mode', 'passthrough'];
+
   const mainArgs = [
     '-hide_banner', '-nostdin', '-y',
     ...inputArgs,
     '-sws_flags', 'spline+accurate_rnd+full_chroma_int',
     '-vf', vf.join(','),
+    ...fpsArgs,
     '-c:v', encoder, ...qArgs,
     ...audioArgs,
     '-map_metadata', '0', '-movflags', '+faststart',

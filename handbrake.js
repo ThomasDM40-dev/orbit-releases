@@ -97,8 +97,11 @@ function buildArgs(job, outputPath) {
   const maxH = clamp(job.maxHeight || 0, 0, 8000, 0);
   if (maxH > 0) a.push('--maxHeight', String(maxH));
 
-  // Frame rate.
+  // Frame rate. "Source" → variable frame rate that matches the original exactly
+  // (no resampling = no speed-up, even on variable-frame-rate sources). A chosen
+  // rate defaults to constant unless the caller asks for VFR.
   if (job.fps && job.fps !== 'same') { a.push('--rate', String(job.fps)); a.push(job.cfr === false ? '--vfr' : '--cfr'); }
+  else { a.push('--vfr'); }
 
   // Audio.
   if (job.audioMode === 'none') a.push('--audio', 'none');

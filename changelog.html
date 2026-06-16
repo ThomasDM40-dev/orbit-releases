@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.14.4
+      Version actuelle : 0.14.5
     </div>
   </header>
 
@@ -343,12 +343,29 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.14.4 -->
+      <!-- v0.14.5 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.14.4</span>
+            <span>v0.14.5</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">11 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Correction</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Topaz & HandBrake — vidéo accélérée :</strong> sur les sources à fréquence d'images variable (VFR, fréquent pour les vidéos téléchargées), le ré-encodage ne préservait pas les timestamps d'origine et la vidéo accélérait. Désormais Topaz conserve exactement les frames/cadence de la source (<code>fps passthrough</code>) et HandBrake utilise le mode VFR sur « fréquence = Source ». La durée et la vitesse restent identiques à l'original.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.14.4 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.14.4</span>
           </div>
           <span class="release-date">11 Juin 2026</span>
         </div>
