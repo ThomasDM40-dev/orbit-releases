@@ -178,6 +178,11 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
                 ))}
               </div>
             </Card>
+            <Card title="Assistant" icon={<SettingsIcon className="w-3.5 h-3.5" />}>
+              <Row title="Assistant de démarrage" desc="Reconfigurer les onglets selon ton profil (monteur, 3D, audio…)">
+                <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('orbit-onboarding')); }} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Relancer</button>
+              </Row>
+            </Card>
             <Card title="Couleur d'accent" icon={<Palette className="w-3.5 h-3.5" />}>
               <div className="flex gap-3 p-3 flex-wrap">
                 {ACCENTS.map(a => (

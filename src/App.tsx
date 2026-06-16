@@ -12,6 +12,7 @@ import HandBrake from "@/components/HandBrake";
 import MediaLibrary from "@/components/MediaLibrary";
 import MattingStudio from "@/components/MattingStudio";
 import UpdatePrompt from "@/components/UpdatePrompt";
+import OnboardingModal from "@/components/OnboardingModal";
 import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import { useState, useRef, useEffect } from "react";
@@ -74,6 +75,7 @@ export default function App() {
   const [language, setLanguage] = useState<'en' | 'fr' | 'es'>(() => (localStorage.getItem('app-lang') as any) || 'en');
   const [showSettings, setShowSettings] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('orbit-onboarded'));
   const SETTINGS_DEFAULTS: any = {
     outputDir: localStorage.getItem('app-output-dir') || "C:\\Users\\User\\Downloads",
     proxy: localStorage.getItem('app-proxy') || "",
@@ -217,6 +219,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [settings.theme, settings.accentColor]);
 
+  // Allow re-opening the onboarding wizard from Settings.
+  useEffect(() => {
+    const reopen = () => setShowOnboarding(true);
+    window.addEventListener('orbit-onboarding', reopen);
+    return () => window.removeEventListener('orbit-onboarding', reopen);
+  }, []);
+
   const handleUpdateYtdlp = async () => {
     setActiveMenu(null);
     setUpdateOk(null);
@@ -262,6 +271,15 @@ export default function App() {
     localStorage.setItem('app-theme', newSettings.theme || "dark");
     // … and the file the download/AI engine actually reads.
     (window as any).electronAPI?.saveGlobalSettings?.(newSettings);
+  };
+
+  const applyOnboarding = (r: { visibleIds: string[]; accent: string; theme: string }) => {
+    const ids = r.visibleIds && r.visibleIds.length ? r.visibleIds : mainTabConfig.map(t => t.id);
+    setMainTabConfig(prev => prev.map(t => ({ ...t, visible: ids.includes(t.id) })));
+    setActiveTab(ids[0] || 'downloads');
+    saveSettings({ ...settings, accentColor: r.accent || settings.accentColor, theme: r.theme || settings.theme });
+    localStorage.setItem('orbit-onboarded', '1');
+    setShowOnboarding(false);
   };
 
   const handleLanguageChange = (lang: 'en' | 'fr' | 'es') => {
@@ -549,6 +567,9 @@ export default function App() {
       {showImportModal && (
         <ImportModal onClose={() => setShowImportModal(false)} language={language} />
       )}
+
+      {/* First-run onboarding wizard (tailors visible tabs to the user's profile) */}
+      {showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
 
       {/* Launch update prompt (Orbit + bundled tools) */}
       <UpdatePrompt />
