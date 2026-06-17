@@ -155,7 +155,7 @@ console.error = (...args) => { originalConsoleError(...args); logToFile('[ERROR]
 // ─── Local AI (free, no key) — bundled llama.cpp + Qwen2.5 ────────────────────
 // Downloaded once from official sources (github.com/ggml-org + HuggingFace/Qwen),
 // runs offline on the user's machine. Used when no Anthropic key is configured.
-const LLM_DIR = path.join(ORBIT_DIR, 'modules', 'llm');
+const LLM_DIR = path.join(os.homedir(), '.orbit', 'modules', 'llm'); // = ORBIT_DIR/modules/llm (ORBIT_DIR is declared later → avoid TDZ)
 const LLAMA_URL = 'https://github.com/ggml-org/llama.cpp/releases/download/b9672/llama-b9672-bin-win-cpu-x64.zip';
 const LLM_MODEL_URL = 'https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf';
 const LLM_MODEL_FILE = 'qwen2.5-3b-instruct-q4_k_m.gguf';
