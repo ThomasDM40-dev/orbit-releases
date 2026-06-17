@@ -11,10 +11,87 @@ interface AIAssistantProps {
 
 const WELCOME_MESSAGE: AIMessage = {
   role: 'assistant',
-  content: "Bonjour 👋 Je suis **Orbit IA**. Pose-moi une question sur les outils, ou glisse-dépose un fichier et je te guide.",
+  content: "Bonjour 👋 Je suis **Orbit IA**. Pose-moi une question, demande-moi de **piloter l'app** (« va dans l'interpolateur IA », « coupe le proxy », « masque tous les onglets »…), ou glisse-dépose un fichier.",
 };
 
 const openExternal = (url: string) => { try { (window as any).electronAPI?.openExternalUrl?.(url); } catch (e) {} };
+
+// ── Interface control: deterministic intent parser (works offline, for everyone) ──
+const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(DIACRITICS, '');
+
+const TABS: { id: string; title: string; names: string[] }[] = [
+  { id: 'downloads', title: 'Téléchargements', names: ['telechargement', 'download', 'yt-dlp', 'ytdlp', 'youtube'] },
+  { id: 'converter', title: 'Convertisseur & Tags', names: ['convertisseur', 'converter', 'conversion', 'convertir', 'tags', 'ffmpeg'] },
+  { id: 'subscriptions', title: 'Abonnements', names: ['abonnement', 'subscription', 'abos', 'abo'] },
+  { id: 'interpolator', title: 'Interpolateur IA', names: ['interpolateur', 'interpolation', 'interpolator', 'rife', 'dain', 'fluidifi', 'fps'] },
+  { id: 'library', title: 'Médiathèque', names: ['mediatheque', 'bibliotheque', 'library', 'media'] },
+  { id: 'enhance', title: 'Amélioration IA', names: ['amelioration', 'ameliorer', 'upscale', 'enhance', 'agrandir', 'esrgan'] },
+  { id: 'matting', title: 'Détourage IA', names: ['detourage', 'detourer', 'matting', 'fond vert', 'arriere-plan', 'arriere plan', 'background', 'fond'] },
+  { id: 'handbrake', title: 'HandBrake', names: ['handbrake', 'compression', 'compresser', 'compresseur', 'compresse'] },
+  { id: 'topaz', title: 'Topaz Video AI', names: ['topaz'] },
+  { id: 'transcription', title: 'Transcription', names: ['transcription', 'transcrire', 'whisper', 'sous-titre', 'sous titre', 'subtitle', 'srt'] },
+];
+
+interface Intent { actionName: string; payload: any; reply: string; }
+
+function parseIntent(raw: string): Intent | null {
+  const s = norm(raw).trim();
+  if (!s) return null;
+  // Don't hijack genuine how-to questions.
+  if (/^(comment|pourquoi|c'?est quoi|qu'?est|a quoi|peux tu m'expliquer|explique)/.test(s)) return null;
+
+  const has = (...w: string[]) => w.some(x => s.includes(x));
+  const OFF = ['desactive', 'desactiver', 'coupe', 'couper', 'enleve', 'enlever', 'retire', 'retirer', 'supprime', 'supprimer', 'masque', 'masquer', 'cache', 'cacher', 'vire', 'virer', 'sans', 'vide'];
+  const ON = ['active', 'activer', 'affiche', 'afficher', 'montre', 'montrer', 'remet', 'remettre', 'restaure', 'reactive', 'reaffiche', 'rallume'];
+  const GO = ['va', 'aller', 'ouvre', 'ouvrir', 'montre', 'affiche', 'passe', 'bascule', 'emmene', 'amene', 'ramene', 'accede', 'direction', 'go', 'rends-toi', 'rend toi'];
+
+  // All tabs at once
+  if (s.includes('onglet') && has('tous', 'toutes', 'tout')) {
+    if (has(...OFF)) return { actionName: 'disableAllTabs', payload: {}, reply: "✅ J'ai masqué tous les onglets (Téléchargements reste actif pour garder l'app utilisable)." };
+    if (has(...ON)) return { actionName: 'enableAllTabs', payload: {}, reply: "✅ J'ai réaffiché tous les onglets." };
+  }
+
+  // Proxy
+  if (s.includes('proxy') && has(...OFF)) return { actionName: 'setSetting', payload: { key: 'proxy', value: '' }, reply: '✅ Proxy désactivé.' };
+
+  // Theme
+  if (has('theme', 'mode', 'apparence')) {
+    if (has('sombre', 'nuit', 'dark', 'noir')) return { actionName: 'setSetting', payload: { key: 'theme', value: 'dark' }, reply: '✅ Thème sombre activé.' };
+    if (has('clair', 'jour', 'light', 'blanc')) return { actionName: 'setSetting', payload: { key: 'theme', value: 'light' }, reply: '✅ Thème clair activé.' };
+  }
+
+  // Notifications
+  if (s.includes('notification')) {
+    if (has(...OFF)) return { actionName: 'setSetting', payload: { key: 'notifications', value: false }, reply: '✅ Notifications désactivées.' };
+    if (has(...ON)) return { actionName: 'setSetting', payload: { key: 'notifications', value: true }, reply: '✅ Notifications activées.' };
+  }
+
+  // Settings / import panels
+  if (has('parametre', 'reglage', 'setting', 'preference', 'option') && has(...GO))
+    return { actionName: 'openSettings', payload: {}, reply: "✅ J'ai ouvert les paramètres." };
+  if (s.includes('import') && has(...GO, 'importer', 'ajoute', 'ajouter', 'charge', 'charger'))
+    return { actionName: 'openImport', payload: {}, reply: "✅ J'ai ouvert l'outil d'import." };
+
+  // Tab-specific actions
+  const tab = TABS.find(t => t.names.some(n => s.includes(n)));
+  if (tab) {
+    if (s.includes('onglet') && has(...OFF))
+      return { actionName: 'setTabVisible', payload: { tab: tab.id, visible: false }, reply: `✅ J'ai masqué l'onglet « ${tab.title} ».` };
+    if (s.includes('onglet') && has(...ON))
+      return { actionName: 'setTabVisible', payload: { tab: tab.id, visible: true }, reply: `✅ J'ai affiché l'onglet « ${tab.title} ».` };
+    if (has(...GO))
+      return { actionName: 'switchTab', payload: { tab: tab.id }, reply: `✅ Direction l'onglet « ${tab.title} » !` };
+  }
+  return null;
+}
+
+const SUGGESTIONS: { label: string; text: string }[] = [
+  { label: '🎬 Interpolateur IA', text: "va dans l'interpolateur ia" },
+  { label: '✨ Amélioration IA', text: "ouvre l'amélioration ia" },
+  { label: '⚙️ Paramètres', text: 'ouvre les paramètres' },
+  { label: '🙈 Masquer tous les onglets', text: 'désactive tous les onglets' },
+];
 
 // ── Lightweight, safe markdown → JSX (bold, inline code, links) ──
 function renderInline(text: string, kb: string) {
@@ -132,7 +209,19 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
     }
   }, [droppedFile]); // eslint-disable-line
 
-  const handleSend = () => { const text = input.trim(); if (!text || isLoading) return; setInput(''); sendMessage({ role: 'user', content: text }); };
+  // Run a command: if it matches a known interface action, do it instantly
+  // (offline, no AI needed); otherwise hand it to the AI for a conversational reply.
+  const runCommand = useCallback((text: string) => {
+    const intent = parseIntent(text);
+    if (intent) {
+      setMessages(prev => [...prev, { role: 'user', content: text }, { role: 'assistant', content: intent.reply }]);
+      window.dispatchEvent(new CustomEvent('ai-dispatch', { detail: { actionName: intent.actionName, payload: intent.payload } }));
+      return;
+    }
+    sendMessage({ role: 'user', content: text });
+  }, [sendMessage]);
+
+  const handleSend = () => { const text = input.trim(); if (!text || isLoading) return; setInput(''); runCommand(text); };
 
   const executeAction = (action: any) => {
     if (action?.name === 'dispatch_action') {
@@ -192,6 +281,18 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
             )}
           </div>
         ))}
+        {/* Quick-action chips — discoverable interface control, shown at the start */}
+        {messages.filter(m => m.role !== 'system').length <= 1 && !isLoading && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {SUGGESTIONS.map(s => (
+              <button key={s.text} onClick={() => runCommand(s.text)}
+                className="px-3 py-1.5 text-[12px] rounded-full border border-white/10 text-gray-200 transition-all hover:scale-[1.04] hover:border-white/25"
+                style={{ background: 'rgba(255,255,255,0.05)' }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
         {isLoading && (
           <div className="self-start px-3.5 py-2.5 rounded-2xl rounded-bl-md text-[13px] flex items-center gap-2 border border-white/8" style={{ background: 'rgba(255,255,255,0.05)' }}>
             <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent,#ec4899)' }} />

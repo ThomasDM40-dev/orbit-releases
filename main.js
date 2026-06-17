@@ -259,7 +259,7 @@ Voici les outils disponibles dans Orbit :
 - Topaz Video AI — id: "topaz"
 - Transcription (Whisper) — id: "transcription"
 
-Tu as accès à un outil "dispatch_action" pour effectuer des actions (changer d'onglet, charger un fichier).
+Tu peux PILOTER l'interface via l'outil "dispatch_action" : ouvrir un onglet, masquer/afficher un ou tous les onglets, couper le proxy, changer le thème, ouvrir les paramètres, etc. Quand l'utilisateur demande une action sur l'app, utilise dispatch_action plutôt que d'expliquer où cliquer.
 Sois concis, clair et professionnel. Réponds toujours en français.`;
 
   // No Anthropic key → free local AI (llama.cpp + Qwen). Downloads on first use.
@@ -270,12 +270,12 @@ Sois concis, clair et professionnel. Réponds toujours en français.`;
 
   const tools = [{
     name: "dispatch_action",
-    description: "Déclenche une action dans Orbit (changer d'onglet, charger un fichier).",
+    description: "Pilote l'interface Orbit. actionName possibles: 'switchTab' (payload {tab}), 'setTabVisible' (payload {tab,visible:bool}), 'enableAllTabs', 'disableAllTabs', 'setSetting' (payload {key,value} — clés: proxy, theme('dark'|'light'), accentColor, notifications(bool), maxConcurrent), 'toggleSetting' (payload {key}), 'openSettings', 'openImport'. tab parmi: downloads, converter, subscriptions, interpolator, library, enhance, matting, handbrake, topaz, transcription.",
     input_schema: {
       type: "object",
       properties: {
-        actionName: { type: "string", description: "Ex: 'switchTab', 'loadFile'" },
-        payload: { type: "object", description: "Ex: { tab: 'handbrake' }", additionalProperties: true }
+        actionName: { type: "string", description: "Ex: 'switchTab', 'disableAllTabs', 'setSetting'" },
+        payload: { type: "object", description: "Ex: { tab: 'handbrake' } ou { key: 'proxy', value: '' }", additionalProperties: true }
       },
       required: ["actionName", "payload"]
     }

@@ -111,6 +111,9 @@ export default function App() {
   });
   const menuRef = useRef<HTMLDivElement>(null);
   const tabSettingsRef = useRef<HTMLDivElement>(null);
+  // Always-fresh refs so the AI dispatch handler (registered once) reads latest state.
+  const settingsRef = useRef(settings); settingsRef.current = settings;
+  const saveSettingsRef = useRef<((s: any) => void) | null>(null);
 
   const t = {
     en: {
@@ -235,28 +238,59 @@ export default function App() {
 
   // --- AI Actions Dispatch ---
   useEffect(() => {
+    const ALL_IDS = defaultMainTabs.map(t => t.id);
     const handleAIDispatch = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { actionName, payload } = customEvent.detail;
-      
-      if (actionName === 'switchTab' && payload?.tab) {
-        const tabExists = mainTabConfig.find(t => t.id === payload.tab);
-        if (tabExists) {
-          if (!tabExists.visible) toggleMainTab(payload.tab);
-          setActiveTab(payload.tab);
+      const { actionName, payload = {} } = (e as CustomEvent).detail || {};
+
+      switch (actionName) {
+        case 'switchTab': {
+          if (payload.tab && ALL_IDS.includes(payload.tab)) {
+            setMainTabConfig(prev => prev.map(t => t.id === payload.tab ? { ...t, visible: true } : t));
+            setActiveTab(payload.tab);
+          }
+          break;
         }
-      }
-      
-      if (actionName === 'loadFile') {
-        // Here you could send another event that the specific tool component listens to
-        // For example: window.dispatchEvent(new CustomEvent('load-file-transcription', { detail: payload.file }));
-        console.log("Loading file into tool", payload);
+        case 'setTabVisible': {
+          if (!ALL_IDS.includes(payload.tab)) break;
+          setMainTabConfig(prev => {
+            const next = prev.map(t => t.id === payload.tab ? { ...t, visible: !!payload.visible } : t);
+            if (payload.visible) setActiveTab(payload.tab);
+            else setActiveTab(cur => cur === payload.tab ? (next.find(t => t.visible)?.id || 'downloads') : cur);
+            return next;
+          });
+          break;
+        }
+        case 'disableAllTabs': {
+          const keep = ALL_IDS[0];
+          setMainTabConfig(prev => prev.map(t => ({ ...t, visible: t.id === keep })));
+          setActiveTab(keep);
+          break;
+        }
+        case 'enableAllTabs': {
+          setMainTabConfig(prev => prev.map(t => ({ ...t, visible: true })));
+          break;
+        }
+        case 'setSetting': {
+          if (payload.key) saveSettingsRef.current?.({ ...settingsRef.current, [payload.key]: payload.value });
+          break;
+        }
+        case 'toggleSetting': {
+          if (payload.key) saveSettingsRef.current?.({ ...settingsRef.current, [payload.key]: !settingsRef.current[payload.key] });
+          break;
+        }
+        case 'openSettings': { setShowSettings(true); break; }
+        case 'openImport': { setShowImportModal(true); break; }
+        case 'loadFile': {
+          // Tool components can listen for this to receive a file path.
+          window.dispatchEvent(new CustomEvent('ai-load-file', { detail: payload }));
+          break;
+        }
       }
     };
 
     window.addEventListener('ai-dispatch', handleAIDispatch);
     return () => window.removeEventListener('ai-dispatch', handleAIDispatch);
-  }, [mainTabConfig]);
+  }, []);
 
   // Merge any settings already on disk (written by a previous session / the engine).
   useEffect(() => {
@@ -349,6 +383,7 @@ export default function App() {
     // … and the file the download/AI engine actually reads.
     (window as any).electronAPI?.saveGlobalSettings?.(newSettings);
   };
+  saveSettingsRef.current = saveSettings;
 
   const applyOnboarding = (r: { visibleIds: string[]; accent: string; theme: string }) => {
     const ids = r.visibleIds && r.visibleIds.length ? r.visibleIds : mainTabConfig.map(t => t.id);
