@@ -11,6 +11,9 @@ interface OrbitPlayerProps {
 
 const AUDIO_EXT = ['mp3', 'flac', 'wav', 'm4a', 'ogg', 'opus', 'aac', 'alac', 'wma'];
 
+const toMediaUrl = (filePath: string) =>
+  'media:///' + filePath.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
+
 export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: OrbitPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -22,6 +25,10 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
   const [showControls, setShowControls] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentSrc, setCurrentSrc] = useState(fileUrl);
+  const [preparing, setPreparing] = useState(false);
+  const [prepProgress, setPrepProgress] = useState(0);
+  const triedPrepareRef = useRef(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ext = (filePath || fileUrl).split('.').pop()?.toLowerCase() || '';
@@ -34,6 +41,39 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
   const openFolder = () => {
     const api = (window as any).electronAPI;
     if (filePath && api?.showItemInFolder) api.showItemInFolder(filePath);
+  };
+
+  // When the built-in player can't decode the file, transcode/remux it to a
+  // browser-friendly MP4 with ffmpeg, then swap the source — so any file plays.
+  const preparePlayback = async () => {
+    const api = (window as any).electronAPI;
+    if (!filePath || !api?.preparePlayback) {
+      setError("Ce fichier ne peut pas être lu ici (codec non pris en charge). Ouvre-le dans ton lecteur système.");
+      return;
+    }
+    triedPrepareRef.current = true;
+    setPreparing(true);
+    setPrepProgress(0);
+    setError(null);
+    let unsub: (() => void) | undefined;
+    if (api.onPlaybackProgress) unsub = api.onPlaybackProgress((v: any) => setPrepProgress(v?.percent || 0));
+    try {
+      const res = await api.preparePlayback(filePath);
+      if (res?.ok && res.path) {
+        setCurrentSrc(toMediaUrl(res.path));
+        setPreparing(false);
+        // Reload with the new compatible source.
+        setTimeout(() => { const v = videoRef.current; if (v) { v.load(); v.play().catch(() => {}); } }, 0);
+      } else {
+        setPreparing(false);
+        setError("Impossible de préparer ce fichier pour la lecture intégrée. Ouvre-le dans ton lecteur système.");
+      }
+    } catch (e) {
+      setPreparing(false);
+      setError("Impossible de préparer ce fichier pour la lecture intégrée. Ouvre-le dans ton lecteur système.");
+    } finally {
+      if (unsub) unsub();
+    }
   };
 
   useEffect(() => {
@@ -130,8 +170,8 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
       >
         <video
           ref={videoRef}
-          src={fileUrl}
-          className={`w-full h-full object-contain ${isAudio || error ? 'opacity-0' : ''}`}
+          src={currentSrc}
+          className={`w-full h-full object-contain ${isAudio || error || preparing ? 'opacity-0' : ''}`}
           onClick={togglePlay}
           onTimeUpdate={handleTimeUpdate}
           onEnded={() => setIsPlaying(false)}
@@ -143,7 +183,10 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
           onPlaying={() => setLoading(false)}
           onError={() => {
             setLoading(false);
-            setError("Ce fichier ne peut pas être lu ici (codec non pris en charge, ex. MKV / H.265). Ouvre-le dans ton lecteur système.");
+            // First failure → auto-transcode to a playable MP4. Only show the
+            // hard error if even the prepared file fails.
+            if (!triedPrepareRef.current) preparePlayback();
+            else setError("Ce fichier ne peut pas être lu ici (codec non pris en charge, ex. MKV / H.265). Ouvre-le dans ton lecteur système.");
           }}
           autoPlay
         />
@@ -158,8 +201,20 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
           </div>
         )}
 
+        {/* Preparing (transcoding) overlay */}
+        {preparing && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-10 text-center bg-[#0a0a0a]">
+            <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />
+            <p className="text-gray-300 text-sm">Préparation de la lecture…</p>
+            <div className="w-full max-w-xs h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300" style={{ width: `${prepProgress}%` }} />
+            </div>
+            <p className="text-[11px] text-gray-500">{prepProgress > 0 ? `${prepProgress}%` : 'Conversion du format pour la lecture intégrée'}</p>
+          </div>
+        )}
+
         {/* Loading spinner */}
-        {loading && !error && (
+        {loading && !error && !preparing && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />
           </div>
@@ -192,7 +247,7 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
         </div>
 
         {/* Big play button overlay when paused */}
-        {!isPlaying && !loading && !error && (
+        {!isPlaying && !loading && !error && !preparing && (
           <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center">
             <div className="w-16 h-16 rounded-full bg-pink-500/20 flex items-center justify-center backdrop-blur-sm border border-pink-500/30 transition-transform hover:scale-110">
               <Play className="w-8 h-8 text-pink-500 fill-pink-500 ml-1" />

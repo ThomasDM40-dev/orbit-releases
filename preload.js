@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: (path) => ipcRenderer.invoke('open-file', path),
   deleteFile: (path) => ipcRenderer.invoke('delete-file', path),
   showItemInFolder: (path) => ipcRenderer.invoke('show-item-in-folder', path),
+  preparePlayback: (path) => ipcRenderer.invoke('prepare-playback', path),
+  onPlaybackProgress: (cb) => { const h = (_e, v) => cb(v); ipcRenderer.on('playback-progress', h); return () => ipcRenderer.removeListener('playback-progress', h); },
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('toggle-maximize-window'),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),

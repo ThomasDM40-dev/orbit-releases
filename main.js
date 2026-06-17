@@ -1907,6 +1907,91 @@ function getVideoDuration(ffmpegPath, inputPath) {
   });
 }
 
+// ── On-the-fly playback preparation ─────────────────────────────────────────
+// The HTML5 <video> element can't decode every container/codec (MKV, H.265…).
+// When in-app playback fails, we remux/transcode the file to a browser-friendly
+// MP4 with the bundled ffmpeg so the user can read ANY file inside Orbit.
+const PLAYBACK_CACHE_DIR = path.join(os.tmpdir(), 'orbit-playback');
+
+// Probe video/audio codec by parsing ffmpeg's stderr (ffprobe isn't bundled).
+function probeCodecs(ffmpegBin, inputPath) {
+  return new Promise((resolve) => {
+    const p = spawn(ffmpegBin, ['-hide_banner', '-i', inputPath]);
+    let stderr = '';
+    p.stderr.on('data', d => stderr += d.toString());
+    p.on('error', () => resolve({ vcodec: null, acodec: null, duration: null }));
+    p.on('close', () => {
+      const v = stderr.match(/Stream #\d+:\d+.*?:\s*Video:\s*([a-z0-9_]+)/i);
+      const a = stderr.match(/Stream #\d+:\d+.*?:\s*Audio:\s*([a-z0-9_]+)/i);
+      const dm = stderr.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
+      resolve({
+        vcodec: v ? v[1].toLowerCase() : null,
+        acodec: a ? a[1].toLowerCase() : null,
+        duration: dm ? (parseInt(dm[1]) * 3600 + parseInt(dm[2]) * 60 + parseFloat(dm[3])) : null
+      });
+    });
+  });
+}
+
+ipcMain.handle('prepare-playback', async (event, filePath) => {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return { ok: false, error: 'not-found' };
+    const ffmpegBin = getFfmpegBin();
+    if (!ffmpegBin || !fs.existsSync(ffmpegBin)) return { ok: false, error: 'no-ffmpeg' };
+
+    // Cache by source path + size + mtime so re-playing is instant.
+    const st = fs.statSync(filePath);
+    const key = require('crypto').createHash('md5')
+      .update(filePath + '|' + st.size + '|' + st.mtimeMs).digest('hex');
+    if (!fs.existsSync(PLAYBACK_CACHE_DIR)) fs.mkdirSync(PLAYBACK_CACHE_DIR, { recursive: true });
+    const outPath = path.join(PLAYBACK_CACHE_DIR, key + '.mp4');
+    if (fs.existsSync(outPath) && fs.statSync(outPath).size > 0) {
+      return { ok: true, path: outPath, cached: true };
+    }
+
+    const { vcodec, acodec, duration } = await probeCodecs(ffmpegBin, filePath);
+    // Copy the stream when it's already browser-compatible (near-instant remux),
+    // otherwise re-encode just that stream.
+    const vArgs = (vcodec === 'h264')
+      ? ['-c:v', 'copy']
+      : ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p'];
+    const aArgs = (acodec === 'aac' || acodec === 'mp3')
+      ? ['-c:a', 'copy']
+      : (acodec ? ['-c:a', 'aac', '-b:a', '192k'] : ['-an']);
+
+    const args = ['-y', '-hide_banner', '-i', filePath, ...vArgs, ...aArgs,
+      '-movflags', '+faststart', outPath];
+
+    return await new Promise((resolve) => {
+      const proc = spawn(ffmpegBin, args);
+      let stderr = '';
+      proc.stderr.on('data', (d) => {
+        const s = d.toString();
+        stderr += s;
+        if (duration) {
+          const m = s.match(/time=(\d+):(\d+):([\d.]+)/);
+          if (m) {
+            const cur = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
+            const percent = Math.min(99, Math.round((cur / duration) * 100));
+            try { event.sender.send('playback-progress', { percent }); } catch (e) {}
+          }
+        }
+      });
+      proc.on('error', () => resolve({ ok: false, error: 'spawn-failed' }));
+      proc.on('close', (code) => {
+        if (code === 0 && fs.existsSync(outPath) && fs.statSync(outPath).size > 0) {
+          resolve({ ok: true, path: outPath });
+        } else {
+          try { if (fs.existsSync(outPath)) fs.unlinkSync(outPath); } catch (e) {}
+          resolve({ ok: false, error: 'ffmpeg-failed', detail: stderr.slice(-400) });
+        }
+      });
+    });
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
 // Helper: download AI module
 function downloadModule(url, destPath, progressId) {
   return new Promise((resolve, reject) => {

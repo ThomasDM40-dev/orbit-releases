@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.16.8
+      Version actuelle : 0.16.9
     </div>
   </header>
 
@@ -343,12 +343,37 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.16.8 -->
+      <!-- v0.16.9 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.16.8</span>
+            <span>v0.16.9</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">17 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Lecteur — lis vraiment TOUS les fichiers</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Tous les formats se lisent dans Orbit :</strong> si le lecteur intégré ne sait pas décoder un fichier (MKV, H.265/HEVC, AV1…), Orbit le <strong>convertit automatiquement à la volée</strong> avec ffmpeg vers un MP4 lisible — avec une barre « Préparation… ». Plus aucun fichier bloqué.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon perf">⬡</div>
+            <div><strong>Rapide :</strong> quand la vidéo est déjà en H.264 (cas le plus courant), Orbit fait une simple <strong>copie du flux</strong> (remux) — quasi instantané, sans ré-encodage. Le résultat est mis en cache : relancer la lecture est immédiat.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Repli toujours dispo :</strong> en dernier recours, les boutons « Lecteur système » et « Dossier » restent là.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.16.8 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.16.8</span>
           </div>
           <span class="release-date">17 Juin 2026</span>
         </div>
