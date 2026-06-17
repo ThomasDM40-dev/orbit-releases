@@ -8,7 +8,7 @@ import {
 import SegmentedTabs from './SegmentedTabs';
 
 const api = () => (window as any).electronAPI;
-const mediaUrl = (p: string) => 'media://' + encodeURI(p.replace(/\\/g, '/'));
+const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 const SELECT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all cursor-pointer w-full shadow-sm backdrop-blur-md";

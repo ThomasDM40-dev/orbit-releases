@@ -601,15 +601,29 @@ ipcMain.handle('notify', (event, { title, body }) => {
 
 app.whenReady().then(() => {
   protocol.registerFileProtocol('media', (request, callback) => {
-    let rawPath = request.url.replace(/^media:\/\//i, '');
-    if (rawPath.startsWith('/')) {
-      rawPath = rawPath.slice(1);
-    }
     try {
-      const decodedPath = decodeURIComponent(rawPath);
-      return callback({ path: decodedPath });
+      // Canonical form: media:///C%3A/Users/.../video.mp4 (path in the URL path
+      // component, NOT the host — putting it in the host makes Chromium lowercase
+      // and mangle the percent-encoded drive/path, which broke playback at random).
+      const parsed = new URL(request.url);
+      let raw = decodeURIComponent(parsed.pathname || '');
+      // Legacy fallback: old builds emitted media://<encoded-whole-path>, which
+      // lands in the host component.
+      if (!raw || raw === '/') {
+        raw = decodeURIComponent((parsed.host || '') + (parsed.pathname || ''));
+      }
+      // Strip the leading slash before a Windows drive letter ("/C:/..." -> "C:/...").
+      if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(raw)) raw = raw.slice(1);
+      raw = raw.replace(/\//g, path.sep);
+
+      if (!raw || !fs.existsSync(raw)) {
+        console.error('Media protocol: file not found ->', raw, '(from', request.url + ')');
+        return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+      }
+      return callback({ path: raw });
     } catch (error) {
-      console.error("Media protocol error:", error);
+      console.error('Media protocol error:', error, request.url);
+      return callback({ error: -2 }); // net::FAILED
     }
   });
 

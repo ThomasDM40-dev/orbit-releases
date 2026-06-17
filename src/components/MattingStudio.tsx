@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const api = () => (window as any).electronAPI;
-const mediaUrl = (p: string) => 'media://' + encodeURI(p.replace(/\\/g, '/'));
+const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const SELECT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-teal-500/50 transition-all w-full shadow-sm";
 const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-teal-500/50 transition-all w-full";

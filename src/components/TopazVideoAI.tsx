@@ -8,7 +8,7 @@ import {
 import SegmentedTabs from './SegmentedTabs';
 
 const api = () => (window as any).electronAPI;
-const mediaUrl = (p: string) => 'media://' + encodeURI(p.replace(/\\/g, '/'));
+const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 // ── shared styles (match Orbit conventions) ──

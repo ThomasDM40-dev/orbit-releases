@@ -6,6 +6,12 @@ import { Loader2, Download, Video, CheckCircle2, ClipboardX, Crop, Cloud, MoreHo
 import OrbitPlayer from "./OrbitPlayer";
 import LogPanel from "./LogPanel";
 
+// Build a safe media:// URL. The path goes in the URL *path* component
+// (media:///C%3A/Users/...), never the host — otherwise Chromium normalizes the
+// host and playback fails intermittently for names with caps/spaces/accents.
+const toMediaUrl = (filePath: string) =>
+  'media:///' + filePath.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
+
 type DownloadItem = {
   id: string;
   url: string;
@@ -105,7 +111,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
   const [outputDir, setOutputDir] = useState(globalSettings?.outputDir || "");
   const [viewLayout, setViewLayout] = useState<'list'|'grid'|'terminal'>('list');
   const [sortOrder, setSortOrder] = useState<'newest'|'name'|'size'>('newest');
-  const [playingMedia, setPlayingMedia] = useState<{url: string, title: string} | null>(null);
+  const [playingMedia, setPlayingMedia] = useState<{url: string, title: string, filePath: string} | null>(null);
   const [logPanel, setLogPanel] = useState<{id: string, title: string} | null>(null);
   const downloadLogsRef = React.useRef<Map<string, Array<{line: string, level: string}>>>(new Map());
   const formatPopoverRef = React.useRef<HTMLDivElement>(null);
@@ -677,11 +683,12 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                             onClick={() => {
                               if (item.filePath) {
                                 setPlayingMedia({
-                                  url: `media://${encodeURIComponent(item.filePath)}`,
-                                  title: item.title || "Video"
+                                  url: toMediaUrl(item.filePath),
+                                  title: item.title || "Video",
+                                  filePath: item.filePath
                                 });
                               }
-                            }} 
+                            }}
                             className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center justify-center ${viewLayout === 'terminal' ? 'text-green-500 border-green-500/30' : 'text-pink-500 border-pink-500/30 hover:bg-pink-500/10'}`} 
                             title="Play in Orbit"
                           >
@@ -753,10 +760,11 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
 
       <AnimatePresence>
         {playingMedia && (
-          <OrbitPlayer 
-            fileUrl={playingMedia.url} 
-            title={playingMedia.title} 
-            onClose={() => setPlayingMedia(null)} 
+          <OrbitPlayer
+            fileUrl={playingMedia.url}
+            filePath={playingMedia.filePath}
+            title={playingMedia.title}
+            onClose={() => setPlayingMedia(null)}
           />
         )}
       </AnimatePresence>
