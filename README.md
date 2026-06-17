@@ -158,6 +158,8 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.16.x** — Assistant IA local gratuit (Qwen via llama.cpp) · interface repensée (Markdown, Liquid Glass, clic-extérieur)
+- **v0.15.0** — Onboarding au premier lancement · icônes d'onglets sur-mesure · prompt de mise à jour au démarrage
 - **v0.14.0** — Onglet Détourage IA (Robust Video Matting · transparent/vert/flou/image)
 - **v0.13.0** — Onglet Médiathèque (gestionnaire + conversion ProRes/DNxHR + export créatif) · fix Reels Instagram
 - **v0.12.0** — Onglet HandBrake (moteur officiel) + code source public sur `main`

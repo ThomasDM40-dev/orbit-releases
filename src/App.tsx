@@ -16,7 +16,7 @@ import OnboardingModal from "@/components/OnboardingModal";
 import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import AIAssistant from "@/components/AIAssistant";
-import { Bot, UploadCloud } from "lucide-react";
+import { Sparkles, UploadCloud } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -650,10 +650,18 @@ export default function App() {
 
       {/* Floating AI Button */}
       <button
+        data-ai-toggle
         onClick={() => setShowAIAssistant(!showAIAssistant)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-pink-500 rounded-full shadow-lg hover:shadow-pink-500/50 hover:bg-pink-600 transition-all flex items-center justify-center text-white z-40 group"
+        aria-label="Assistant IA"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-2xl transition-all flex items-center justify-center text-white z-40 group hover:scale-105 active:scale-95"
+        style={{
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent,#ec4899) 88%, white), var(--accent,#ec4899))',
+          border: '1px solid rgba(255,255,255,0.18)',
+          boxShadow: '0 10px 30px color-mix(in srgb, var(--accent,#ec4899) 45%, transparent), 0 1px 0 rgba(255,255,255,0.25) inset',
+          backdropFilter: 'blur(12px)',
+        }}
       >
-        <Bot className="w-6 h-6 group-hover:scale-110 transition-transform" />
+        <Sparkles className="w-6 h-6 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
       </button>
 
       {/* AI Assistant */}
