@@ -152,14 +152,98 @@ console.log = (...args) => { originalConsoleLog(...args); logToFile('[INFO]', ..
 console.error = (...args) => { originalConsoleError(...args); logToFile('[ERROR]', ...args); };
 
 // ── AI Assistant: proxy Claude API calls from renderer (avoids CORS) ──
+// ─── Local AI (free, no key) — bundled llama.cpp + Qwen2.5 ────────────────────
+// Downloaded once from official sources (github.com/ggml-org + HuggingFace/Qwen),
+// runs offline on the user's machine. Used when no Anthropic key is configured.
+const LLM_DIR = path.join(ORBIT_DIR, 'modules', 'llm');
+const LLAMA_URL = 'https://github.com/ggml-org/llama.cpp/releases/download/b9672/llama-b9672-bin-win-cpu-x64.zip';
+const LLM_MODEL_URL = 'https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf';
+const LLM_MODEL_FILE = 'qwen2.5-3b-instruct-q4_k_m.gguf';
+const LLM_PORT = 8769;
+const LLM_MIN_MODEL_BYTES = 5e8;
+const llmState = { proc: null, ready: false, starting: null };
+
+function findLlamaServer(dir) {
+  if (!dir || !fs.existsSync(dir)) return null;
+  try { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { const f = path.join(dir, e.name); if (e.isFile() && e.name.toLowerCase() === 'llama-server.exe') return f; if (e.isDirectory()) { const x = findLlamaServer(f); if (x) return x; } } } catch (e) {}
+  return null;
+}
+function llmModelOk() { try { return fs.existsSync(path.join(LLM_DIR, 'models', LLM_MODEL_FILE)) && fs.statSync(path.join(LLM_DIR, 'models', LLM_MODEL_FILE)).size >= LLM_MIN_MODEL_BYTES; } catch (e) { return false; } }
+function llmInstalled() { return !!findLlamaServer(LLM_DIR) && llmModelOk(); }
+
+function curlTo(url, dest, onPct) {
+  return new Promise((resolve, reject) => {
+    const c = spawn('curl', ['-L', '--fail', '--retry', '3', '--progress-bar', '-o', dest, url]);
+    c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
+    c.stderr.on('data', d => { const m = d.toString().match(/([\d.]+)%/); if (m && onPct) onPct(parseFloat(m[1])); });
+    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+  });
+}
+
+async function ensureLocalLlm(onLog) {
+  fs.mkdirSync(path.join(LLM_DIR, 'models'), { recursive: true });
+  let exe = findLlamaServer(LLM_DIR);
+  if (!exe) {
+    onLog && onLog({ stage: 'Téléchargement du moteur IA local…', percent: 0 });
+    const zip = path.join(LLM_DIR, 'llama.zip');
+    await curlTo(LLAMA_URL, zip, p => onLog && onLog({ stage: 'Moteur IA…', percent: Math.round(p * 0.05) }));
+    require('child_process').execSync(`powershell -Command "Expand-Archive -Path '${zip}' -DestinationPath '${LLM_DIR}' -Force"`, { timeout: 120000 });
+    try { fs.unlinkSync(zip); } catch (e) {}
+    exe = findLlamaServer(LLM_DIR);
+  }
+  if (!exe) throw new Error('llama-server introuvable après extraction.');
+  const modelPath = path.join(LLM_DIR, 'models', LLM_MODEL_FILE);
+  if (!llmModelOk()) {
+    onLog && onLog({ stage: 'Téléchargement du modèle IA (~2 Go, une seule fois)…', percent: 5 });
+    await curlTo(LLM_MODEL_URL, modelPath, p => onLog && onLog({ stage: 'Modèle IA (~2 Go)…', percent: 5 + Math.round(p * 0.94) }));
+    if (!llmModelOk()) { try { fs.unlinkSync(modelPath); } catch (e) {} throw new Error('Modèle IA incomplet.'); }
+  }
+  return { exe, modelPath };
+}
+
+function startLocalLlm(onLog) {
+  if (llmState.ready && llmState.proc && !llmState.proc.killed) return Promise.resolve();
+  if (llmState.starting) return llmState.starting;
+  llmState.starting = (async () => {
+    const { exe, modelPath } = await ensureLocalLlm(onLog);
+    onLog && onLog({ stage: 'Démarrage de l\'IA locale…', percent: 99 });
+    const srv = spawn(exe, ['-m', modelPath, '--port', String(LLM_PORT), '-c', '4096', '-ngl', '0', '--no-webui'], { cwd: path.dirname(exe), windowsHide: true });
+    srv.stderr.on('data', () => {}); srv.stdout.on('data', () => {});
+    srv.on('exit', () => { llmState.ready = false; if (llmState.proc === srv) llmState.proc = null; });
+    llmState.proc = srv;
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const httpGet = (u) => new Promise(r => { require('http').get(u, x => { let b = ''; x.on('data', d => b += d); x.on('end', () => r(b)); }).on('error', () => r(null)); });
+    for (let i = 0; i < 90; i++) { await sleep(1000); if (srv.killed) break; const h = await httpGet(`http://127.0.0.1:${LLM_PORT}/health`); if (h && /ok/i.test(h)) { llmState.ready = true; break; } }
+    if (!llmState.ready) { try { srv.kill('SIGKILL'); } catch (e) {} throw new Error('Le serveur IA local n\'a pas démarré.'); }
+  })();
+  try { return llmState.starting; } finally { const p = llmState.starting; p.finally(() => { if (llmState.starting === p) llmState.starting = null; }); }
+}
+
+async function localChat(messages, systemPrompt, onLog) {
+  await startLocalLlm(onLog);
+  const body = JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, ...messages], max_tokens: 512, temperature: 0.7, stream: false });
+  const text = await new Promise((resolve, reject) => {
+    const req = require('http').request({ host: '127.0.0.1', port: LLM_PORT, path: '/v1/chat/completions', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, x => {
+      let b = ''; x.on('data', d => b += d); x.on('end', () => { try { const j = JSON.parse(b); resolve((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').trim()); } catch (e) { reject(new Error('Réponse IA locale illisible.')); } });
+    });
+    req.on('error', reject); req.write(body); req.end();
+  });
+  return text;
+}
+
+app.on('before-quit', () => { try { llmState.proc && llmState.proc.kill('SIGKILL'); } catch (e) {} });
+
+// Pre-download / verify the local AI (with progress) — from Settings.
+ipcMain.handle('llm-status', () => ({ installed: llmInstalled(), running: !!(llmState.ready && llmState.proc) }));
+ipcMain.handle('llm-install', async () => {
+  try { await startLocalLlm(d => uiWin()?.webContents.send('llm-progress', d)); return { ok: true }; }
+  catch (e) { return { ok: false, error: e.message }; }
+});
+
 ipcMain.handle('ai-chat', async (event, { messages }) => {
-  // The user supplies their OWN Anthropic API key (Paramètres → Assistant IA).
-  // Never ship a shared/hardcoded key — it leaks publicly and gets revoked.
+  // Anthropic key (optional, most powerful) — the user's OWN key, never hardcoded.
   let apiKey = '';
   try { const gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); apiKey = (gs.aiApiKey || '').trim(); } catch (e) {}
-  if (!apiKey) {
-    return { error: "Aucune clé API. Ajoutez votre clé Anthropic (sk-ant-…) dans Paramètres → Assistant IA. Créez-en une sur console.anthropic.com." };
-  }
 
   const systemPrompt = `Tu es Orbit IA, l'assistant intelligent intégré au logiciel vidéo/audio Orbit.
 L'utilisateur peut te demander de l'aide sur la manière d'utiliser les différents outils.
@@ -177,6 +261,12 @@ Voici les outils disponibles dans Orbit :
 
 Tu as accès à un outil "dispatch_action" pour effectuer des actions (changer d'onglet, charger un fichier).
 Sois concis, clair et professionnel. Réponds toujours en français.`;
+
+  // No Anthropic key → free local AI (llama.cpp + Qwen). Downloads on first use.
+  if (!apiKey) {
+    try { return { text: await localChat(messages, systemPrompt, d => uiWin()?.webContents.send('llm-progress', d)) }; }
+    catch (e) { return { error: 'IA locale : ' + ((e && e.message) || 'indisponible') }; }
+  }
 
   const tools = [{
     name: "dispatch_action",

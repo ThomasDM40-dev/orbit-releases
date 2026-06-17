@@ -155,4 +155,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),
+  llmStatus: () => ipcRenderer.invoke('llm-status'),
+  llmInstall: () => ipcRenderer.invoke('llm-install'),
+  onLlmProgress: (cb) => { ipcRenderer.on('llm-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('llm-progress'); },
 });

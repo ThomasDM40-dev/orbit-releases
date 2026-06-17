@@ -58,8 +58,23 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
   const [clearing, setClearing] = useState(false);
   const [proxyTest, setProxyTest] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
   const [gpuList, setGpuList] = useState<{ id: string; name: string }[]>([]);
+  const [llm, setLlm] = useState<{ installed?: boolean }>({});
+  const [llmBusy, setLlmBusy] = useState(false);
+  const [llmProg, setLlmProg] = useState<{ stage?: string; percent?: number } | null>(null);
 
   const update = (key: string, value: any) => saveSettings({ ...settings, [key]: value });
+
+  useEffect(() => {
+    electronAPI?.llmStatus?.().then((s: any) => s && setLlm(s)).catch(() => {});
+    const off = electronAPI?.onLlmProgress?.((d: any) => setLlmProg(d));
+    return () => { if (off) off(); };
+  }, [electronAPI]);
+  const installLlm = async () => {
+    setLlmBusy(true); setLlmProg({ stage: 'Préparation…', percent: 0 });
+    const r = await electronAPI?.llmInstall?.().catch((e: any) => ({ ok: false, error: String(e) }));
+    setLlmBusy(false); setLlmProg(null);
+    if (r?.ok) setLlm({ installed: true });
+  };
 
   useEffect(() => {
     if (!electronAPI) return;
@@ -201,11 +216,31 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
         return (
           <div>
             <Card title="Assistant IA" icon={<Cpu className="w-3.5 h-3.5" />}>
+              {/* Free local AI (no key, for everyone) */}
+              <div className="px-3 py-2.5 border-b border-white/5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm text-gray-200">IA locale gratuite {settings.aiApiKey ? '' : <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-300 ml-1">active</span>}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{llm.installed ? 'Installée — fonctionne hors-ligne, sans clé.' : 'Téléchargée une fois (~2 Go), tourne sur ta machine. Sans clé, c\'est elle qui répond.'}</p>
+                  </div>
+                  <button onClick={installLlm} disabled={llmBusy} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5 disabled:opacity-50 shrink-0">
+                    {llmBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : llm.installed ? <Check className="w-4 h-4 text-green-400" /> : <Cpu className="w-4 h-4" />}
+                    {llmBusy ? 'En cours…' : llm.installed ? 'Vérifier' : 'Installer'}
+                  </button>
+                </div>
+                {llmBusy && llmProg ? (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-[10px] text-gray-400 mb-1"><span className="truncate">{llmProg.stage}</span><span>{llmProg.percent ?? 0}%</span></div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${llmProg.percent ?? 0}%`, background: 'var(--accent,#ec4899)' }} /></div>
+                  </div>
+                ) : null}
+              </div>
+              {/* Optional Claude key (more powerful) */}
               <div className="px-3 py-2.5">
-                <p className="text-sm text-gray-200 mb-1">Clé API Anthropic (Claude)</p>
-                <p className="text-[11px] text-gray-500 mb-2">Nécessaire pour l'Assistant IA. Crée une clé sur <span className="text-gray-300">console.anthropic.com</span>. Elle reste sur ta machine (jamais partagée).</p>
+                <p className="text-sm text-gray-200 mb-1">Clé API Anthropic (Claude) <span className="text-gray-500 text-[11px]">— optionnel, plus puissant</span></p>
+                <p className="text-[11px] text-gray-500 mb-2">Ajoute ta clé pour utiliser Claude à la place de l'IA locale. Crée-en une sur <span className="text-gray-300">console.anthropic.com</span>. Elle reste sur ta machine.</p>
                 <input type="password" placeholder="sk-ant-..." className={INPUT + ' w-full font-mono'} value={settings.aiApiKey || ''} onChange={e => update('aiApiKey', e.target.value.trim())} />
-                {settings.aiApiKey ? <p className="text-[11px] text-green-400 mt-1.5">✓ Clé enregistrée ({settings.aiApiKey.slice(0, 7)}…{settings.aiApiKey.slice(-4)})</p> : null}
+                {settings.aiApiKey ? <p className="text-[11px] text-green-400 mt-1.5">✓ Clé enregistrée ({settings.aiApiKey.slice(0, 7)}…{settings.aiApiKey.slice(-4)}) — Claude actif</p> : null}
               </div>
             </Card>
             <Card title="Amélioration IA & Topaz" icon={<Cpu className="w-3.5 h-3.5" />}>
