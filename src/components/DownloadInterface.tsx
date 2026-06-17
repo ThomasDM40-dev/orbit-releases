@@ -141,7 +141,10 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
       }
     };
     const handleImportUrls = (e: any) => {
-      const urls: string[] = e.detail;
+      // Accept either a bare string[] (ImportModal) or { urls, audioOnly } (AI assistant).
+      const detail = e.detail;
+      const urls: string[] = Array.isArray(detail) ? detail : (detail?.urls || []);
+      const forceAudio: boolean | undefined = Array.isArray(detail) ? undefined : detail?.audioOnly;
       if (urls && urls.length > 0) {
         const processUrl = async (importedUrl: string) => {
           const id = Math.random().toString(36).substr(2, 9);
@@ -174,9 +177,9 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
               id, 
               url: importedUrl, 
               format: globalFormat,
-              options: { 
-                outputDir: outputDir, 
-                audioOnly: ['MP3', 'FLAC', 'WAV', 'M4A', 'OGG', 'ALAC'].includes(globalFormat)
+              options: {
+                outputDir: outputDir,
+                audioOnly: forceAudio ?? ['MP3', 'FLAC', 'WAV', 'M4A', 'OGG', 'ALAC'].includes(globalFormat)
               }
             });
           }

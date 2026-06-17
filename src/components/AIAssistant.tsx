@@ -38,13 +38,31 @@ interface Intent { actionName: string; payload: any; reply: string; }
 function parseIntent(raw: string): Intent | null {
   const s = norm(raw).trim();
   if (!s) return null;
+
+  const has = (...w: string[]) => w.some(x => s.includes(x));
+
+  // ── Download: any URL in the message → fetch it for real, right away ──
+  const urlMatch = raw.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) {
+    const audioOnly = /\b(audio|mp3|musique|son|extrait? l'?audio|sans (la )?video)\b/i.test(s);
+    return {
+      actionName: 'downloadUrl',
+      payload: { url: urlMatch[0], audioOnly },
+      reply: audioOnly ? "✅ Je récupère l'audio de ce lien — direction Téléchargements." : '✅ Je télécharge cette vidéo pour toi — direction Téléchargements.',
+    };
+  }
+
   // Don't hijack genuine how-to questions.
   if (/^(comment|pourquoi|c'?est quoi|qu'?est|a quoi|peux tu m'expliquer|explique)/.test(s)) return null;
 
-  const has = (...w: string[]) => w.some(x => s.includes(x));
   const OFF = ['desactive', 'desactiver', 'coupe', 'couper', 'enleve', 'enlever', 'retire', 'retirer', 'supprime', 'supprimer', 'masque', 'masquer', 'cache', 'cacher', 'vire', 'virer', 'sans', 'vide'];
   const ON = ['active', 'activer', 'affiche', 'afficher', 'montre', 'montrer', 'remet', 'remettre', 'restaure', 'reactive', 'reaffiche', 'rallume'];
-  const GO = ['va', 'aller', 'ouvre', 'ouvrir', 'montre', 'affiche', 'passe', 'bascule', 'emmene', 'amene', 'ramene', 'accede', 'direction', 'go', 'rends-toi', 'rend toi'];
+  const GO = ['va', 'aller', 'ouvre', 'ouvrir', 'montre', 'affiche', 'passe', 'bascule', 'emmene', 'amene', 'ramene', 'accede', 'direction', 'go', 'rends-toi', 'rend toi', 'veux', 'voudrais', 'utilise', 'utiliser', 'lance', 'lancer', 'demarre', 'demarrer', 'fais', 'faire', 'besoin', 'met', 'mets'];
+
+  // Download intent without a URL → take the user to Téléchargements.
+  if (has('telecharge', 'telecharger', 'download', 'downloader', 'recupere', 'recuperer', 'dl ')) {
+    return { actionName: 'switchTab', payload: { tab: 'downloads' }, reply: "✅ Direction Téléchargements ! Colle le lien de la vidéo ici ou dans la barre, et je m'en occupe automatiquement." };
+  }
 
   // All tabs at once
   if (s.includes('onglet') && has('tous', 'toutes', 'tout')) {

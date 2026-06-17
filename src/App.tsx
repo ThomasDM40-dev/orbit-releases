@@ -280,6 +280,15 @@ export default function App() {
         }
         case 'openSettings': { setShowSettings(true); break; }
         case 'openImport': { setShowImportModal(true); break; }
+        case 'downloadUrl': {
+          if (!payload.url) break;
+          // Show the queue, then hand the URL to the always-mounted downloader,
+          // which analyses + starts the download automatically.
+          setMainTabConfig(prev => prev.map(t => t.id === 'downloads' ? { ...t, visible: true } : t));
+          setActiveTab('downloads');
+          window.dispatchEvent(new CustomEvent('import-urls', { detail: { urls: [payload.url], audioOnly: !!payload.audioOnly } }));
+          break;
+        }
         case 'loadFile': {
           // Tool components can listen for this to receive a file path.
           window.dispatchEvent(new CustomEvent('ai-load-file', { detail: payload }));
