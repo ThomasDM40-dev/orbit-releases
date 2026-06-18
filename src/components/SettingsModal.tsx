@@ -5,6 +5,7 @@ import {
   Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot
 } from 'lucide-react';
 import ChangelogModal from './ChangelogModal';
+import GlassSelect from './GlassSelect';
 
 type SettingsModalProps = {
   onClose: () => void;
@@ -46,7 +47,6 @@ const Row = ({ title, desc, children }: any) => (
   </div>
 );
 const INPUT = "bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 outline-none focus:border-white/30 transition-all";
-const OPT = "bg-[#15151f] text-gray-200";
 
 export default function SettingsModal({ onClose, language, settings, saveSettings, handleLanguageChange, electronAPI }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState('general');
@@ -122,7 +122,7 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
                 <button onClick={() => handleDirSelect('outputDir')} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5"><FolderOpen className="w-4 h-4" /> Choisir</button>
               </Row>
               <Row title="Format vidéo par défaut" desc="Conteneur préféré pour les nouveaux téléchargements">
-                <select className={INPUT} value={settings.defaultFormat || 'best'} onChange={e => update('defaultFormat', e.target.value)}>{FORMATS.map(f => <option key={f} className={OPT}>{f}</option>)}</select>
+                <GlassSelect className="w-44 py-1.5" value={settings.defaultFormat || 'best'} onChange={v => update('defaultFormat', v)} ariaLabel="Format vidéo par défaut" options={FORMATS.map(f => ({ value: f, label: f }))} />
               </Row>
               <Row title="Noms de fichiers restreints (ASCII)" desc="Évite les caractères spéciaux dans les noms">
                 <Toggle checked={!!settings.restrictFilenames} onChange={c => update('restrictFilenames', c)} />
@@ -130,9 +130,8 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
             </Card>
             <Card title="Langue" icon={<Globe className="w-3.5 h-3.5" />}>
               <Row title="Langue de l'interface">
-                <select className={INPUT} value={language} onChange={e => handleLanguageChange(e.target.value as any)}>
-                  <option value="fr" className={OPT}>Français</option><option value="en" className={OPT}>English</option><option value="es" className={OPT}>Español</option>
-                </select>
+                <GlassSelect className="w-44 py-1.5" value={language} onChange={v => handleLanguageChange(v as any)} ariaLabel="Langue de l'interface"
+                  options={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }, { value: 'es', label: 'Español' }]} />
               </Row>
             </Card>
           </div>
@@ -166,7 +165,7 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
             </Card>
             <Card title="Authentification" icon={<Globe className="w-3.5 h-3.5" />}>
               <Row title="Cookies du navigateur" desc="Pour les contenus nécessitant une connexion">
-                <select className={INPUT} value={settings.cookiesFromBrowser || 'none'} onChange={e => update('cookiesFromBrowser', e.target.value)}>{BROWSERS.map(b => <option key={b.v} value={b.v} className={OPT}>{b.l}</option>)}</select>
+                <GlassSelect className="w-44 py-1.5" value={settings.cookiesFromBrowser || 'none'} onChange={v => update('cookiesFromBrowser', v)} ariaLabel="Cookies du navigateur" options={BROWSERS.map(b => ({ value: b.v, label: b.l }))} />
               </Row>
             </Card>
           </div>
@@ -248,10 +247,8 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
                 <button onClick={() => handleDirSelect('enhanceOutputDir')} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5"><FolderOpen className="w-4 h-4" /> Choisir</button>
               </Row>
               <Row title="GPU par défaut" desc="Pour l'upscale / interpolation / Topaz">
-                <select className={INPUT} value={settings.defaultGpu || 'auto'} onChange={e => update('defaultGpu', e.target.value)}>
-                  <option value="auto" className={OPT}>Auto</option>
-                  {gpuList.map(g => <option key={g.id} value={g.id} className={OPT}>{g.name}</option>)}
-                </select>
+                <GlassSelect className="w-44 py-1.5" value={settings.defaultGpu || 'auto'} onChange={v => update('defaultGpu', v)} ariaLabel="GPU par défaut"
+                  options={[{ value: 'auto', label: 'Auto' }, ...gpuList.map(g => ({ value: g.id, label: g.name }))]} />
               </Row>
             </Card>
             <Card title="Performance" icon={<Monitor className="w-3.5 h-3.5" />}>

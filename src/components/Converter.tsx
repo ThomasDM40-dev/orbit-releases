@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, FileVideo, FileAudio, Settings, Music, Play, X, Image as ImageIcon, Loader2, CheckCircle2, FolderOpen, FolderInput } from "lucide-react";
+import GlassSelect from "./GlassSelect";
 
 type ConvertItem = {
   id: string;
@@ -250,23 +251,24 @@ export default function Converter({ language, globalSettings }: { language: stri
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <select
+                  <GlassSelect
                     value={item.targetFormat}
-                    onChange={(e) => updateItem(item.id, { targetFormat: e.target.value as any })}
+                    onChange={(v) => updateItem(item.id, { targetFormat: v as any })}
                     disabled={item.status === 'converting'}
-                    className="bg-[#0f0f0f] border border-white/10 rounded px-2 py-1.5 text-xs text-gray-300 outline-none hover:border-pink-500/50 transition-colors"
-                  >
-                    <option value="MP4">Convertir en MP4</option>
-                    <option value="MP3">Convertir en MP3</option>
-                    <option value="WAV">Convertir en WAV</option>
-                    <option value="FLAC">Convertir en FLAC</option>
-                    <option disabled>--- ORBIT AI STUDIO ---</option>
-                    <option value="COMPRESS_DISCORD">Smart Compressor (Discord 25MB)</option>
-                    <option value="COMPRESS_WHATSAPP">Smart Compressor (WhatsApp 16MB)</option>
-                    <option value="AI_WHISPER">AI Whisper (Générer Sous-titres FR)</option>
-                    <option value="AI_VOCAL_REMOVER">AI Vocal Remover (Isoler Voix)</option>
-                    <option value="AI_UPSCALER">AI Upscaler & 60FPS (RIFE)</option>
-                  </select>
+                    className="w-56 py-1.5 text-xs"
+                    ariaLabel="Format de conversion"
+                    options={[
+                      { value: 'MP4', label: 'Convertir en MP4', group: 'Conversion' },
+                      { value: 'MP3', label: 'Convertir en MP3', group: 'Conversion' },
+                      { value: 'WAV', label: 'Convertir en WAV', group: 'Conversion' },
+                      { value: 'FLAC', label: 'Convertir en FLAC', group: 'Conversion' },
+                      { value: 'COMPRESS_DISCORD', label: 'Smart Compressor (Discord 25MB)', group: 'Orbit AI Studio' },
+                      { value: 'COMPRESS_WHATSAPP', label: 'Smart Compressor (WhatsApp 16MB)', group: 'Orbit AI Studio' },
+                      { value: 'AI_WHISPER', label: 'AI Whisper (Générer Sous-titres FR)', group: 'Orbit AI Studio' },
+                      { value: 'AI_VOCAL_REMOVER', label: 'AI Vocal Remover (Isoler Voix)', group: 'Orbit AI Studio' },
+                      { value: 'AI_UPSCALER', label: 'AI Upscaler & 60FPS (RIFE)', group: 'Orbit AI Studio' },
+                    ]}
+                  />
 
                   {item.status === 'ready' ? (
                     <button

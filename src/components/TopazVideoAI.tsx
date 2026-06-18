@@ -6,17 +6,15 @@ import {
   AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Eye, RotateCcw,
 } from 'lucide-react';
 import SegmentedTabs from './SegmentedTabs';
+import GlassSelect from './GlassSelect';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 // ── shared styles (match Orbit conventions) ──
-const SELECT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-fuchsia-500/50 focus:ring-2 focus:ring-fuchsia-500/20 transition-all cursor-pointer w-full shadow-sm backdrop-blur-md";
 const INPUT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-fuchsia-500/50 focus:ring-2 focus:ring-fuchsia-500/20 transition-all w-full select-text shadow-sm backdrop-blur-md";
 const LABEL_CLS = "text-[11px] font-semibold text-gray-400 uppercase tracking-wider";
-
-const OPT = "bg-[#15131f] text-gray-200";
 
 type ModelEntry = { family: string; tag: string; name: string; defaultCode: string; codes: string[]; supportsManual: boolean; known: boolean };
 type Models = { upscale: ModelEntry[]; interpolate: ModelEntry[]; stabilize: ModelEntry[] };
@@ -555,17 +553,15 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={LABEL_CLS}>Modèle IA</label>
-            <select className={SELECT_CLS + ' mt-1'} value={enhanceModel?.family || ''}
-              onChange={e => { const m = models.upscale.find((x: ModelEntry) => x.family === e.target.value); if (m) patch({ enhanceModel: m.defaultCode, proteusMode: m.supportsManual ? s.proteusMode : 'auto' }); }}>
-              {models?.upscale.map((m: ModelEntry) => <option key={m.family} value={m.family} className={OPT}>{m.name}</option>)}
-            </select>
+            <GlassSelect className="mt-1 w-full" value={enhanceModel?.family || ''} ariaLabel="Modèle IA"
+              onChange={v => { const m = models.upscale.find((x: ModelEntry) => x.family === v); if (m) patch({ enhanceModel: m.defaultCode, proteusMode: m.supportsManual ? s.proteusMode : 'auto' }); }}
+              options={(models?.upscale || []).map((m: ModelEntry) => ({ value: m.family, label: m.name }))} />
           </div>
           {enhanceModel && enhanceModel.codes.length > 1 && (
             <div>
               <label className={LABEL_CLS}>Version</label>
-              <select className={SELECT_CLS + ' mt-1'} value={s.enhanceModel} onChange={e => patch({ enhanceModel: e.target.value })}>
-                {enhanceModel.codes.map(c => <option key={c} value={c} className={OPT}>{c}</option>)}
-              </select>
+              <GlassSelect className="mt-1 w-full" value={s.enhanceModel} onChange={v => patch({ enhanceModel: v })} ariaLabel="Version"
+                options={enhanceModel.codes.map(c => ({ value: c, label: c }))} />
             </div>
           )}
         </div>
@@ -583,10 +579,9 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
             <label className={LABEL_CLS}>Résolution cible</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.scaleMode === 'resolution' ? s.resPreset : 'Auto'}
-              onChange={e => { const v = e.target.value; patch(v === 'Auto' ? { scaleMode: 'scale', resPreset: 'Auto' } : { scaleMode: 'resolution', resPreset: v }); }}>
-              {RES_PRESETS.map(r => <option key={r} value={r} className={OPT}>{r}</option>)}
-            </select>
+            <GlassSelect className="mt-1 w-full" value={s.scaleMode === 'resolution' ? s.resPreset : 'Auto'} ariaLabel="Résolution cible"
+              onChange={v => { patch(v === 'Auto' ? { scaleMode: 'scale', resPreset: 'Auto' } : { scaleMode: 'resolution', resPreset: v }); }}
+              options={RES_PRESETS.map(r => ({ value: r, label: r }))} />
           </div>
           {s.scaleMode === 'resolution' && s.resPreset === 'Personnalisé' && (
             <div className="flex gap-2 items-end">
@@ -632,16 +627,14 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={LABEL_CLS}>Modèle</label>
-            <select className={SELECT_CLS + ' mt-1'} value={models?.interpolate.find((m: ModelEntry) => m.codes.includes(s.interpModel))?.family || ''}
-              onChange={e => { const m = models.interpolate.find((x: ModelEntry) => x.family === e.target.value); if (m) patch({ interpModel: m.defaultCode }); }}>
-              {models?.interpolate.map((m: ModelEntry) => <option key={m.family} value={m.family} className={OPT}>{m.name}</option>)}
-            </select>
+            <GlassSelect className="mt-1 w-full" value={models?.interpolate.find((m: ModelEntry) => m.codes.includes(s.interpModel))?.family || ''} ariaLabel="Modèle"
+              onChange={v => { const m = models.interpolate.find((x: ModelEntry) => x.family === v); if (m) patch({ interpModel: m.defaultCode }); }}
+              options={(models?.interpolate || []).map((m: ModelEntry) => ({ value: m.family, label: m.name }))} />
           </div>
           <div>
             <label className={LABEL_CLS}>FPS de sortie</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.fpsPreset} onChange={e => patch({ fpsPreset: e.target.value, fps: parseInt(e.target.value) || s.fps })}>
-              {FPS_PRESETS.map(f => <option key={f} value={f} className={OPT}>{f === 'Conserver' || f === 'Personnalisé' ? f : f + ' fps'}</option>)}
-            </select>
+            <GlassSelect className="mt-1 w-full" value={s.fpsPreset} onChange={v => patch({ fpsPreset: v, fps: parseInt(v) || s.fps })} ariaLabel="FPS de sortie"
+              options={FPS_PRESETS.map(f => ({ value: f, label: (f === 'Conserver' || f === 'Personnalisé') ? f : f + ' fps' }))} />
           </div>
         </div>
         {s.fpsPreset === 'Personnalisé' && (
@@ -665,12 +658,12 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
       <Section title="Export" icon={<Download className="w-3.5 h-3.5 text-green-400" />} accent="#22c55e" on={true}>
         <div className="grid grid-cols-3 gap-3">
           <div><label className={LABEL_CLS}>Format</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.format} onChange={e => patch({ format: e.target.value })}>{FORMATS.map(f => <option key={f} className={OPT}>{f}</option>)}</select></div>
+            <GlassSelect className="mt-1 w-full" value={s.format} onChange={v => patch({ format: v })} ariaLabel="Format" options={FORMATS.map(f => ({ value: f, label: f }))} /></div>
           <div><label className={LABEL_CLS}>Codec</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.codec} onChange={e => patch({ codec: e.target.value })}>{CODECS.map(c => <option key={c.v} value={c.v} className={OPT}>{c.l}</option>)}</select></div>
+            <GlassSelect className="mt-1 w-full" value={s.codec} onChange={v => patch({ codec: v })} ariaLabel="Codec" options={CODECS.map(c => ({ value: c.v, label: c.l }))} /></div>
           {s.codec !== 'prores' && (
             <div><label className={LABEL_CLS}>Préréglage</label>
-              <select className={SELECT_CLS + ' mt-1'} value={s.preset} onChange={e => patch({ preset: e.target.value })}>{X264_PRESETS.map(p => <option key={p} className={OPT}>{p}</option>)}</select></div>
+              <GlassSelect className="mt-1 w-full" value={s.preset} onChange={v => patch({ preset: v })} ariaLabel="Préréglage" options={X264_PRESETS.map(p => ({ value: p, label: p }))} /></div>
           )}
         </div>
         <Slider label="Qualité" value={s.quality} min={0} max={100} onChange={(v: number) => patch({ quality: v })} suffix="%" accent="#22c55e" />
@@ -685,11 +678,8 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
       {/* Device */}
       <div className="grid grid-cols-2 gap-3">
         <div><label className={LABEL_CLS}>Processeur (Device)</label>
-          <select className={SELECT_CLS + ' mt-1'} value={s.device} onChange={e => patch({ device: e.target.value })}>
-            <option value="auto" className={OPT}>Auto</option>
-            {gpuList.map((g: any) => <option key={g.id} value={g.id} className={OPT}>{g.name}</option>)}
-            <option value="cpu" className={OPT}>CPU uniquement</option>
-          </select></div>
+          <GlassSelect className="mt-1 w-full" value={s.device} onChange={v => patch({ device: v })} ariaLabel="Processeur (Device)"
+            options={[{ value: 'auto', label: 'Auto' }, ...gpuList.map((g: any) => ({ value: g.id, label: g.name })), { value: 'cpu', label: 'CPU uniquement' }]} /></div>
         <div className="pt-0.5"><Slider label="VRAM max" value={Math.round(s.vram * 100)} min={10} max={100} onChange={(v: number) => patch({ vram: v / 100 })} suffix="%" /></div>
       </div>
 

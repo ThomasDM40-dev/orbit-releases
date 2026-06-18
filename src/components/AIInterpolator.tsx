@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, FolderOpen, Play, Terminal, Info, AlertCircle, CheckCircle2, Loader2, Square } from 'lucide-react';
 import SegmentedTabs from './SegmentedTabs';
+import GlassSelect from './GlassSelect';
 
-const SELECT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer w-full shadow-sm backdrop-blur-md";
 const INPUT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all w-full select-text shadow-sm backdrop-blur-md";
 const LABEL_CLS = "text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1";
 
@@ -339,9 +339,8 @@ export default function AIInterpolator() {
               {/* AI Engine */}
               <div className="glass-panel rounded-xl p-3 flex items-center gap-4">
                 <div className="w-44 shrink-0"><label className={LABEL_CLS}><Info className="w-3 h-3" /> Moteur IA</label></div>
-                <select value={engine} onChange={e => setEngine(e.target.value)} className={SELECT_CLS} disabled={status === 'running'}>
-                  {AI_ENGINES.map(e => <option key={e.value} value={e.value} className="bg-[#1a1b26] text-gray-200">{e.label}</option>)}
-                </select>
+                <GlassSelect value={engine} onChange={setEngine} disabled={status === 'running'} className="w-full"
+                  options={AI_ENGINES} ariaLabel="Moteur IA" />
               </div>
 
               {/* Input Video */}
@@ -437,17 +436,13 @@ export default function AIInterpolator() {
                 </div>
                 <div className="glass-panel rounded-xl p-3 flex items-center gap-3">
                   <label className={LABEL_CLS}>Format</label>
-                  <select value={outFormat} onChange={e => setOutFormat(e.target.value)} disabled={status === 'running'}
-                    className={SELECT_CLS}>
-                    {OUTPUT_FORMATS.map(f => <option key={f} className="bg-[#1a1b26] text-gray-200">{f}</option>)}
-                  </select>
+                  <GlassSelect value={outFormat} onChange={setOutFormat} disabled={status === 'running'} className="w-full"
+                    options={OUTPUT_FORMATS.map(f => ({ value: f, label: f }))} ariaLabel="Format" />
                 </div>
                 <div className="glass-panel rounded-xl p-3 flex items-center gap-3">
                   <label className={LABEL_CLS}>Codec</label>
-                  <select value={codec} onChange={e => setCodec(e.target.value)} disabled={status === 'running'}
-                    className={SELECT_CLS}>
-                    {CODECS.map(c => <option key={c} className="bg-[#1a1b26] text-gray-200">{c}</option>)}
-                  </select>
+                  <GlassSelect value={codec} onChange={setCodec} disabled={status === 'running'} className="w-full"
+                    options={CODECS.map(c => ({ value: c, label: c }))} ariaLabel="Codec" />
                 </div>
               </div>
 
@@ -456,26 +451,15 @@ export default function AIInterpolator() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-gray-500 font-semibold tracking-wider">GPU :</label>
-                    <select value={gpu} onChange={e => setGpu(e.target.value)} disabled={status === 'running'}
-                      className="bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-gray-300 outline-none cursor-pointer disabled:opacity-40 hover:bg-white/10 focus:border-purple-500/50 transition-all shadow-sm backdrop-blur-md">
-                      <option value="auto" className="bg-[#1a1b26] text-gray-200">Auto</option>
-                      {gpuList.length === 0 ? (
-                        <>
-                          <option value="0" className="bg-[#1a1b26] text-gray-200">GPU 0 (Défaut)</option>
-                          <option value="1" className="bg-[#1a1b26] text-gray-200">GPU 1</option>
-                          <option value="2" className="bg-[#1a1b26] text-gray-200">GPU 2</option>
-                        </>
-                      ) : (
-                        gpuList.map(g => <option key={g.id} value={g.id} className="bg-[#1a1b26] text-gray-200">{g.name}</option>)
-                      )}
-                    </select>
+                    <GlassSelect value={gpu} onChange={setGpu} disabled={status === 'running'} className="w-48 py-1.5 text-xs" ariaLabel="GPU"
+                      options={[{ value: 'auto', label: 'Auto' }, ...(gpuList.length === 0
+                        ? [{ value: '0', label: 'GPU 0 (Défaut)' }, { value: '1', label: 'GPU 1' }, { value: '2', label: 'GPU 2' }]
+                        : gpuList.map(g => ({ value: g.id, label: g.name })))]} />
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-gray-500 font-semibold tracking-wider">Après :</label>
-                    <select value={whenDone} onChange={e => setWhenDone(e.target.value)} disabled={status === 'running'}
-                      className="bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-gray-300 outline-none cursor-pointer disabled:opacity-40 hover:bg-white/10 focus:border-purple-500/50 transition-all shadow-sm backdrop-blur-md">
-                      {WHEN_DONE.map(w => <option key={w} className="bg-[#1a1b26] text-gray-200">{w}</option>)}
-                    </select>
+                    <GlassSelect value={whenDone} onChange={setWhenDone} disabled={status === 'running'} className="w-52 py-1.5 text-xs" ariaLabel="Après"
+                      options={WHEN_DONE.map(w => ({ value: w, label: w }))} />
                   </div>
                 </div>
                 <motion.button

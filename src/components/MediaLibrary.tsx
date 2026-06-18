@@ -5,11 +5,11 @@ import {
   Film, X, Play, Pause, ChevronLeft, ChevronRight, FolderOpen, Loader2, Wand2,
   Gauge, CheckCircle2, AlertCircle, Trash2, Filter,
 } from 'lucide-react';
+import GlassSelect from './GlassSelect';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-const OPT = "bg-[#12121a] text-gray-200";
 const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-indigo-500/50 transition-all";
 
 type Meta = { width: number; height: number; fps: number; codec: string; duration: number; size: number; hasAudio: boolean; audioCodec: string };
@@ -159,9 +159,12 @@ export default function MediaLibrary() {
           {/* Filters */}
           <div className="flex items-center gap-2 px-5 py-2 border-b border-white/5 text-xs">
             <Filter className="w-3.5 h-3.5 text-gray-500" />
-            <select className={INPUT + ' py-1'} value={resFilter} onChange={e => setResFilter(e.target.value)}><option value="all" className={OPT}>Résolution : toutes</option>{['4K', '1440p', '1080p', '720p', 'SD'].map(r => <option key={r} value={r} className={OPT}>{r}</option>)}</select>
-            <select className={INPUT + ' py-1'} value={codecFilter} onChange={e => setCodecFilter(e.target.value)}><option value="all" className={OPT}>Codec : tous</option>{codecs.map(c => <option key={c} value={c} className={OPT}>{c}</option>)}</select>
-            <select className={INPUT + ' py-1'} value={sort} onChange={e => setSort(e.target.value)}><option value="added" className={OPT}>Tri : date d'ajout</option><option value="name" className={OPT}>Nom</option><option value="duration" className={OPT}>Durée</option><option value="episode" className={OPT}>Saison/Épisode</option></select>
+            <GlassSelect className="w-44 py-1" value={resFilter} onChange={setResFilter} ariaLabel="Résolution"
+              options={[{ value: 'all', label: 'Résolution : toutes' }, ...['4K', '1440p', '1080p', '720p', 'SD'].map(r => ({ value: r, label: r }))]} />
+            <GlassSelect className="w-40 py-1" value={codecFilter} onChange={setCodecFilter} ariaLabel="Codec"
+              options={[{ value: 'all', label: 'Codec : tous' }, ...codecs.map((c: string) => ({ value: c, label: c }))]} />
+            <GlassSelect className="w-48 py-1" value={sort} onChange={setSort} ariaLabel="Tri"
+              options={[{ value: 'added', label: "Tri : date d'ajout" }, { value: 'name', label: 'Nom' }, { value: 'duration', label: 'Durée' }, { value: 'episode', label: 'Saison/Épisode' }]} />
             <span className="ml-auto text-gray-600">{filtered.length} résultat{filtered.length > 1 ? 's' : ''}</span>
           </div>
 
@@ -290,9 +293,8 @@ function Detail({ item, presets, conv, onClose, onConvert, onCancel, onReveal }:
             <div className="pt-1">
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1.5">Conversion</p>
               <div className="flex gap-2">
-                <select className={INPUT + ' flex-1 py-1.5'} value={preset} onChange={e => setPreset(e.target.value)}>
-                  {Object.entries(presetGroups).map(([g, keys]: any) => <optgroup key={g} label={g} className={OPT}>{keys.map((k: string) => <option key={k} value={k} className={OPT}>{PRESETS[k].label}</option>)}</optgroup>)}
-                </select>
+                <GlassSelect className="flex-1 py-1.5" value={preset} onChange={setPreset} ariaLabel="Préréglage"
+                  options={Object.entries(presetGroups).flatMap(([g, keys]: any) => (keys as string[]).map((k: string) => ({ value: k, label: PRESETS[k].label, group: g })))} />
                 <button disabled={conv?.status === 'running'} onClick={() => onConvert(item, 'preset', preset)} className="px-3 py-1.5 rounded-xl text-sm font-semibold disabled:opacity-40" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.75),rgba(139,92,246,0.75))', color: 'white' }}>Convertir</button>
               </div>
             </div>

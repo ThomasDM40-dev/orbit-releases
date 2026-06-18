@@ -4,13 +4,12 @@ import {
   Flame, FolderOpen, Play, Square, Trash2, Plus, Save, Layers, Download,
   AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, RotateCcw, Sliders, Film,
 } from 'lucide-react';
+import GlassSelect from './GlassSelect';
 
 const api = () => (window as any).electronAPI;
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-const SELECT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition-all cursor-pointer w-full shadow-sm backdrop-blur-md";
 const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-orange-500/50 transition-all w-full select-text shadow-sm";
 const LABEL = "text-[11px] font-semibold text-gray-400 uppercase tracking-wider";
-const OPT = "bg-[#17120c] text-gray-200";
 
 type Meta = { width: number; height: number; fps: number; codec: string; duration: number; size: number; hasAudio: boolean };
 type S = {
@@ -175,20 +174,18 @@ export default function HandBrake() {
               <Section title="Préréglage & Format" icon={<Film className="w-3.5 h-3.5 text-orange-400" />}>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className={LABEL}>Préréglage HandBrake (base)</label>
-                    <select className={SELECT + ' mt-1'} value={selected.settings.preset} onChange={e => patch({ preset: e.target.value })}>
-                      <option value="" className={OPT}>Aucun (réglages manuels)</option>
-                      {Object.entries(presetGroups).map(([g, names]: any) => (<optgroup key={g} label={g} className={OPT}>{names.map((n: string) => <option key={n} value={n} className={OPT}>{n}</option>)}</optgroup>))}
-                    </select>
+                    <GlassSelect className="mt-1 w-full" value={selected.settings.preset} onChange={v => patch({ preset: v })} ariaLabel="Préréglage HandBrake"
+                      options={[{ value: '', label: 'Aucun (réglages manuels)' }, ...Object.entries(presetGroups).flatMap(([g, names]: any) => (names as string[]).map((n: string) => ({ value: n, label: n, group: g })))]} />
                   </div>
-                  <div><label className={LABEL}>Conteneur</label><select className={SELECT + ' mt-1'} value={selected.settings.container} onChange={e => patch({ container: e.target.value })}>{CONTAINERS.map(c => <option key={c} className={OPT}>{c}</option>)}</select></div>
+                  <div><label className={LABEL}>Conteneur</label><GlassSelect className="mt-1 w-full" value={selected.settings.container} onChange={v => patch({ container: v })} ariaLabel="Conteneur" options={CONTAINERS.map(c => ({ value: c, label: c }))} /></div>
                 </div>
                 {selected.settings.container === 'mp4' && <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={selected.settings.webOptimize} onClick={() => patch({ webOptimize: !selected.settings.webOptimize })} /> Optimisé web (lecture progressive)</label>}
               </Section>
 
               <Section title="Vidéo" icon={<Sliders className="w-3.5 h-3.5 text-orange-400" />}>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className={LABEL}>Encodeur</label><select className={SELECT + ' mt-1'} value={selected.settings.encoder} onChange={e => patch({ encoder: e.target.value, encoderPreset: /nvenc/.test(e.target.value) ? 'medium' : 'medium' })}>{encoders.map((e: any) => <option key={e.v} value={e.v} className={OPT}>{e.l}</option>)}</select></div>
-                  <div><label className={LABEL}>Vitesse d'encodage</label><select className={SELECT + ' mt-1'} value={selected.settings.encoderPreset} onChange={e => patch({ encoderPreset: e.target.value })}>{speedPresets.map((p: string) => <option key={p} className={OPT}>{p}</option>)}</select></div>
+                  <div><label className={LABEL}>Encodeur</label><GlassSelect className="mt-1 w-full" value={selected.settings.encoder} onChange={v => patch({ encoder: v, encoderPreset: 'medium' })} ariaLabel="Encodeur" options={encoders.map((e: any) => ({ value: e.v, label: e.l }))} /></div>
+                  <div><label className={LABEL}>Vitesse d'encodage</label><GlassSelect className="mt-1 w-full" value={selected.settings.encoderPreset} onChange={v => patch({ encoderPreset: v })} ariaLabel="Vitesse d'encodage" options={speedPresets.map((p: string) => ({ value: p, label: p }))} /></div>
                 </div>
                 <div className="flex gap-2">
                   {(['quality', 'bitrate'] as const).map(m => <button key={m} onClick={() => patch({ rateMode: m })} className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${selected.settings.rateMode === m ? 'bg-orange-500/30 text-orange-100 border border-orange-500/50' : 'bg-white/5 text-gray-400 border border-white/10'}`}>{m === 'quality' ? 'Qualité constante (RF)' : 'Débit moyen'}</button>)}
@@ -197,16 +194,16 @@ export default function HandBrake() {
                   ? <Slider label="Qualité RF (bas = meilleur)" value={selected.settings.quality} min={0} max={51} onChange={(v: number) => patch({ quality: v })} />
                   : <div className="flex items-center gap-3"><div className="flex-1"><label className={LABEL}>Débit vidéo (kbit/s)</label><input type="number" className={INPUT + ' mt-1'} value={selected.settings.bitrate} onChange={e => patch({ bitrate: Number(e.target.value) })} /></div><label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mt-4"><Toggle on={selected.settings.twoPass} onClick={() => patch({ twoPass: !selected.settings.twoPass })} /> 2 passes</label></div>}
                 <div className="grid grid-cols-3 gap-3">
-                  <div><label className={LABEL}>Résolution max</label><select className={SELECT + ' mt-1'} value={selected.settings.maxHeight} onChange={e => patch({ maxHeight: Number(e.target.value) })}>{HEIGHTS.map(h => <option key={h.v} value={h.v} className={OPT}>{h.l}</option>)}</select></div>
-                  <div><label className={LABEL}>Images / s</label><select className={SELECT + ' mt-1'} value={selected.settings.fps} onChange={e => patch({ fps: e.target.value })}>{FPSES.map(f => <option key={f} value={f} className={OPT}>{f === 'same' ? 'Source' : f}</option>)}</select></div>
-                  <div><label className={LABEL}>Rotation</label><select className={SELECT + ' mt-1'} value={selected.settings.rotate} onChange={e => patch({ rotate: Number(e.target.value) })}>{ROTATIONS.map(r => <option key={r.v} value={r.v} className={OPT}>{r.l}</option>)}</select></div>
+                  <div><label className={LABEL}>Résolution max</label><GlassSelect className="mt-1 w-full" value={String(selected.settings.maxHeight)} onChange={v => patch({ maxHeight: Number(v) })} ariaLabel="Résolution max" options={HEIGHTS.map(h => ({ value: String(h.v), label: h.l }))} /></div>
+                  <div><label className={LABEL}>Images / s</label><GlassSelect className="mt-1 w-full" value={selected.settings.fps} onChange={v => patch({ fps: v })} ariaLabel="Images par seconde" options={FPSES.map(f => ({ value: f, label: f === 'same' ? 'Source' : f }))} /></div>
+                  <div><label className={LABEL}>Rotation</label><GlassSelect className="mt-1 w-full" value={String(selected.settings.rotate)} onChange={v => patch({ rotate: Number(v) })} ariaLabel="Rotation" options={ROTATIONS.map(r => ({ value: String(r.v), label: r.l }))} /></div>
                 </div>
               </Section>
 
               <Section title="Filtres" icon={<Sliders className="w-3.5 h-3.5 text-orange-400" />}>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className={LABEL}>Débruitage (NLMeans)</label><select className={SELECT + ' mt-1'} value={selected.settings.denoise} onChange={e => patch({ denoise: e.target.value })}>{denoiseOpts.map((d: string) => <option key={d} value={d} className={OPT}>{d === 'off' ? 'Aucun' : d}</option>)}</select></div>
-                  <div><label className={LABEL}>Netteté (Lapsharp)</label><select className={SELECT + ' mt-1'} value={selected.settings.sharpen} onChange={e => patch({ sharpen: e.target.value })}>{sharpenOpts.map((d: string) => <option key={d} value={d} className={OPT}>{d === 'off' ? 'Aucun' : d}</option>)}</select></div>
+                  <div><label className={LABEL}>Débruitage (NLMeans)</label><GlassSelect className="mt-1 w-full" value={selected.settings.denoise} onChange={v => patch({ denoise: v })} ariaLabel="Débruitage" options={denoiseOpts.map((d: string) => ({ value: d, label: d === 'off' ? 'Aucun' : d }))} /></div>
+                  <div><label className={LABEL}>Netteté (Lapsharp)</label><GlassSelect className="mt-1 w-full" value={selected.settings.sharpen} onChange={v => patch({ sharpen: v })} ariaLabel="Netteté" options={sharpenOpts.map((d: string) => ({ value: d, label: d === 'off' ? 'Aucun' : d }))} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={selected.settings.deinterlace} onClick={() => patch({ deinterlace: !selected.settings.deinterlace })} /> Désentrelacement (decomb)</label>
@@ -217,7 +214,8 @@ export default function HandBrake() {
 
               <Section title="Audio & Sortie" icon={<Download className="w-3.5 h-3.5 text-orange-400" />}>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className={LABEL}>Audio</label><select className={SELECT + ' mt-1'} value={selected.settings.audioMode} onChange={e => patch({ audioMode: e.target.value })}><option value="copy" className={OPT}>Copier (sans ré-encodage)</option><option value="aac" className={OPT}>{selected.settings.container === 'webm' ? 'Opus' : 'AAC'}</option><option value="none" className={OPT}>Aucun</option></select></div>
+                  <div><label className={LABEL}>Audio</label><GlassSelect className="mt-1 w-full" value={selected.settings.audioMode} onChange={v => patch({ audioMode: v })} ariaLabel="Audio"
+                    options={[{ value: 'copy', label: 'Copier (sans ré-encodage)' }, { value: 'aac', label: selected.settings.container === 'webm' ? 'Opus' : 'AAC' }, { value: 'none', label: 'Aucun' }]} /></div>
                   {selected.settings.audioMode === 'aac' && <div><label className={LABEL}>Débit audio (kbit/s)</label><input type="number" className={INPUT + ' mt-1'} value={selected.settings.audioBitrate} onChange={e => patch({ audioBitrate: Number(e.target.value) })} /></div>}
                 </div>
                 {selected.settings.container !== 'webm' && <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={selected.settings.subtitles} onClick={() => patch({ subtitles: !selected.settings.subtitles })} /> Conserver les sous-titres</label>}

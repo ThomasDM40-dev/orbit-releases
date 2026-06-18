@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import GlassSelect from "./GlassSelect";
 
 // Each export target maps to the file format(s) the app actually imports.
 const TARGETS: { id: string; label: string; icon: string; desc: string; formats: string[] }[] = [
@@ -132,17 +133,13 @@ export default function Transcription() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Langue</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)}
-              className="mt-1.5 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-pink-500/50">
-              {LANGUAGES.map(l => <option key={l.code} value={l.code} className="bg-[#12121a]">{l.label}</option>)}
-            </select>
+            <GlassSelect value={language} onChange={setLanguage} className="mt-1.5 w-full py-2.5" ariaLabel="Langue"
+              options={LANGUAGES.map(l => ({ value: l.code, label: l.label }))} />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Modèle IA</label>
-            <select value={model} onChange={e => setModel(e.target.value)}
-              className="mt-1.5 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-pink-500/50">
-              {MODELS.map(m => <option key={m.id} value={m.id} className="bg-[#12121a]">{m.label} — {m.desc}</option>)}
-            </select>
+            <GlassSelect value={model} onChange={setModel} className="mt-1.5 w-full py-2.5" ariaLabel="Modèle IA"
+              options={MODELS.map(m => ({ value: m.id, label: `${m.label} — ${m.desc}` }))} />
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, Download, CheckCircle2, X, FolderOpen, AlertCircle, Loader2 } from "lucide-react";
+import GlassSelect from "./GlassSelect";
 
 type Quality = '1080p' | '720p' | '480p' | '360p';
 type AudioLang = 'ja-JP' | 'en-US' | 'fr-FR' | 'de-DE' | 'es-419' | 'pt-BR';
@@ -314,44 +315,18 @@ export default function CrunchyrollDownloader() {
                     <div className="flex flex-wrap gap-3 pt-2 border-t border-white/5">
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Qualité</label>
-                        <select
-                          value={ep.quality}
-                          onChange={e => updateEp(ep.id, { quality: e.target.value as Quality })}
-                          className="bg-[#0f0f0f] border border-white/10 rounded px-2 py-1.5 text-xs text-gray-300 outline-none hover:border-orange-500/50 transition-colors"
-                        >
-                          <option value="1080p">1080p — Full HD</option>
-                          <option value="720p">720p — HD</option>
-                          <option value="480p">480p — SD</option>
-                          <option value="360p">360p</option>
-                        </select>
+                        <GlassSelect value={ep.quality} onChange={v => updateEp(ep.id, { quality: v as Quality })} className="w-40 py-1.5 text-xs" ariaLabel="Qualité"
+                          options={[{ value: '1080p', label: '1080p — Full HD' }, { value: '720p', label: '720p — HD' }, { value: '480p', label: '480p — SD' }, { value: '360p', label: '360p' }]} />
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Audio</label>
-                        <select
-                          value={ep.audioLang}
-                          onChange={e => updateEp(ep.id, { audioLang: e.target.value as AudioLang })}
-                          className="bg-[#0f0f0f] border border-white/10 rounded px-2 py-1.5 text-xs text-gray-300 outline-none hover:border-orange-500/50 transition-colors"
-                        >
-                          <option value="ja-JP">Japonais (VO)</option>
-                          <option value="en-US">Anglais (VA)</option>
-                          <option value="fr-FR">Français (VF)</option>
-                          <option value="de-DE">Allemand</option>
-                          <option value="es-419">Espagnol (LATAM)</option>
-                          <option value="pt-BR">Portugais (BR)</option>
-                        </select>
+                        <GlassSelect value={ep.audioLang} onChange={v => updateEp(ep.id, { audioLang: v as AudioLang })} className="w-44 py-1.5 text-xs" ariaLabel="Audio"
+                          options={[{ value: 'ja-JP', label: 'Japonais (VO)' }, { value: 'en-US', label: 'Anglais (VA)' }, { value: 'fr-FR', label: 'Français (VF)' }, { value: 'de-DE', label: 'Allemand' }, { value: 'es-419', label: 'Espagnol (LATAM)' }, { value: 'pt-BR', label: 'Portugais (BR)' }]} />
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Sous-titres</label>
-                        <select
-                          value={ep.subLang}
-                          onChange={e => updateEp(ep.id, { subLang: e.target.value as SubLang })}
-                          className="bg-[#0f0f0f] border border-white/10 rounded px-2 py-1.5 text-xs text-gray-300 outline-none hover:border-orange-500/50 transition-colors"
-                        >
-                          <option value="fr-FR">Français</option>
-                          <option value="en-US">Anglais</option>
-                          <option value="fr-FR,en-US">Français + Anglais</option>
-                          <option value="none">Aucun</option>
-                        </select>
+                        <GlassSelect value={ep.subLang} onChange={v => updateEp(ep.id, { subLang: v as SubLang })} className="w-48 py-1.5 text-xs" ariaLabel="Sous-titres"
+                          options={[{ value: 'fr-FR', label: 'Français' }, { value: 'en-US', label: 'Anglais' }, { value: 'fr-FR,en-US', label: 'Français + Anglais' }, { value: 'none', label: 'Aucun' }]} />
                       </div>
                     </div>
                   )}

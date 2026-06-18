@@ -6,15 +6,14 @@ import {
   Loader2, Image as ImageIcon, Eye, RotateCcw, SlidersHorizontal,
 } from 'lucide-react';
 import SegmentedTabs from './SegmentedTabs';
+import GlassSelect from './GlassSelect';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-const SELECT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all cursor-pointer w-full shadow-sm backdrop-blur-md";
 const INPUT_CLS = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 hover:border-white/20 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all w-full select-text shadow-sm backdrop-blur-md";
 const LABEL_CLS = "text-[11px] font-semibold text-gray-400 uppercase tracking-wider";
-const OPT = "bg-[#0f1620] text-gray-200";
 
 type Meta = { width: number; height: number; fps: number; codec: string; duration: number; size: number; hasAudio: boolean; audioCodec: string };
 type Settings = {
@@ -318,9 +317,8 @@ function SettingsPanel({ job, detect, gpuList, patch, patchRestore, patchColor, 
       <Section title="Upscale IA (Real-ESRGAN)" icon={<Wand2 className="w-3.5 h-3.5 text-cyan-400" />} on={s.upscaleEnabled} onToggle={() => patch({ upscaleEnabled: !s.upscaleEnabled })}>
         <div>
           <label className={LABEL_CLS}>Modèle</label>
-          <select className={SELECT_CLS + ' mt-1'} value={s.upscaleModel} onChange={e => patch({ upscaleModel: e.target.value })}>
-            {models.map((m: any) => <option key={m.family} value={m.family} className={OPT}>{m.name}</option>)}
-          </select>
+          <GlassSelect className="mt-1 w-full" value={s.upscaleModel} onChange={v => patch({ upscaleModel: v })} ariaLabel="Modèle"
+            options={models.map((m: any) => ({ value: m.family, label: m.name }))} />
         </div>
         <div>
           <label className={LABEL_CLS}>Échelle</label>
@@ -331,9 +329,8 @@ function SettingsPanel({ job, detect, gpuList, patch, patchRestore, patchColor, 
         </div>
         <div className="grid grid-cols-2 gap-3 items-end">
           <div><label className={LABEL_CLS}>Résolution cible</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.scaleMode === 'resolution' ? s.resPreset : 'Auto'} onChange={e => { const v = e.target.value; patch(v === 'Auto' ? { scaleMode: 'scale', resPreset: 'Auto' } : { scaleMode: 'resolution', resPreset: v }); }}>
-              {RES_PRESETS.map(r => <option key={r} value={r} className={OPT}>{r}</option>)}
-            </select>
+            <GlassSelect className="mt-1 w-full" value={s.scaleMode === 'resolution' ? s.resPreset : 'Auto'} onChange={v => { patch(v === 'Auto' ? { scaleMode: 'scale', resPreset: 'Auto' } : { scaleMode: 'resolution', resPreset: v }); }} ariaLabel="Résolution cible"
+              options={RES_PRESETS.map(r => ({ value: r, label: r }))} />
           </div>
           {s.scaleMode === 'resolution' && s.resPreset === 'Personnalisé' && (
             <div className="flex gap-2 items-end">
@@ -353,7 +350,7 @@ function SettingsPanel({ job, detect, gpuList, patch, patchRestore, patchColor, 
       <Section title="Restauration vidéo" icon={<SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />} accent="#10b981" on={s.restoreEnabled} onToggle={() => patch({ restoreEnabled: !s.restoreEnabled })}>
         <div className="grid grid-cols-2 gap-3">
           <div><label className={LABEL_CLS}>Débruitage</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.restore.denoise} onChange={e => patchRestore({ denoise: e.target.value })}>{DENOISE.map(d => <option key={d.v} value={d.v} className={OPT}>{d.l}</option>)}</select>
+            <GlassSelect className="mt-1 w-full" value={s.restore.denoise} onChange={v => patchRestore({ denoise: v })} ariaLabel="Débruitage" options={DENOISE.map(d => ({ value: d.v, label: d.l }))} />
           </div>
           <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mt-5"><Toggle on={s.restore.temporalDenoise} onClick={() => patchRestore({ temporalDenoise: !s.restore.temporalDenoise })} /> Débruitage temporel</label>
         </div>
@@ -383,7 +380,8 @@ function SettingsPanel({ job, detect, gpuList, patch, patchRestore, patchColor, 
       <Section title="Interpolation d'images (RIFE)" icon={<Film className="w-3.5 h-3.5 text-violet-400" />} accent="#8b5cf6" on={s.interpEnabled} onToggle={() => patch({ interpEnabled: !s.interpEnabled })}>
         <div className="grid grid-cols-2 gap-3">
           <div><label className={LABEL_CLS}>FPS de sortie</label>
-            <select className={SELECT_CLS + ' mt-1'} value={s.fpsPreset} onChange={e => patch({ fpsPreset: e.target.value, fps: parseInt(e.target.value) || s.fps })}>{FPS_PRESETS.map(f => <option key={f} value={f} className={OPT}>{f === 'Conserver' || f === 'Personnalisé' ? f : f + ' fps'}</option>)}</select>
+            <GlassSelect className="mt-1 w-full" value={s.fpsPreset} onChange={v => patch({ fpsPreset: v, fps: parseInt(v) || s.fps })} ariaLabel="FPS de sortie"
+              options={FPS_PRESETS.map(f => ({ value: f, label: (f === 'Conserver' || f === 'Personnalisé') ? f : f + ' fps' }))} />
           </div>
           {s.fpsPreset === 'Personnalisé' && <div><label className={LABEL_CLS}>FPS</label><input type="number" className={INPUT_CLS + ' mt-1'} value={s.fps} onChange={e => patch({ fps: Number(e.target.value) })} /></div>}
         </div>
@@ -400,8 +398,8 @@ function SettingsPanel({ job, detect, gpuList, patch, patchRestore, patchColor, 
             const codecsFor = (fmt: string) => (CONTAINER_CODECS[fmt] || CONTAINER_CODECS.MP4).filter(c => avail.includes(c));
             const fmtCodecs = codecsFor(s.format).length ? codecsFor(s.format) : ['h264'];
             return <>
-              <div><label className={LABEL_CLS}>Format</label><select className={SELECT_CLS + ' mt-1'} value={s.format} onChange={ev => { const fmt = ev.target.value; const allowed = codecsFor(fmt); const next = allowed.length ? allowed : ['h264']; patch({ format: fmt, codec: next.includes(s.codec) ? s.codec : next[0] }); }}>{FORMATS.map(f => <option key={f} className={OPT}>{f}</option>)}</select></div>
-              <div><label className={LABEL_CLS}>Codec</label><select className={SELECT_CLS + ' mt-1'} value={s.codec} onChange={ev => patch({ codec: ev.target.value })}>{CODECS.filter(c => fmtCodecs.includes(c.v)).map(c => <option key={c.v} value={c.v} className={OPT}>{c.l}</option>)}</select></div>
+              <div><label className={LABEL_CLS}>Format</label><GlassSelect className="mt-1 w-full" value={s.format} onChange={v => { const fmt = v; const allowed = codecsFor(fmt); const next = allowed.length ? allowed : ['h264']; patch({ format: fmt, codec: next.includes(s.codec) ? s.codec : next[0] }); }} ariaLabel="Format" options={FORMATS.map(f => ({ value: f, label: f }))} /></div>
+              <div><label className={LABEL_CLS}>Codec</label><GlassSelect className="mt-1 w-full" value={s.codec} onChange={v => patch({ codec: v })} ariaLabel="Codec" options={CODECS.filter(c => fmtCodecs.includes(c.v)).map(c => ({ value: c.v, label: c.l }))} /></div>
             </>;
           })()}
           <div className="pt-0.5"><Slider label="Qualité" value={s.quality} min={0} max={100} onChange={(v: number) => patch({ quality: v })} suffix="%" accent="#22c55e" /></div>
@@ -415,11 +413,8 @@ function SettingsPanel({ job, detect, gpuList, patch, patchRestore, patchColor, 
 
       <div className="grid grid-cols-1 gap-3">
         <div><label className={LABEL_CLS}>Processeur (Device)</label>
-          <select className={SELECT_CLS + ' mt-1'} value={s.device} onChange={e => patch({ device: e.target.value })}>
-            <option value="auto" className={OPT}>Auto</option>
-            {gpuList.map((g: any) => <option key={g.id} value={g.id} className={OPT}>{g.name}</option>)}
-            <option value="cpu" className={OPT}>CPU (encodage — l'IA reste sur GPU)</option>
-          </select>
+          <GlassSelect className="mt-1 w-full" value={s.device} onChange={v => patch({ device: v })} ariaLabel="Processeur (Device)"
+            options={[{ value: 'auto', label: 'Auto' }, ...gpuList.map((g: any) => ({ value: g.id, label: g.name })), { value: 'cpu', label: "CPU (encodage — l'IA reste sur GPU)" }]} />
         </div>
       </div>
 

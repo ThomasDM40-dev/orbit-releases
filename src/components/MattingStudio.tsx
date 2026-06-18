@@ -4,14 +4,13 @@ import {
   Scissors, FolderOpen, Play, Square, Trash2, Plus, Layers, Download, Eye,
   AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, RotateCcw, Wand2,
 } from 'lucide-react';
+import GlassSelect from './GlassSelect';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-const SELECT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-teal-500/50 transition-all w-full shadow-sm";
 const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-teal-500/50 transition-all w-full";
 const LABEL = "text-[11px] font-semibold text-gray-400 uppercase tracking-wider";
-const OPT = "bg-[#0d1414] text-gray-200";
 const CHECKER = { backgroundImage: 'linear-gradient(45deg,#2a2a2a 25%,transparent 25%),linear-gradient(-45deg,#2a2a2a 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2a2a2a 75%),linear-gradient(-45deg,transparent 75%,#2a2a2a 75%)', backgroundSize: '20px 20px', backgroundPosition: '0 0,0 10px,10px -10px,-10px 0', backgroundColor: '#1a1a1a' } as React.CSSProperties;
 
 type Meta = { width: number; height: number; fps: number; codec: string; duration: number; size: number; hasAudio: boolean };
@@ -125,12 +124,12 @@ export default function MattingStudio() {
                   <div className="flex items-center gap-2"><Wand2 className="w-3.5 h-3.5 text-teal-400" /><span className="text-sm font-semibold text-gray-200">Modèle & qualité</span></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className={LABEL}>Modèle IA</label>
-                      <select className={SELECT + ' mt-1'} value={s.model} onChange={e => patch({ model: e.target.value })}>
-                        {(detect?.models || [{ key: 'mobilenetv3', label: 'MobileNetV3 (rapide)' }, { key: 'resnet50', label: 'ResNet50 (qualité)' }]).map((m: any) => <option key={m.key} value={m.key} className={OPT}>{m.label}{m.installed === false ? ' — à télécharger' : ''}</option>)}
-                      </select>
+                      <GlassSelect className="mt-1 w-full" value={s.model} onChange={v => patch({ model: v })} ariaLabel="Modèle IA"
+                        options={(detect?.models || [{ key: 'mobilenetv3', label: 'MobileNetV3 (rapide)' }, { key: 'resnet50', label: 'ResNet50 (qualité)' }]).map((m: any) => ({ value: m.key, label: `${m.label}${m.installed === false ? ' — à télécharger' : ''}` }))} />
                     </div>
                     <div><label className={LABEL}>Vitesse / qualité</label>
-                      <select className={SELECT + ' mt-1'} value={s.quality} onChange={e => patch({ quality: e.target.value })}><option value="fast" className={OPT}>Rapide (512p)</option><option value="balanced" className={OPT}>Équilibré (960p)</option><option value="max" className={OPT}>Max (source)</option></select>
+                      <GlassSelect className="mt-1 w-full" value={s.quality} onChange={v => patch({ quality: v })} ariaLabel="Vitesse / qualité"
+                        options={[{ value: 'fast', label: 'Rapide (512p)' }, { value: 'balanced', label: 'Équilibré (960p)' }, { value: 'max', label: 'Max (source)' }]} />
                     </div>
                   </div>
                   {detect?.models?.find((m: any) => m.key === s.model && !m.installed) && (
@@ -145,7 +144,8 @@ export default function MattingStudio() {
                   </div>
                   {s.mode === 'transparent' && (
                     <div><label className={LABEL}>Format (avec alpha)</label>
-                      <select className={SELECT + ' mt-1'} value={s.transparentFormat} onChange={e => patch({ transparentFormat: e.target.value })}><option value="webm" className={OPT}>WebM (VP9 · web/montage)</option><option value="prores" className={OPT}>ProRes 4444 (.mov · pro)</option><option value="png" className={OPT}>Séquence PNG (VFX)</option></select>
+                      <GlassSelect className="mt-1 w-full" value={s.transparentFormat} onChange={v => patch({ transparentFormat: v })} ariaLabel="Format (avec alpha)"
+                        options={[{ value: 'webm', label: 'WebM (VP9 · web/montage)' }, { value: 'prores', label: 'ProRes 4444 (.mov · pro)' }, { value: 'png', label: 'Séquence PNG (VFX)' }]} />
                       <p className="text-[10px] text-gray-500 mt-1">Le fond devient transparent — idéal incrustation AE / Premiere.</p>
                     </div>
                   )}
