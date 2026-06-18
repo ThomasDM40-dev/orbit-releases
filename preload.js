@@ -57,6 +57,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdaterStatus: (cb) => ipcRenderer.on('updater-status', (_e, v) => cb(v)),
   rpcUpdate: (data) => ipcRenderer.send('rpc-update', data),
   openSniffer: (url) => ipcRenderer.send('open-sniffer', url),
+  reportSnifferPage: (info) => ipcRenderer.send('sniffer-page-info', info),
+  snifferClearSeen: () => ipcRenderer.send('sniffer-clear-seen'),
   onSnifferCaughtVideo: (cb) => {
     ipcRenderer.on('sniffer-caught-video', (_e, v) => cb(v));
     return () => ipcRenderer.removeAllListeners('sniffer-caught-video');

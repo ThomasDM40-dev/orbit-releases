@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Download, Video, CheckCircle2, ClipboardX, Crop, Cloud, MoreHorizontal, Subtitles, Cookie, Trash, LayoutGrid, List, Rss, TerminalSquare, Filter, Folder, Heart, Gift, File, Play, X, Pause, Clock, Globe } from "lucide-react";
 import OrbitPlayer from "./OrbitPlayer";
 import LogPanel from "./LogPanel";
+import SnifferBrowser from "./SnifferBrowser";
 
 // Build a safe media:// URL. The path goes in the URL *path* component
 // (media:///C%3A/Users/...), never the host — otherwise Chromium normalizes the
@@ -112,6 +113,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
   const [viewLayout, setViewLayout] = useState<'list'|'grid'|'terminal'>('list');
   const [sortOrder, setSortOrder] = useState<'newest'|'name'|'size'>('newest');
   const [playingMedia, setPlayingMedia] = useState<{url: string, title: string, filePath: string} | null>(null);
+  const [snifferOpen, setSnifferOpen] = useState<false | string>(false);
   const [logPanel, setLogPanel] = useState<{id: string, title: string} | null>(null);
   const downloadLogsRef = React.useRef<Map<string, Array<{line: string, level: string}>>>(new Map());
   const formatPopoverRef = React.useRef<HTMLDivElement>(null);
@@ -237,21 +239,34 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
           downloadLogsRef.current.set(data.id, logs);
         });
       }
-      api.onSnifferCaughtVideo((data: any) => {
+      const addSniffed = (data: any) => {
         const newId = Math.random().toString(36).substring(7);
-        setDownloads(prev => [{
-          id: newId,
-          url: data.url,         // raw m3u8/mpd URL for yt-dlp
-          title: data.videoTitle || data.title || ('Flux intercepté : ' + data.type),
-          thumbnail: "",
-          platform: "Patreon/Web",
-          format: globalFormat,
-          status: "ready",
-          cookies: data.cookies,
-          referer: data.referer || data.pageUrl || "",
-          videoTitle: data.videoTitle || ""
-        }, ...prev]);
-      });
+        // Let the in-app browser (if open) confirm with a toast — via a window
+        // event so we don't add a second IPC listener (the preload cleanup uses
+        // removeAllListeners and would nuke this one).
+        window.dispatchEvent(new CustomEvent('sniffer-toast', { detail: { title: data.videoTitle || data.title || 'Flux détecté' } }));
+        setDownloads(prev => {
+          // Avoid duplicating a stream we already captured.
+          if (prev.some(d => d.url === data.url)) return prev;
+          return [{
+            id: newId,
+            url: data.url,         // raw m3u8/mpd URL for yt-dlp
+            title: data.videoTitle || data.title || ('Flux intercepté : ' + data.type),
+            thumbnail: "",
+            platform: "Patreon/Web",
+            format: globalFormat,
+            status: "ready",
+            cookies: data.cookies,
+            referer: data.referer || data.pageUrl || "",
+            videoTitle: data.videoTitle || ""
+          }, ...prev];
+        });
+      };
+      api.onSnifferCaughtVideo(addSniffed);
+      // The in-app browser's "Analyser" button adds via this window event.
+      const onSnifferAdd = (e: any) => addSniffed(e.detail || {});
+      window.addEventListener('sniffer-add', onSnifferAdd);
+      return () => window.removeEventListener('sniffer-add', onSnifferAdd);
     }
   }, [globalFormat]);
 
@@ -409,7 +424,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
             className="flex-1 bg-transparent border-none px-2 py-1.5 text-white placeholder-gray-500 focus:outline-none text-sm relative z-10"
           />
           <div className="flex items-center gap-4 text-gray-400 px-3 border-r border-white/10 relative z-10">
-            <button type="button" onClick={() => { if ((window as any).electronAPI) (window as any).electronAPI.openSniffer('https://www.patreon.com'); }} className="transition-colors hover:text-white flex items-center gap-1 group/sniffer" title="Ouvrir le Sniffer Web pour Patreon / Flux cachés">
+            <button type="button" onClick={() => setSnifferOpen('https://www.patreon.com')} className="transition-colors hover:text-white flex items-center gap-1 group/sniffer" title="Ouvrir le navigateur intégré pour intercepter les flux cachés (Patreon, etc.)">
               <Globe className="w-4 h-4 text-pink-400 group-hover/sniffer:drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" />
               <span className="text-[10px] uppercase font-bold text-pink-400 opacity-80 group-hover/sniffer:opacity-100">Sniffer</span>
             </button>
@@ -757,6 +772,15 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {snifferOpen !== false && (
+          <SnifferBrowser
+            initialUrl={snifferOpen || undefined}
+            onClose={() => setSnifferOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {playingMedia && (

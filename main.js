@@ -345,7 +345,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webviewTag: true
     }
   });
 
@@ -1001,6 +1002,12 @@ ipcMain.on('open-sniffer', (event, targetUrl) => {
     snifferWindow = null;
     seenSnifferUrls.clear();
   });
+});
+
+// In-app sniffer (embedded webview) asks to reset the dedup set so a fresh
+// browsing session can re-detect streams it saw before.
+ipcMain.on('sniffer-clear-seen', () => {
+  seenSnifferUrls.clear();
 });
 
 // Route "download this video" from browser → DownloadInterface in main window
