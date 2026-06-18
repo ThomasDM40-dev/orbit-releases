@@ -1469,6 +1469,15 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
     args.mergeOutputFormat = 'mp4';
   }
 
+  // Ask yt-dlp to print the EXACT final path after all post-processing
+  // (merge / remux / recode / extract-audio) so playback opens the real file
+  // instead of a name guessed from stdout. The "after_move:" WHEN-prefix prints
+  // during a real download (not a simulation); --no-simulate makes that explicit.
+  if (!options.isPlaylist && !args.yesPlaylist) {
+    args.print = 'after_move:ORBIT_FINAL=%(filepath)s';
+    args.noSimulate = true;
+  }
+
   youtubedl = require('youtube-dl-exec').create(getYtDlpBin());
   const subprocess = youtubedl.exec(url, args);
   if (subprocess.catch) {
@@ -1497,12 +1506,20 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
     const output = data.toString();
     stdoutLog.push(output.trim());
     
-    // Stream log lines to frontend
-    output.split('\n').filter(l => l.trim()).forEach(line => {
+    // Stream log lines to frontend (hide our internal final-path marker).
+    output.split('\n').filter(l => l.trim() && !l.includes('ORBIT_FINAL=')).forEach(line => {
       mainWindow.webContents.send('download-log', { id, line: line.trim(), level: 'info' });
     });
 
-    const destMatch = output.match(/\[download\] Destination: (.*)/) || 
+    // Canonical final path printed by yt-dlp after all post-processing.
+    const finalMatch = output.match(/ORBIT_FINAL=(.+)/);
+    if (finalMatch && finalMatch[1]) {
+      let fp = finalMatch[1].trim().replace(/^"|"$/g, '');
+      if (!path.isAbsolute(fp)) fp = path.join(downloadDir, path.basename(fp));
+      finalFilePath = fp;
+    }
+
+    const destMatch = output.match(/\[download\] Destination: (.*)/) ||
                       output.match(/\[download\] (.*) has already been downloaded/) ||
                       output.match(/\[Merger\] Merging formats into "(.*)"/) ||
                       output.match(/\[ExtractAudio\] Destination: (.*)/) ||
@@ -1541,6 +1558,11 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
   subprocess.on('close', (code) => {
     activeDownloads.delete(id);
     const success = code === 0;
+    if (success) {
+      // Make sure the path we report to the UI is a file that exists (handles
+      // extension changes from merge/remux and any parsing gaps).
+      finalFilePath = resolveDownloadedFile(finalFilePath, downloadDir);
+    }
     if (!success) {
       // Send full error summary
       const errorSummary = stderrLog.join('\n') || stdoutLog.slice(-5).join('\n');
@@ -1912,6 +1934,32 @@ function getVideoDuration(ffmpegPath, inputPath) {
       }
     });
   });
+}
+
+// Safety net: yt-dlp's reported path can be wrong/stale (merge/remux changes the
+// extension, etc.). Make sure we hand back a file that actually exists on disk.
+const MEDIA_EXT_RE = /\.(mp4|mkv|webm|mov|avi|m4v|flv|ts|m4a|mp3|flac|wav|ogg|opus|aac|alac|wma)$/i;
+function resolveDownloadedFile(fp, dir) {
+  try {
+    if (fp && fs.existsSync(fp)) return fp;
+    // Same base name, different extension (merge/remux/recode).
+    if (fp && dir && fs.existsSync(dir)) {
+      const base = path.basename(fp, path.extname(fp));
+      const sameBase = fs.readdirSync(dir)
+        .filter(f => f.startsWith(base) && MEDIA_EXT_RE.test(f) && !f.endsWith('.part'))
+        .map(f => path.join(dir, f));
+      if (sameBase.length) return sameBase.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+    }
+    // Last resort: newest media file written in the last 10 minutes.
+    if (dir && fs.existsSync(dir)) {
+      const now = Date.now();
+      const recent = fs.readdirSync(dir)
+        .map(f => path.join(dir, f))
+        .filter(f => { try { const s = fs.statSync(f); return s.isFile() && MEDIA_EXT_RE.test(f) && !f.endsWith('.part') && (now - s.mtimeMs) < 600000; } catch (e) { return false; } });
+      if (recent.length) return recent.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+    }
+  } catch (e) {}
+  return fp;
 }
 
 // ── On-the-fly playback preparation ─────────────────────────────────────────
