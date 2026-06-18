@@ -6,6 +6,7 @@ import { Loader2, Download, Video, CheckCircle2, ClipboardX, Crop, Cloud, MoreHo
 import OrbitPlayer from "./OrbitPlayer";
 import LogPanel from "./LogPanel";
 import SnifferBrowser from "./SnifferBrowser";
+import GlassSelect, { GlassOption } from "./GlassSelect";
 
 // Build a safe media:// URL. The path goes in the URL *path* component
 // (media:///C%3A/Users/...), never the host — otherwise Chromium normalizes the
@@ -114,6 +115,30 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
   const [sortOrder, setSortOrder] = useState<'newest'|'name'|'size'>('newest');
   const [playingMedia, setPlayingMedia] = useState<{url: string, title: string, filePath: string} | null>(null);
   const [snifferOpen, setSnifferOpen] = useState<false | string>(false);
+
+  // Build dropdown options from the localized format labels.
+  const videoFmtOpts: GlassOption[] = [
+    { value: 'BEST', label: t.videoFormats.BEST, group: 'Vidéo' },
+    { value: '8K', label: t.videoFormats["8K"], group: 'Vidéo' },
+    { value: '4K', label: t.videoFormats["4K"], group: 'Vidéo' },
+    { value: '2K', label: t.videoFormats["2K"], group: 'Vidéo' },
+    { value: '1080p', label: t.videoFormats["1080p"], group: 'Vidéo' },
+    { value: '720p', label: t.videoFormats["720p"], group: 'Vidéo' },
+    { value: '480p', label: t.videoFormats["480p"], group: 'Vidéo' },
+    { value: '360p', label: t.videoFormats["360p"], group: 'Vidéo' },
+    { value: '144p', label: t.videoFormats["144p"], group: 'Vidéo' },
+    { value: 'MP4', label: t.videoFormats.MP4, group: 'Vidéo' },
+    { value: 'WEBM', label: t.videoFormats.WEBM, group: 'Vidéo' },
+  ];
+  const audioFmtOpts: GlassOption[] = [
+    { value: 'MP3', label: t.audioFormats.MP3, group: 'Audio' },
+    { value: 'FLAC', label: t.audioFormats.FLAC, group: 'Audio' },
+    { value: 'WAV', label: t.audioFormats.WAV, group: 'Audio' },
+    { value: 'M4A', label: t.audioFormats.M4A, group: 'Audio' },
+    { value: 'OGG', label: t.audioFormats.OGG, group: 'Audio' },
+    { value: 'ALAC', label: t.audioFormats.ALAC, group: 'Audio' },
+  ];
+  const allFmtOpts: GlassOption[] = [...videoFmtOpts, ...audioFmtOpts];
   const [logPanel, setLogPanel] = useState<{id: string, title: string} | null>(null);
   const downloadLogsRef = React.useRef<Map<string, Array<{line: string, level: string}>>>(new Map());
   const formatPopoverRef = React.useRef<HTMLDivElement>(null);
@@ -209,7 +234,10 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (formatPopoverRef.current && !formatPopoverRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Ignore clicks inside a GlassSelect dropdown (rendered in a body portal).
+      if ((target as HTMLElement)?.closest?.('[role="listbox"]')) return;
+      if (formatPopoverRef.current && !formatPopoverRef.current.contains(target)) {
         setShowFormatPopover(false);
       }
     }
@@ -468,44 +496,13 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                   <h4 className="font-bold text-white mb-1">{t.formatTitle}</h4>
                   <p className="text-xs text-gray-400 mb-3">{t.formatDesc}</p>
                   
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                    </div>
-                    <select 
-                      value={globalFormat}
-                      onChange={(e) => setGlobalFormat(e.target.value as any)}
-                      className="block w-full pl-10 pr-10 py-2.5 text-sm bg-transparent border border-white/20 rounded-lg text-white appearance-none focus:outline-none focus:border-pink-500 transition-colors cursor-pointer hover:border-white/30"
-                    >
-                      {audioOnly ? (
-                        <>
-                          <option value="MP3" className="bg-[#1e1e1e]">{t.audioFormats.MP3}</option>
-                          <option value="FLAC" className="bg-[#1e1e1e]">{t.audioFormats.FLAC}</option>
-                          <option value="WAV" className="bg-[#1e1e1e]">{t.audioFormats.WAV}</option>
-                          <option value="M4A" className="bg-[#1e1e1e]">{t.audioFormats.M4A}</option>
-                          <option value="OGG" className="bg-[#1e1e1e]">{t.audioFormats.OGG}</option>
-                          <option value="ALAC" className="bg-[#1e1e1e]">{t.audioFormats.ALAC}</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="BEST" className="bg-[#1e1e1e]">{t.videoFormats.BEST}</option>
-                          <option value="8K" className="bg-[#1e1e1e]">{t.videoFormats["8K"]}</option>
-                          <option value="4K" className="bg-[#1e1e1e]">{t.videoFormats["4K"]}</option>
-                          <option value="2K" className="bg-[#1e1e1e]">{t.videoFormats["2K"]}</option>
-                          <option value="1080p" className="bg-[#1e1e1e]">{t.videoFormats["1080p"]}</option>
-                          <option value="720p" className="bg-[#1e1e1e]">{t.videoFormats["720p"]}</option>
-                          <option value="480p" className="bg-[#1e1e1e]">{t.videoFormats["480p"]}</option>
-                          <option value="360p" className="bg-[#1e1e1e]">{t.videoFormats["360p"]}</option>
-                          <option value="144p" className="bg-[#1e1e1e]">{t.videoFormats["144p"]}</option>
-                          <option value="MP4" className="bg-[#1e1e1e]">{t.videoFormats.MP4}</option>
-                          <option value="WEBM" className="bg-[#1e1e1e]">{t.videoFormats.WEBM}</option>
-                        </>
-                      )}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 15 12 19 16 15"></polyline><polyline points="16 9 12 5 8 9"></polyline></svg>
-                    </div>
-                  </div>
+                  <GlassSelect
+                    value={globalFormat}
+                    onChange={(v) => setGlobalFormat(v as any)}
+                    options={(audioOnly ? audioFmtOpts : videoFmtOpts).map(o => ({ ...o, group: undefined }))}
+                    className="w-full py-2.5"
+                    ariaLabel="Format de téléchargement"
+                  />
                   <span className="inline-block mt-3 bg-pink-500/20 text-pink-500 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border border-pink-500/30">--FORMAT</span>
                 </div>
               </div>
@@ -527,15 +524,17 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
           <button onClick={clearCompleted} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors" title="Clear completed"><Trash className="w-4 h-4" /> Clear</button>
         </div>
         <div className="flex items-center gap-3">
-          <select 
+          <GlassSelect
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as any)}
-            className="bg-transparent border border-white/10 rounded px-2 py-1 text-xs outline-none focus:border-pink-500"
-          >
-            <option value="newest" className="bg-[#111]">Date (Newest)</option>
-            <option value="name" className="bg-[#111]">Name (A-Z)</option>
-            <option value="size" className="bg-[#111]">Size (Largest)</option>
-          </select>
+            onChange={(v) => setSortOrder(v as any)}
+            options={[
+              { value: 'newest', label: 'Date (récent)' },
+              { value: 'name', label: 'Nom (A-Z)' },
+              { value: 'size', label: 'Taille (grand)' },
+            ]}
+            className="w-40 py-1.5 text-xs"
+            ariaLabel="Trier"
+          />
           <button onClick={handleSelectDir} className="flex items-center gap-2 border border-pink-500 text-pink-500 rounded-full px-3 py-1 text-xs font-medium hover:bg-pink-500/10 transition-colors truncate max-w-[200px]">
             <Folder className="w-3 h-3 flex-shrink-0" />
             {outputDir}
@@ -618,33 +617,13 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                   <div className={`relative z-10 flex items-center gap-2 ${viewLayout === 'grid' ? 'w-full justify-center mt-2' : ''}`}>
                     {item.status === "ready" && (
                       <>
-                        <select 
-                          className={`border border-white/10 rounded px-2 py-1.5 text-xs outline-none truncate transition-colors ${viewLayout === 'terminal' ? 'bg-black text-green-500 border-green-500/30' : 'bg-[#111] text-gray-300 focus:border-pink-500 hover:bg-[#1a1a1a] w-32'}`}
+                        <GlassSelect
                           value={item.format}
-                          onChange={(e) => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, format: e.target.value as any } : d))}
-                        >
-                          <optgroup label="Video">
-                            <option value="BEST">{t.videoFormats.BEST}</option>
-                            <option value="8K">{t.videoFormats["8K"]}</option>
-                            <option value="4K">{t.videoFormats["4K"]}</option>
-                            <option value="2K">{t.videoFormats["2K"]}</option>
-                            <option value="1080p">{t.videoFormats["1080p"]}</option>
-                            <option value="720p">{t.videoFormats["720p"]}</option>
-                            <option value="480p">{t.videoFormats["480p"]}</option>
-                            <option value="360p">{t.videoFormats["360p"]}</option>
-                            <option value="144p">{t.videoFormats["144p"]}</option>
-                            <option value="MP4">{t.videoFormats.MP4}</option>
-                            <option value="WEBM">{t.videoFormats.WEBM}</option>
-                          </optgroup>
-                          <optgroup label="Audio">
-                            <option value="MP3">{t.audioFormats.MP3}</option>
-                            <option value="FLAC">{t.audioFormats.FLAC}</option>
-                            <option value="WAV">{t.audioFormats.WAV}</option>
-                            <option value="M4A">{t.audioFormats.M4A}</option>
-                            <option value="OGG">{t.audioFormats.OGG}</option>
-                            <option value="ALAC">{t.audioFormats.ALAC}</option>
-                          </optgroup>
-                        </select>
+                          onChange={(v) => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, format: v as any } : d))}
+                          options={allFmtOpts}
+                          className="w-36 py-1.5 text-xs"
+                          ariaLabel="Format"
+                        />
                         
                         <button onClick={() => handleItemSelectDir(item.id)} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors group relative ${viewLayout === 'terminal' ? 'text-green-500 border-green-500/30' : 'text-gray-400 hover:text-white'}`} title={item.outputDir || outputDir}>
                           <Folder className="w-4 h-4" />

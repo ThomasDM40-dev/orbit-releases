@@ -178,6 +178,50 @@ html.theme-midnight .bg-\[\#ff2a6d\] {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* ── Native <select> baseline (custom GlassSelect is preferred, but any
+   remaining native selects get a consistent dark glass look + pink accent
+   instead of the raw OS control) ─────────────────────────────────────────── */
+select {
+  color-scheme: dark;
+  accent-color: #ec4899;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px !important;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+select:hover { border-color: rgba(255, 255, 255, 0.2); }
+select:focus, select:focus-visible {
+  outline: none;
+  border-color: rgba(236, 72, 153, 0.55);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.12);
+}
+select option {
+  background-color: #14141a;
+  color: #e5e7eb;
+  padding: 8px;
+}
+select optgroup {
+  background-color: #0c0c12;
+  color: #6b7280;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Buttons: smooth feedback + clear keyboard focus everywhere */
+button { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease; }
+button:not(:disabled):active { transform: scale(0.97); }
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.35);
+}
+
 /* Glassmorphism Panel */
 .glass-panel {
   background: rgba(20, 20, 20, 0.4);
