@@ -19,6 +19,10 @@ export const TAB_ICONS: Record<string, React.ReactNode> = {
   library: ic(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9.5h3M18 9.5h3M3 14.5h3M18 14.5h3" /><path d="m10 9.5 5 2.5-5 2.5z" /></>),
   // ✨ sparkles (AI enhance)
   enhance: ic(<><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" /><path d="M18.5 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" /></>),
+  // 🪄 wand + spark (AI image generation)
+  imagegen: ic(<><path d="M15 4V2" /><path d="M15 16v-2" /><path d="M8 9h2" /><path d="M20 9h2" /><path d="M17.8 11.8 19 13" /><path d="M15 9h0" /><path d="M17.8 6.2 19 5" /><path d="m3 21 9-9" /><path d="M12.2 6.2 11 5" /></>),
+  // 🧽 eraser (magic object removal)
+  inpaint: ic(<><path d="m7 21-4-4a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l3.6 3.6a2 2 0 0 1 0 2.8L12 19" /><path d="M7 21h10" /><path d="m9 12 4 4" /></>),
   // ✂ scissors (matting / cut-out)
   matting: ic(<><circle cx="6" cy="6" r="2.4" /><circle cx="6" cy="18" r="2.4" /><path d="M8 7.5 20 18" /><path d="M8 16.5 20 6" /></>),
   // compress (HandBrake)

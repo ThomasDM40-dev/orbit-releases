@@ -3279,6 +3279,92 @@ ipcMain.on('enhance-start', async (event, job) => {
   }
 });
 
+// ─── Génération d'image IA (Pollinations · Flux — gratuit, sans clé API) ───────
+// Modèle Flux : open-source, niveau Midjourney, totalement gratuit & illimité.
+const IMAGEGEN_DIR_NAME = 'Orbit Images IA';
+const IMAGEGEN_MODELS_FALLBACK = [
+  { value: 'flux',         label: 'Flux — qualité maximale (recommandé)' },
+  { value: 'flux-realism', label: 'Flux Realism — photoréaliste' },
+  { value: 'flux-anime',   label: 'Flux Anime — manga / anime' },
+  { value: 'flux-3d',      label: 'Flux 3D — rendu 3D / Blender' },
+  { value: 'flux-cablyai', label: 'Flux CablyAI — artistique' },
+  { value: 'turbo',        label: 'Turbo — ultra rapide' },
+];
+
+// Fetch a URL to a Buffer, following redirects (Pollinations redirects to a CDN).
+function httpGetBuffer(url, opts = {}, redirects = 0) {
+  const timeout = opts.timeout || 180000;
+  return new Promise((resolve, reject) => {
+    if (redirects > 6) return reject(new Error('Trop de redirections.'));
+    const lib = url.startsWith('https') ? https : require('http');
+    const req = lib.get(url, { headers: { 'User-Agent': 'Orbit/1.0', ...(opts.headers || {}) } }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+        res.resume();
+        const next = new URL(res.headers.location, url).toString();
+        return resolve(httpGetBuffer(next, opts, redirects + 1));
+      }
+      if (res.statusCode !== 200) { res.resume(); return reject(new Error('HTTP ' + res.statusCode)); }
+      const chunks = [];
+      res.on('data', d => chunks.push(d));
+      res.on('end', () => resolve({ buffer: Buffer.concat(chunks), contentType: res.headers['content-type'] || '' }));
+      res.on('error', reject);
+    });
+    req.setTimeout(timeout, () => req.destroy(new Error('Délai dépassé — réessayez.')));
+    req.on('error', reject);
+  });
+}
+
+ipcMain.handle('image-gen-models', async () => {
+  try {
+    const { buffer, contentType } = await httpGetBuffer('https://image.pollinations.ai/models', { timeout: 8000 });
+    const txt = buffer.toString('utf8').trim();
+    if (/json/.test(contentType) || txt[0] === '[') {
+      const arr = JSON.parse(txt);
+      if (Array.isArray(arr) && arr.length) {
+        const known = Object.fromEntries(IMAGEGEN_MODELS_FALLBACK.map(m => [m.value, m.label]));
+        // Keep the curated order first, then any extra models the API exposes.
+        const set = new Set(arr.map(String));
+        const ordered = IMAGEGEN_MODELS_FALLBACK.filter(m => set.has(m.value));
+        for (const m of arr.map(String)) if (!ordered.some(o => o.value === m)) ordered.push({ value: m, label: known[m] || m });
+        return ordered.length ? ordered : IMAGEGEN_MODELS_FALLBACK;
+      }
+    }
+  } catch (e) {}
+  return IMAGEGEN_MODELS_FALLBACK;
+});
+
+ipcMain.handle('image-gen', async (e, params = {}) => {
+  try {
+    const prompt = (params.prompt || '').trim();
+    if (!prompt) return { error: 'Décris l\'image que tu veux générer.' };
+    const width = Math.round(enhanceLib.clamp(params.width || 1024, 64, 2048, 1024));
+    const height = Math.round(enhanceLib.clamp(params.height || 1024, 64, 2048, 1024));
+    const model = params.model || 'flux';
+    const seed = (params.seed != null && params.seed !== '') ? String(params.seed) : String(Math.floor(Math.random() * 1e9));
+    const q = new URLSearchParams({
+      width: String(width), height: String(height), seed, model,
+      nologo: 'true', enhance: params.enhance ? 'true' : 'false', private: 'true', safe: 'false',
+    });
+    const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?' + q.toString();
+    const { buffer, contentType } = await httpGetBuffer(url, { timeout: 180000 });
+    if (!buffer || buffer.length < 800) return { error: 'Image vide — réessaie ou change de modèle.' };
+    if (/json|text\/(?!plain)/.test(contentType) && buffer.length < 4000) {
+      return { error: 'Le service a renvoyé une erreur : ' + buffer.toString('utf8').slice(0, 200) };
+    }
+    let outDir = (params.outputDir && fs.existsSync(params.outputDir)) ? params.outputDir
+      : path.join(app.getPath('pictures') || app.getPath('downloads'), IMAGEGEN_DIR_NAME);
+    try { if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true }); } catch (e2) { outDir = app.getPath('downloads'); }
+    const ext = /png/.test(contentType) ? 'png' : 'jpg';
+    const safeName = prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'image';
+    const file = path.join(outDir, `orbit-${safeName}-${Date.now().toString(36)}.${ext}`);
+    fs.writeFileSync(file, buffer);
+    const dataUrl = `data:${contentType || 'image/jpeg'};base64,` + buffer.toString('base64');
+    return { ok: true, path: file, dataUrl, seed, model, width, height, prompt };
+  } catch (err) {
+    return { error: 'Échec de la génération : ' + ((err && err.message) || String(err)) };
+  }
+});
+
 // ─── HandBrake — genuine HandBrakeCLI engine, auto-downloaded & wrapped ────────
 const handbrake = require('./handbrake.js');
 
@@ -3486,6 +3572,7 @@ ipcMain.on('lib-convert', async (event, job) => {
 
 // ─── AI Background Removal (Robust Video Matting · ONNX) ──────────────────────
 const matting = require('./matting.js');
+const inpaint = require('./inpaint.js');
 let _ort = null;
 function getOrt() { if (!_ort) { _ort = require('onnxruntime-node'); try { _ort.env.logLevel = 'error'; } catch (e) {} } return _ort; }
 const RVM_DIR = path.join(ORBIT_DIR, 'modules', 'rvm');
@@ -3508,7 +3595,7 @@ async function installRvmModel(modelKey, onLog) {
 
 ipcMain.handle('matting-detect', async () => {
   let ready = false, err = null;
-  try { getOrt(); ready = true; } catch (e) { err = e.message; }
+  try { getOrt(); ready = true; } catch (e) { err = (e && e.message) || String(e); }
   const models = Object.entries(matting.MODELS).map(([k, m]) => ({ key: k, label: m.label, installed: (() => { try { return fs.existsSync(path.join(RVM_DIR, m.file)) && fs.statSync(path.join(RVM_DIR, m.file)).size >= m.minBytes; } catch (e) { return false; } })() }));
   return { ready, err, models };
 });
@@ -3639,5 +3726,197 @@ ipcMain.on('matting-start', async (event, job) => {
     const msg = (e && e.message) || String(e);
     if (/cancelled/i.test(msg)) return sendErr('Annulé par l\'utilisateur.');
     sendErr('Échec : ' + msg);
+  }
+});
+
+// ─── Gomme magique IA · suppression d'objet (LaMa · ONNX, local & gratuit) ─────
+const LAMA_DIR = path.join(ORBIT_DIR, 'modules', 'lama');
+
+async function installLamaModel(onLog) {
+  if (!fs.existsSync(LAMA_DIR)) fs.mkdirSync(LAMA_DIR, { recursive: true });
+  const dest = path.join(LAMA_DIR, inpaint.LAMA.file);
+  if (fs.existsSync(dest) && fs.statSync(dest).size >= inpaint.LAMA.minBytes) return dest;
+  onLog && onLog('Téléchargement du moteur LaMa (~200 Mo, première utilisation)…');
+  await new Promise((resolve, reject) => {
+    const c = spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '3', inpaint.LAMA.url]);
+    c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
+    c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLog && onLog('LaMa: ' + s.replace(/\r/g, '').split('\n').pop()); });
+    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+  });
+  if (!fs.existsSync(dest) || fs.statSync(dest).size < inpaint.LAMA.minBytes) { try { fs.unlinkSync(dest); } catch (e) {} throw new Error('Modèle LaMa incomplet.'); }
+  return dest;
+}
+
+// Decode any image to a raw pixel Buffer at an exact size via ffmpeg.
+function ffDecodeRaw(ff, input, w, h, pix) {
+  return new Promise((resolve, reject) => {
+    const p = spawn(ff, ['-hide_banner', '-nostdin', '-i', input, '-vf', `scale=${w}:${h}:flags=bilinear`, '-f', 'rawvideo', '-pix_fmt', pix, 'pipe:1'], { windowsHide: true });
+    const chunks = []; let err = '';
+    p.stdout.on('data', d => chunks.push(d)); p.stderr.on('data', d => err += d);
+    p.on('error', reject);
+    p.on('close', c => c === 0 ? resolve(Buffer.concat(chunks)) : reject(new Error('décodage image (' + c + ')')));
+  });
+}
+function ffEncodeRaw(ff, buf, w, h, pix, outPath) {
+  return new Promise((resolve, reject) => {
+    const p = spawn(ff, ['-hide_banner', '-nostdin', '-y', '-f', 'rawvideo', '-pix_fmt', pix, '-s', `${w}x${h}`, '-i', 'pipe:0', outPath], { windowsHide: true });
+    let err = ''; p.stderr.on('data', d => err += d); p.on('error', reject);
+    p.on('close', c => c === 0 ? resolve() : reject(new Error('encodage image (' + c + ')')));
+    p.stdin.on('error', () => {}); p.stdin.write(buf); p.stdin.end();
+  });
+}
+const _byte = (v) => v < 0 ? 0 : v > 255 ? 255 : v;
+
+ipcMain.handle('inpaint-detect', async () => {
+  let ready = false, err = null;
+  try { getOrt(); ready = true; } catch (e) { err = (e && e.message) || String(e); }
+  let installed = false;
+  try { const d = path.join(LAMA_DIR, inpaint.LAMA.file); installed = fs.existsSync(d) && fs.statSync(d).size >= inpaint.LAMA.minBytes; } catch (e) {}
+  return { ready, err, installed };
+});
+
+ipcMain.handle('inpaint-install', async () => {
+  const win = uiWin();
+  try { await installLamaModel(m => win?.webContents.send('inpaint-progress', { stage: m })); return { ok: true }; }
+  catch (er) { return { ok: false, error: er.message }; }
+});
+
+ipcMain.handle('inpaint-run', async (e, params = {}) => {
+  const win = uiWin();
+  const prog = (stage) => win?.webContents.send('inpaint-progress', { stage });
+  const tmp = [];
+  try {
+    const eng = enhanceLib.detectEngines(ORBIT_DIR);
+    if (!eng.ffmpeg) return { error: 'ffmpeg introuvable.' };
+    const ff = eng.ffmpeg;
+    const imagePath = params.imagePath;
+    if (!imagePath || !fs.existsSync(imagePath)) return { error: 'Image introuvable.' };
+    if (!params.maskPng) return { error: 'Sélectionne d\'abord une zone avec le pinceau.' };
+
+    const meta = await enhanceProbe(ff, imagePath);
+    const W = meta.width, H = meta.height;
+    if (!W || !H) return { error: 'Image illisible.' };
+
+    // Write the painted mask (PNG data URL) to a temp file.
+    const maskB64 = String(params.maskPng).replace(/^data:image\/\w+;base64,/, '');
+    const maskTmp = path.join(os.tmpdir(), `orbit_mask_${Date.now()}.png`); tmp.push(maskTmp);
+    fs.writeFileSync(maskTmp, Buffer.from(maskB64, 'base64'));
+
+    // Shared output target.
+    let outDir = (params.outputDir && fs.existsSync(params.outputDir)) ? params.outputDir
+      : path.join(app.getPath('pictures') || app.getPath('downloads'), IMAGEGEN_DIR_NAME);
+    try { if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true }); } catch (e2) { outDir = app.getPath('downloads'); }
+    const base = path.basename(imagePath, path.extname(imagePath));
+    const finalPath = path.join(outDir, `${base}-retouche-${Date.now().toString(36)}.png`);
+
+    const prompt = (params.prompt || '').trim();
+
+    // ── Mode « Ajouter / Remplacer » : prompt fourni → génération Flux dans la zone ──
+    // (aucun téléchargement de modèle requis — la zone peinte est remplacée par
+    //  une génération Flux, fondue dans l'image via le masque adouci.)
+    if (prompt) {
+      prog('Analyse de la zone…');
+      const mRaw = await ffDecodeRaw(ff, maskTmp, W, H, 'gray');
+      let minX = W, minY = H, maxX = -1, maxY = -1;
+      for (let y = 0; y < H; y++) { const row = y * W; for (let x = 0; x < W; x++) { if (mRaw[row + x] > 127) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; } } }
+      if (maxX < 0) return { error: 'Aucune zone sélectionnée — peins la zone à générer.' };
+      let bw = maxX - minX + 1, bh = maxY - minY + 1;
+      const padX = Math.round(bw * 0.12), padY = Math.round(bh * 0.12);
+      let bx = Math.max(0, minX - padX), by = Math.max(0, minY - padY);
+      const ex = Math.min(W - 1, maxX + padX), ey = Math.min(H - 1, maxY + padY);
+      bx -= bx % 2; by -= by % 2; bw = ex - bx + 1; bh = ey - by + 1; bw -= bw % 2; bh -= bh % 2;
+      // Generation size: cap the long edge to 1024, snap to /8.
+      let gw = bw, gh = bh; const lng = Math.max(bw, bh); if (lng > 1024) { const s = 1024 / lng; gw = Math.round(bw * s); gh = Math.round(bh * s); }
+      gw = Math.max(64, Math.round(gw / 8) * 8); gh = Math.max(64, Math.round(gh / 8) * 8);
+      prog('Génération IA…');
+      const q = new URLSearchParams({ width: String(gw), height: String(gh), seed: String((params.seed != null && params.seed !== '') ? params.seed : Math.floor(Math.random() * 1e9)), model: params.model || 'flux', nologo: 'true', enhance: 'true', private: 'true', safe: 'false' });
+      const genUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?' + q.toString();
+      const { buffer, contentType } = await httpGetBuffer(genUrl, { timeout: 180000 });
+      if (!buffer || buffer.length < 800) return { error: 'Génération vide — réessaie ou change le prompt.' };
+      const genTmp = path.join(os.tmpdir(), `orbit_gen_${Date.now()}.${/png/.test(contentType) ? 'png' : 'jpg'}`); tmp.push(genTmp);
+      fs.writeFileSync(genTmp, buffer);
+      prog('Composition…');
+      await new Promise((resolve, reject) => {
+        const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', genTmp, '-i', maskTmp, '-filter_complex',
+          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${bw}:${bh}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${bx}:${by}[full];[2:v]scale=${W}:${H},format=gray,gblur=sigma=3[m];[b1][full][m]maskedmerge[o]`,
+          '-map', '[o]', finalPath];
+        const p = spawn(ff, args, { windowsHide: true }); let log = '';
+        p.stderr.on('data', d => log += d); p.on('error', reject);
+        p.on('close', c => c === 0 ? resolve() : reject(new Error('composition (' + c + ')\n' + log.slice(-300))));
+      });
+      for (const f of tmp) { try { fs.unlinkSync(f); } catch (e) {} }
+      if (!fs.existsSync(finalPath)) return { error: 'Sortie non générée.' };
+      const gb = fs.readFileSync(finalPath);
+      return { ok: true, path: finalPath, dataUrl: 'data:image/png;base64,' + gb.toString('base64'), width: W, height: H };
+    }
+
+    // ── Mode « Effacer » : pas de prompt → LaMa (suppression d'objet, local) ──
+    const ort = getOrt();
+    prog('Préparation du moteur…');
+    const modelPath = await installLamaModel(m => prog(m));
+    const maxDim = Math.round(enhanceLib.clamp(params.maxDim || 1536, 256, 2048, 1536));
+    const { pw, ph } = inpaint.procSize(W, H, maxDim);
+
+    prog('Analyse de l\'image…');
+    const imgRaw = await ffDecodeRaw(ff, imagePath, pw, ph, 'rgb24');
+    const maskRaw = await ffDecodeRaw(ff, maskTmp, pw, ph, 'gray');
+    const N = pw * ph;
+    if (imgRaw.length < 3 * N || maskRaw.length < N) return { error: 'Décodage incomplet de l\'image.' };
+
+    // CHW float tensors. LaMa: image in [0,1], mask binary (1 = à reconstruire).
+    const img = new Float32Array(3 * N);
+    for (let i = 0; i < N; i++) { img[i] = imgRaw[i * 3] / 255; img[N + i] = imgRaw[i * 3 + 1] / 255; img[2 * N + i] = imgRaw[i * 3 + 2] / 255; }
+    const mask = new Float32Array(N);
+    let painted = 0;
+    for (let i = 0; i < N; i++) { const v = maskRaw[i] > 127 ? 1 : 0; mask[i] = v; painted += v; }
+    if (!painted) return { error: 'Aucune zone sélectionnée — peins sur l\'objet à effacer.' };
+
+    prog('Reconstruction IA…');
+    const session = await ort.InferenceSession.create(modelPath);
+    const inNames = session.inputNames || [];
+    const outNames = session.outputNames || [];
+    if (inNames.length < 2 || !outNames.length) return { error: 'Modèle LaMa inattendu.' };
+    // Robust name mapping (works whatever the export names the tensors).
+    let maskName = inNames.find(n => /mask/i.test(n));
+    let imgName = inNames.find(n => /image|img|src|input/i.test(n) && !/mask/i.test(n));
+    if (!imgName) imgName = inNames.find(n => n !== maskName) || inNames[0];
+    if (!maskName) maskName = inNames.find(n => n !== imgName) || inNames[1];
+    const feeds = {};
+    feeds[imgName] = new ort.Tensor('float32', img, [1, 3, ph, pw]);
+    feeds[maskName] = new ort.Tensor('float32', mask, [1, 1, ph, pw]);
+    const out = await session.run(feeds);
+    const od = out[outNames[0]].data;
+    if (!od || od.length < 3 * N) return { error: 'Sortie du modèle invalide.' };
+    // Auto-detect output range (0..1 vs 0..255).
+    let mx = 0; for (let i = 0; i < od.length; i += 1009) if (od[i] > mx) mx = od[i];
+    const sc = mx <= 1.5 ? 255 : 1;
+    const outBuf = Buffer.allocUnsafe(3 * N);
+    for (let i = 0; i < N; i++) { outBuf[i * 3] = _byte(od[i] * sc); outBuf[i * 3 + 1] = _byte(od[N + i] * sc); outBuf[i * 3 + 2] = _byte(od[2 * N + i] * sc); }
+    const inpaintedTmp = path.join(os.tmpdir(), `orbit_inpaint_${Date.now()}.png`); tmp.push(inpaintedTmp);
+    await ffEncodeRaw(ff, outBuf, pw, ph, 'rgb24', inpaintedTmp);
+
+    prog('Finalisation…');
+    // Keep the original pixels everywhere except the (feathered) painted region:
+    // base = original, overlay = AI result upscaled, mask = painted area.
+    await new Promise((resolve, reject) => {
+      const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', inpaintedTmp, '-i', maskTmp,
+        '-filter_complex',
+        `[0:v]format=rgb24,scale=${W}:${H}[base];[1:v]scale=${W}:${H}:flags=lanczos,format=rgb24[ov];[2:v]scale=${W}:${H},format=gray,gblur=sigma=2[m];[base][ov][m]maskedmerge[o]`,
+        '-map', '[o]', finalPath];
+      const p = spawn(ff, args, { windowsHide: true }); let log = '';
+      p.stderr.on('data', d => log += d); p.on('error', reject);
+      p.on('close', c => c === 0 ? resolve() : reject(new Error('composition (' + c + ')\n' + log.slice(-300))));
+    });
+
+    for (const f of tmp) { try { fs.unlinkSync(f); } catch (e) {} }
+    if (!fs.existsSync(finalPath)) return { error: 'Sortie non générée.' };
+    const buf = fs.readFileSync(finalPath);
+    return { ok: true, path: finalPath, dataUrl: 'data:image/png;base64,' + buf.toString('base64'), width: W, height: H };
+  } catch (err) {
+    for (const f of tmp) { try { fs.unlinkSync(f); } catch (e) {} }
+    const msg = (err && err.message) || String(err);
+    let hint = '';
+    if (/out of memory|alloc|bad_alloc/i.test(msg)) hint = ' — réduis la résolution de traitement.';
+    return { error: 'Échec : ' + msg + hint };
   }
 });

@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.16.13
+      Version actuelle : 0.17.2
     </div>
   </header>
 
@@ -343,12 +343,84 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.16.13 -->
+      <!-- v0.17.2 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.16.13</span>
+            <span>v0.17.2</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">19 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Gomme magique IA — prompts + correctifs</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Ajout / remplacement par prompt :</strong> peins une zone et décris ce que tu veux à la place (« a leather backpack », « a tree »…) — l'IA <strong>génère le contenu directement dans la sélection</strong> (Flux), fondu dans l'image. Laisse le prompt vide pour simplement <strong>effacer</strong> l'objet. Un seul outil, deux usages.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>« Ça n'effaçait rien » corrigé :</strong> le bouton restait bloqué tant que le moteur n'était pas installé. Maintenant un clic lance directement le traitement (et télécharge le moteur d'effacement au besoin, avec progression). Interface revue, plus claire et plus ergonomique.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.17.1 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.17.1</span>
+          </div>
+          <span class="release-date">19 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Correctif de la mise à jour</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>La 0.17.0 plantait au lancement après mise à jour :</strong> le moteur de la nouvelle Gomme magique IA n'était pas inclus dans le paquet d'installation. C'est corrigé — la mise à jour s'installe et démarre normalement, et les deux nouveaux onglets (Génération IA + Gomme magique IA) fonctionnent.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.17.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.17.0</span>
+          </div>
+          <span class="release-date">19 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Nouvel onglet — Génération d'image IA</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Crée des images depuis un simple texte :</strong> un nouvel onglet <strong>« Génération IA »</strong> propulsé par <strong>Flux</strong> — le modèle open-source le plus avancé (niveau Midjourney), <strong>100% gratuit, illimité et sans clé API</strong>. Décris ton image, choisis un style, et l'IA la génère en quelques secondes.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Pensé pour les créatifs :</strong> 10 styles prêts à l'emploi (Photoréaliste, Cinématique, <strong>3D / Blender</strong>, Anime, Digital Art, Cyberpunk, Logo/Vecteur…), plusieurs modèles Flux, formats/ratios (1:1, 16:9, 9:16, 21:9…), génération par lot (jusqu'à 4 images), et <strong>seed verrouillable</strong> pour des résultats reproductibles.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Galerie intégrée :</strong> aperçu plein écran, réutilisation du prompt + seed en un clic, copie du prompt, ouverture du dossier et sauvegarde automatique des créations sur le disque. La galerie est conservée entre les sessions.</div>
+          </div>
+          <div class="category feat" style="margin-top:18px;">✦ Nouvel onglet — Gomme magique IA (suppression d'objet)</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Comme le « Remplissage génératif » de Photoshop :</strong> ouvre une photo, <strong>peins sur l'objet</strong> que tu veux faire disparaître (une poubelle, une personne, un logo, des fils…) et l'IA <strong>reconstruit le fond</strong> de façon réaliste. Propulsé par <strong>LaMa</strong> — modèle exécuté <strong>en local</strong>, gratuit et sans clé API.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Vrai outil de retouche :</strong> pinceau et gomme à taille réglable avec curseur en direct, 3 niveaux de précision (Rapide / Équilibré / Max), annulation, et <strong>retouches en chaîne</strong> (efface un objet puis un autre). La zone non peinte garde sa qualité d'origine au pixel près.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.16.13 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.16.13</span>
           </div>
           <span class="release-date">18 Juin 2026</span>
         </div>

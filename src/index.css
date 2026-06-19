@@ -326,3 +326,8 @@ button:focus-visible {
   50%  { transform: translateX(120%)  scaleX(1.25); }
   100% { transform: translateX(340%)  scaleX(0.7); }
 }
+
+/* Shimmer placeholder for AI image generation tiles (Génération d'image IA) */
+@keyframes shimmer {
+  100% { transform: translateX(200%); }
+}

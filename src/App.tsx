@@ -8,6 +8,8 @@ import SegmentedTabs from "@/components/SegmentedTabs";
 import Transcription from "@/components/Transcription";
 import TopazVideoAI from "@/components/TopazVideoAI";
 import OrbitEnhance from "@/components/OrbitEnhance";
+import ImageGen from "@/components/ImageGen";
+import InpaintStudio from "@/components/InpaintStudio";
 import HandBrake from "@/components/HandBrake";
 import MediaLibrary from "@/components/MediaLibrary";
 import MattingStudio from "@/components/MattingStudio";
@@ -28,6 +30,8 @@ export default function App() {
     { id: 'interpolator', label: 'Interpolateur IA' },
     { id: 'library', label: 'Médiathèque' },
     { id: 'enhance', label: 'Amélioration IA' },
+    { id: 'imagegen', label: 'Génération IA' },
+    { id: 'inpaint', label: 'Gomme magique IA' },
     { id: 'matting', label: 'Détourage IA' },
     { id: 'handbrake', label: 'HandBrake' },
     { id: 'topaz', label: 'Topaz Video AI' },
@@ -652,6 +656,12 @@ export default function App() {
           </div>
           <div className={activeTab === 'enhance' ? '' : 'hidden'} style={{ height: '100%' }}>
             <OrbitEnhance />
+          </div>
+          <div className={activeTab === 'imagegen' ? '' : 'hidden'} style={{ height: '100%' }}>
+            <ImageGen />
+          </div>
+          <div className={activeTab === 'inpaint' ? '' : 'hidden'} style={{ height: '100%' }}>
+            <InpaintStudio />
           </div>
           <div className={activeTab === 'library' ? '' : 'hidden'} style={{ height: '100%' }}>
             <MediaLibrary />

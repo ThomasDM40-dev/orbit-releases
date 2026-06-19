@@ -119,6 +119,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onEnhanceComplete: (cb) => { ipcRenderer.on('enhance-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('enhance-complete'); },
   onEnhanceError: (cb) => { ipcRenderer.on('enhance-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('enhance-error'); },
 
+  // ── Génération d'image IA (Pollinations · Flux — gratuit) ──
+  imageGenModels: () => ipcRenderer.invoke('image-gen-models'),
+  imageGenerate: (params) => ipcRenderer.invoke('image-gen', params),
+
+  // ── Gomme magique IA · suppression d'objet (LaMa — local & gratuit) ──
+  inpaintDetect: () => ipcRenderer.invoke('inpaint-detect'),
+  inpaintInstall: () => ipcRenderer.invoke('inpaint-install'),
+  inpaintRun: (params) => ipcRenderer.invoke('inpaint-run', params),
+  onInpaintProgress: (cb) => { const h = (_e, v) => cb(v); ipcRenderer.on('inpaint-progress', h); return () => ipcRenderer.removeListener('inpaint-progress', h); },
+
   // ── HandBrake ──
   hbDetect: () => ipcRenderer.invoke('hb-detect'),
   hbInstall: () => ipcRenderer.invoke('hb-install'),
