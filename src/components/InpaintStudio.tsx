@@ -22,7 +22,6 @@ export default function InpaintStudio() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [engine, setEngine] = useState<{ ready: boolean; installed: boolean } | null>(null);
-  const [maxDim, setMaxDim] = useState(1536);
   const [cursor, setCursor] = useState<{ x: number; y: number; show: boolean }>({ x: 0, y: 0, show: false });
   const [outputDir, setOutputDir] = useState('');
   const [prompt, setPrompt] = useState('');
@@ -124,7 +123,7 @@ export default function InpaintStudio() {
     if (!maskPng) { setError('Peins d\'abord la zone avec le pinceau.'); return; }
     const p = prompt.trim();
     setProcessing(true); setError(null); setStage(p ? 'Génération…' : 'Préparation…');
-    const res = await electron.inpaintRun?.({ imagePath: img.path, maskPng, maxDim, outputDir, prompt: p }).catch((e: any) => ({ error: String(e) }));
+    const res = await electron.inpaintRun?.({ imagePath: img.path, maskPng, outputDir, prompt: p }).catch((e: any) => ({ error: String(e) }));
     setProcessing(false); setStage('');
     if (res?.ok) {
       setHistory(h => [...h, img]);
@@ -203,16 +202,6 @@ export default function InpaintStudio() {
               <input type="range" min={5} max={200} value={brush} onChange={e => setBrush(Number(e.target.value))} className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer accent-rose-500"
                 style={{ background: `linear-gradient(to right,#f43f5e ${((brush - 5) / 195) * 100}%, rgba(255,255,255,0.1) ${((brush - 5) / 195) * 100}%)` }} />
               <button onClick={() => setBrush(b => Math.min(200, b + 5))} className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center"><Plus className="w-3.5 h-3.5" /></button>
-            </div>
-          </div>
-
-          {/* Quality */}
-          <div>
-            <div className="flex justify-between mb-1.5"><label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Précision <span className="text-gray-600 normal-case font-normal tracking-normal">(effacer)</span></label><span className="text-[11px] font-mono text-gray-200">{maxDim}px</span></div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[1024, 1536, 2048].map(d => (
-                <button key={d} onClick={() => setMaxDim(d)} className={`px-2 py-1.5 rounded-lg text-xs font-bold border transition-all ${maxDim === d ? 'bg-rose-500/25 text-rose-100 border-rose-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}>{d === 1024 ? 'Rapide' : d === 1536 ? 'Équilibré' : 'Max'}</button>
-              ))}
             </div>
           </div>
 

@@ -439,6 +439,14 @@ function createWindow() {
 
 const ORBIT_DIR = path.join(os.homedir(), '.orbit');
 
+// Return a writable download directory. A path saved on another machine (a
+// different user's home that doesn't exist here) throws WinError 5 when created
+// → fall back to THIS machine's Downloads folder.
+function usableDownloadDir(d) {
+  try { if (d) { fs.mkdirSync(d, { recursive: true }); fs.accessSync(d, fs.constants.W_OK); return d; } } catch (e) {}
+  try { const dl = app.getPath('downloads'); fs.mkdirSync(dl, { recursive: true }); return dl; } catch (e) { return os.homedir(); }
+}
+
 // Apply persisted app-level settings that MUST be set before app is ready.
 let bootSettings = {};
 try { bootSettings = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); } catch (e) {}
@@ -1137,8 +1145,7 @@ ipcMain.on('open-crunchyroll-sniffer', async () => {
 // ─── Crunchyroll Download ──────────────────────────────────────────────────────
 
 ipcMain.on('start-crunchyroll-download', (event, { id, url, cookies, quality, audioLang, subLang, outputDir }) => {
-  const downloadDir = outputDir || app.getPath('downloads');
-  if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+  const downloadDir = usableDownloadDir(outputDir);
 
   // Write Netscape-format cookie file
   const cookieFilePath = path.join(ORBIT_DIR, `cr_${id}.txt`);
@@ -1251,15 +1258,9 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
     try { globalSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
   }
 
-  const downloadDir = globalSettings.outputDir || options.outputDir || path.join(os.homedir(), 'Downloads');
-  let targetDir = options.outputDir;
-  if (!targetDir || targetDir.includes('C:\\Users\\User\\Downloads')) {
-    targetDir = app.getPath('downloads');
-  }
-
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
+  // Resolve a USABLE download directory (handles paths saved on another machine
+  // that can't be created here → WinError 5; falls back to this PC's Downloads).
+  const downloadDir = usableDownloadDir(globalSettings.outputDir || options.outputDir);
 
   // Is this a direct stream URL (sniffer-caught m3u8/mpd/mp4)?
   const isDirectStream = /\.(m3u8|mpd|mp4|webm|mov)(\?|$)/i.test(url);
@@ -2108,19 +2109,22 @@ ipcMain.on('transcribe', async (event, { id, inputPath, language, model, outputD
     const whisperDir = path.join(modulesDir, 'whisper');
     if (!fs.existsSync(whisperDir)) fs.mkdirSync(whisperDir, { recursive: true });
 
-    // Locate (or fetch) the whisper CLI executable.
+    // Locate (or fetch) the whisper CLI executable. Recent whisper.cpp renamed
+    // `main.exe` → `whisper-cli.exe`; the old `main.exe` is now a deprecated stub
+    // that exits with code 1 without transcribing. Always PREFER whisper-cli.exe.
     const findWhisperExe = (dir) => {
-      const want = ['main.exe', 'whisper-cli.exe', 'whisper.exe', 'whisper-cpp.exe'];
+      const priority = ['whisper-cli.exe', 'whisper.exe', 'whisper-cpp.exe', 'main.exe'];
+      const matches = [];
       const walk = (d) => {
-        let found = null;
         for (const e of fs.readdirSync(d, { withFileTypes: true })) {
           const full = path.join(d, e.name);
-          if (e.isDirectory()) { found = walk(full); if (found) return found; }
-          else if (want.includes(e.name.toLowerCase())) return full;
+          if (e.isDirectory()) walk(full);
+          else if (priority.includes(e.name.toLowerCase())) matches.push(full);
         }
-        return found;
       };
-      try { return walk(dir); } catch (e) { return null; }
+      try { walk(dir); } catch (e) { return null; }
+      matches.sort((a, b) => priority.indexOf(path.basename(a).toLowerCase()) - priority.indexOf(path.basename(b).toLowerCase()));
+      return matches[0] || null;
     };
 
     let whisperExe = findWhisperExe(whisperDir);
@@ -3055,7 +3059,22 @@ async function runEnhancePipeline(job, opts) {
     const wantScale = s.scaleMode === 'scale' ? (s.scale || 2) : 4;
     const { model, native } = enhanceLib.resolveEsrgan(s.upscaleModel || 'video', wantScale);
     onLog('Upscale : modèle ' + model + ' ×' + native);
-    await runTool(esrExe, enhanceLib.esrganArgs({ inDir: framesIn, outDir: framesOut, model, native, tile: s.tile || 0, tta: s.tta, gpu: ncnnGpu }), path.dirname(esrExe), 'Upscale IA', /([\d.]+)%/);
+    const VULKAN_RE = /vkcreateinstance|vkenumerate|vulkan|invalid gpu device|no gpu|failed -9/i;
+    const esrgan = (gpu) => runTool(esrExe, enhanceLib.esrganArgs({ inDir: framesIn, outDir: framesOut, model, native, tile: s.tile || 0, tta: s.tta, gpu }), path.dirname(esrExe), 'Upscale IA', /([\d.]+)%/);
+    try {
+      await esrgan(ncnnGpu);
+    } catch (err) {
+      const m = (err && err.message) || '';
+      // A specific GPU index can be wrong (ncnn enumerates differently from
+      // Windows) → retry once on the default device before giving up.
+      if (ncnnGpu != null && VULKAN_RE.test(m)) {
+        onLog('GPU sélectionné invalide — nouvel essai sur le GPU par défaut…');
+        try { await esrgan(null); }
+        catch (err2) { throw VULKAN_RE.test((err2 && err2.message) || '') ? new Error('Aucun GPU compatible Vulkan détecté. L\'upscale IA (Real-ESRGAN) nécessite un GPU Vulkan récent (NVIDIA, AMD ou Intel) avec des pilotes à jour. Mets à jour tes pilotes graphiques, ou désactive l\'upscale.') : err2; }
+      } else if (VULKAN_RE.test(m)) {
+        throw new Error('Aucun GPU compatible Vulkan détecté. L\'upscale IA (Real-ESRGAN) nécessite un GPU Vulkan récent (NVIDIA, AMD ou Intel) avec des pilotes à jour. Mets à jour tes pilotes graphiques, ou désactive l\'upscale.');
+      } else { throw err; }
+    }
     if (isCancelled()) throw new Error('cancelled');
     let outFiles = []; try { outFiles = fs.readdirSync(framesOut).filter(f => f.toLowerCase().endsWith('.png')).sort(); } catch (e) {}
     if (!outFiles.length) throw new Error('Upscale : aucune frame produite.');
@@ -3091,10 +3110,22 @@ async function runEnhancePipeline(job, opts) {
       const c = path.join(rifeDir, m);
       if (fs.existsSync(path.join(c, 'flownet.param'))) { modelPath = c; break; }
     }
-    const rifeArgs = ['-i', framesIn, '-o', framesOut, '-n', String(outCount)];
-    if (modelPath) rifeArgs.push('-m', modelPath);
-    if (ncnnGpu) rifeArgs.push('-g', ncnnGpu); // specific GPU index; omitted = default GPU
-    await runTool(rifeExe, rifeArgs, rifeDir, 'Interpolation IA', /(\d+)\/(\d+)/);
+    const baseRifeArgs = ['-i', framesIn, '-o', framesOut, '-n', String(outCount)];
+    if (modelPath) baseRifeArgs.push('-m', modelPath);
+    const RIFE_VULKAN_RE = /vkcreateinstance|vkenumerate|vulkan|invalid gpu device|no gpu|failed -9/i;
+    const rife = (gpu) => runTool(rifeExe, gpu != null ? [...baseRifeArgs, '-g', String(gpu)] : baseRifeArgs, rifeDir, 'Interpolation IA', /(\d+)\/(\d+)/);
+    try {
+      await rife(ncnnGpu);
+    } catch (err) {
+      const m = (err && err.message) || '';
+      if (ncnnGpu != null && RIFE_VULKAN_RE.test(m)) {
+        onLog('GPU sélectionné invalide — nouvel essai sur le GPU par défaut…');
+        try { await rife(null); }
+        catch (err2) { throw RIFE_VULKAN_RE.test((err2 && err2.message) || '') ? new Error('Aucun GPU compatible Vulkan détecté. L\'interpolation IA (RIFE) nécessite un GPU Vulkan récent avec des pilotes à jour. Mets à jour tes pilotes, ou désactive l\'interpolation.') : err2; }
+      } else if (RIFE_VULKAN_RE.test(m)) {
+        throw new Error('Aucun GPU compatible Vulkan détecté. L\'interpolation IA (RIFE) nécessite un GPU Vulkan récent avec des pilotes à jour. Mets à jour tes pilotes, ou désactive l\'interpolation.');
+      } else { throw err; }
+    }
     if (isCancelled()) throw new Error('cancelled');
     let outFiles = []; try { outFiles = fs.readdirSync(framesOut).filter(f => f.toLowerCase().endsWith('.png')).sort(); } catch (e) {}
     if (!outFiles.length) throw new Error('Interpolation : aucune frame produite.');
@@ -3854,8 +3885,9 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
     const ort = getOrt();
     prog('Préparation du moteur…');
     const modelPath = await installLamaModel(m => prog(m));
-    const maxDim = Math.round(enhanceLib.clamp(params.maxDim || 1536, 256, 2048, 1536));
-    const { pw, ph } = inpaint.procSize(W, H, maxDim);
+    // This LaMa export has a FIXED 512×512 input. Run at 512; the inpainted
+    // region is scaled back to full resolution during the composite below.
+    const pw = inpaint.LAMA.size || 512, ph = inpaint.LAMA.size || 512;
 
     prog('Analyse de l\'image…');
     const imgRaw = await ffDecodeRaw(ff, imagePath, pw, ph, 'rgb24');

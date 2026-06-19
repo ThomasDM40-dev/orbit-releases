@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.17.2
+      Version actuelle : 0.17.3
     </div>
   </header>
 
@@ -343,12 +343,41 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.17.2 -->
+      <!-- v0.17.3 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.17.2</span>
+            <span>v0.17.3</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">19 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category fix">⚡ Correctifs importants</div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Téléchargement « Accès refusé » (WinError 5) corrigé :</strong> sur certains PC, un dossier de téléchargement enregistré pointait vers un chemin inexistant (celui d'un autre utilisateur). Orbit vérifie maintenant que le dossier est accessible en écriture et bascule automatiquement sur le dossier <strong>Téléchargements</strong> de la machine.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Gomme magique IA — effacement réparé :</strong> le moteur LaMa tourne en résolution fixe (512), ce qui provoquait l'erreur « invalid dimensions ». L'effacement fonctionne désormais, et le résultat est recomposé en pleine résolution (zone non peinte intacte).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Upscale / Interpolation IA — message clair sans GPU Vulkan :</strong> au lieu d'un code d'erreur cryptique (« vkCreateInstance failed »), Orbit réessaie sur le GPU par défaut puis explique clairement qu'un GPU Vulkan à jour est requis.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Transcription réparée :</strong> les versions récentes de Whisper ont remplacé <code>main.exe</code> (désormais déprécié, sortie en erreur) par <code>whisper-cli.exe</code>. Orbit utilise maintenant le bon exécutable en priorité.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.17.2 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.17.2</span>
           </div>
           <span class="release-date">19 Juin 2026</span>
         </div>

@@ -12,6 +12,10 @@ const LAMA = {
   url: 'https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx',
   label: 'LaMa — suppression d\'objet',
   minBytes: 40 * 1024 * 1024,
+  // This ONNX export has a FIXED input resolution (512×512). The model runs at
+  // this size; the inpainted region is scaled back to the original resolution
+  // during compositing (untouched pixels keep full quality via the mask).
+  size: 512,
 };
 
 function roundTo(n, m) { return Math.max(m, Math.round(n / m) * m); }
