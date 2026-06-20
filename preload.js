@@ -129,6 +129,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   inpaintRun: (params) => ipcRenderer.invoke('inpaint-run', params),
   onInpaintProgress: (cb) => { const h = (_e, v) => cb(v); ipcRenderer.on('inpaint-progress', h); return () => ipcRenderer.removeListener('inpaint-progress', h); },
 
+  // ── Sélection intelligente (SAM — clic → masque) ──
+  samDetect: () => ipcRenderer.invoke('sam-detect'),
+  samEmbed: (params) => ipcRenderer.invoke('sam-embed', params),
+  samPoints: (params) => ipcRenderer.invoke('sam-points', params),
+  onSamProgress: (cb) => { const h = (_e, v) => cb(v); ipcRenderer.on('sam-progress', h); return () => ipcRenderer.removeListener('sam-progress', h); },
+
   // ── HandBrake ──
   hbDetect: () => ipcRenderer.invoke('hb-detect'),
   hbInstall: () => ipcRenderer.invoke('hb-install'),

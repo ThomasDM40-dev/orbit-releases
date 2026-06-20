@@ -1,6 +1,6 @@
 {
     "name": "frontend",
-    "version": "0.17.8",
+    "version": "0.17.9",
     "private": true,
     "main": "main.js",
     "scripts": {
@@ -30,6 +30,7 @@
             "library.js",
             "matting.js",
             "inpaint.js",
+            "sam.js",
             "package.json",
             "changelog.html"
         ],

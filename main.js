@@ -3628,6 +3628,7 @@ ipcMain.on('lib-convert', async (event, job) => {
 // ─── AI Background Removal (Robust Video Matting · ONNX) ──────────────────────
 const matting = require('./matting.js');
 const inpaint = require('./inpaint.js');
+const sam = require('./sam.js');
 let _ort = null;
 function getOrt() { if (!_ort) { _ort = require('onnxruntime-node'); try { _ort.env.logLevel = 'error'; } catch (e) {} } return _ort; }
 const RVM_DIR = path.join(ORBIT_DIR, 'modules', 'rvm');
@@ -3996,4 +3997,108 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
     if (/out of memory|alloc|bad_alloc/i.test(msg)) hint = ' — réduis la résolution de traitement.';
     return { error: 'Échec : ' + msg + hint };
   }
+});
+
+// ─── Sélection intelligente (SAM · clic → masque, local & gratuit) ─────────────
+const SAM_DIR = path.join(ORBIT_DIR, 'modules', 'sam');
+let _samEnc = null, _samDec = null, _samEmb = null; // cached encoder/decoder + last image embeddings
+
+async function installSam(onLog) {
+  if (!fs.existsSync(SAM_DIR)) fs.mkdirSync(SAM_DIR, { recursive: true });
+  const enc = path.join(SAM_DIR, sam.SAM.encFile), dec = path.join(SAM_DIR, sam.SAM.decFile);
+  const need = [];
+  if (!(fs.existsSync(enc) && fs.statSync(enc).size >= sam.SAM.encMin)) need.push([sam.SAM.encUrl, enc, 'encodeur']);
+  if (!(fs.existsSync(dec) && fs.statSync(dec).size >= sam.SAM.decMin)) need.push([sam.SAM.decUrl, dec, 'décodeur']);
+  for (const [url, dst, label] of need) {
+    onLog && onLog(`Téléchargement du moteur de sélection IA (${label}, ~40 Mo)…`);
+    await new Promise((resolve, reject) => {
+      const c = spawn('curl', ['-L', '--output', dst, '--progress-bar', '--retry', '3', url]);
+      c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
+      c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+    });
+    if (!fs.existsSync(dst) || fs.statSync(dst).size < 1024 * 1024) { try { fs.unlinkSync(dst); } catch (e) {} throw new Error('Modèle SAM incomplet.'); }
+  }
+  return { enc, dec };
+}
+
+ipcMain.handle('sam-detect', async () => {
+  let ready = false, err = null;
+  try { getOrt(); ready = true; } catch (e) { err = (e && e.message) || String(e); }
+  let installed = false;
+  try {
+    const enc = path.join(SAM_DIR, sam.SAM.encFile), dec = path.join(SAM_DIR, sam.SAM.decFile);
+    installed = fs.existsSync(enc) && fs.existsSync(dec) && fs.statSync(enc).size >= sam.SAM.encMin && fs.statSync(dec).size >= sam.SAM.decMin;
+  } catch (e) {}
+  return { ready, err, installed };
+});
+
+// Run the encoder once for an image and cache its embeddings.
+ipcMain.handle('sam-embed', async (e, params = {}) => {
+  const win = uiWin(); const prog = (s) => win?.webContents.send('sam-progress', { stage: s });
+  try {
+    const ort = getOrt();
+    const eng = enhanceLib.detectEngines(ORBIT_DIR);
+    if (!eng.ffmpeg) return { error: 'ffmpeg introuvable.' };
+    const ff = eng.ffmpeg;
+    const imagePath = params.imagePath;
+    if (!imagePath || !fs.existsSync(imagePath)) return { error: 'Image introuvable.' };
+    prog('Préparation du moteur de sélection…');
+    const { enc, dec } = await installSam(m => prog(m));
+    if (!_samEnc) _samEnc = await ort.InferenceSession.create(enc);
+    if (!_samDec) _samDec = await ort.InferenceSession.create(dec);
+    const meta = await enhanceProbe(ff, imagePath);
+    const W = meta.width, H = meta.height;
+    if (!W || !H) return { error: 'Image illisible.' };
+    const key = imagePath + '|' + (() => { try { return fs.statSync(imagePath).mtimeMs; } catch (e) { return 0; } })();
+    if (_samEmb && _samEmb.key === key) return { ok: true, W, H, cached: true };
+    prog('Analyse de l\'image…');
+    const T = sam.SAM.size, s = T / Math.max(W, H), rw = Math.max(1, Math.round(W * s)), rh = Math.max(1, Math.round(H * s));
+    const raw = await ffDecodeRaw(ff, imagePath, rw, rh, 'rgb24');
+    const pv = new Float32Array(3 * T * T); const { mean, std } = sam.SAM;
+    for (let y = 0; y < rh; y++) for (let x = 0; x < rw; x++) { const o = (y * rw + x) * 3; for (let c = 0; c < 3; c++) pv[c * T * T + y * T + x] = ((raw[o + c] / 255) - mean[c]) / std[c]; }
+    const out = await _samEnc.run({ pixel_values: new ort.Tensor('float32', pv, [1, 3, T, T]) });
+    _samEmb = { key, image_embeddings: out.image_embeddings, image_positional_embeddings: out.image_positional_embeddings, W, H, s, rw, rh };
+    return { ok: true, W, H };
+  } catch (err) { return { error: 'Sélection IA : ' + ((err && err.message) || String(err)) }; }
+});
+
+// Decode a mask from accumulated click points (label 1 = inclure, 0 = exclure).
+ipcMain.handle('sam-points', async (e, params = {}) => {
+  try {
+    const ort = getOrt();
+    const eng = enhanceLib.detectEngines(ORBIT_DIR);
+    const ff = eng.ffmpeg;
+    if (!_samEmb || !_samDec) return { error: 'Analyse l\'image d\'abord (clique dessus).' };
+    const pts = params.points || [];
+    if (!pts.length) return { error: 'Aucun point.' };
+    const { s, rw, rh, W, H } = _samEmb;
+    const np = pts.length;
+    const pcoords = new Float32Array(np * 2);
+    const plabels = new BigInt64Array(np);
+    for (let i = 0; i < np; i++) { pcoords[i * 2] = pts[i].x * s; pcoords[i * 2 + 1] = pts[i].y * s; plabels[i] = BigInt(pts[i].label != null ? pts[i].label : 1); }
+    const d = await _samDec.run({
+      input_points: new ort.Tensor('float32', pcoords, [1, 1, np, 2]),
+      input_labels: new ort.Tensor('int64', plabels, [1, 1, np]),
+      image_embeddings: _samEmb.image_embeddings,
+      image_positional_embeddings: _samEmb.image_positional_embeddings,
+    });
+    const iou = d.iou_scores.data; let bi = 0; for (let i = 1; i < iou.length; i++) if (iou[i] > iou[bi]) bi = i;
+    const M = 256, md = d.pred_masks.data, off = bi * M * M;
+    const gray = Buffer.allocUnsafe(M * M);
+    let fg = 0;
+    for (let i = 0; i < M * M; i++) { const v = md[off + i] > 0 ? 255 : 0; gray[i] = v; if (v) fg++; }
+    if (!fg) return { error: 'Aucun objet détecté ici — clique en plein sur l\'objet.' };
+    const maskTmp = path.join(os.tmpdir(), `orbit_sammask_${Date.now()}.png`);
+    await ffEncodeRaw(ff, gray, M, M, 'gray', maskTmp);
+    // 256 mask → 1024 input space → crop the resized (unpadded) region → original size.
+    const outPng = path.join(os.tmpdir(), `orbit_sammask_full_${Date.now()}.png`);
+    await new Promise((resolve, reject) => {
+      const p = spawn(ff, ['-hide_banner', '-nostdin', '-y', '-i', maskTmp, '-vf', `scale=1024:1024:flags=bilinear,crop=${rw}:${rh}:0:0,scale=${W}:${H}:flags=bilinear`, outPng], { windowsHide: true });
+      let lg = ''; p.stderr.on('data', x => lg += x); p.on('error', reject);
+      p.on('close', c => c === 0 ? resolve() : reject(new Error('mask resize ' + c)));
+    });
+    const buf = fs.readFileSync(outPng);
+    try { fs.unlinkSync(maskTmp); fs.unlinkSync(outPng); } catch (e) {}
+    return { ok: true, mask: 'data:image/png;base64,' + buf.toString('base64'), width: W, height: H };
+  } catch (err) { return { error: 'Sélection : ' + ((err && err.message) || String(err)) }; }
 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eraser, Brush, FolderOpen, Download, Undo2, Trash2, Wand2, Loader2,
-  AlertCircle, Check, ImagePlus, Maximize2, Plus, Minus,
+  AlertCircle, Check, ImagePlus, Maximize2, Plus, Minus, MousePointerClick,
 } from 'lucide-react';
 
 const api = () => (window as any).electronAPI;
@@ -15,8 +15,11 @@ export default function InpaintStudio() {
   const [img, setImg] = useState<Img | null>(null);
   const [history, setHistory] = useState<Img[]>([]);
   const [brush, setBrush] = useState(40);
-  const [erasing, setErasing] = useState(false);
+  const [tool, setTool] = useState<'brush' | 'eraser' | 'sam'>('brush');
+  const erasing = tool === 'eraser';
   const [hasMask, setHasMask] = useState(false);
+  const [samPts, setSamPts] = useState<{ x: number; y: number; label: number }[]>([]);
+  const samEmbedded = useRef<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [stage, setStage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +44,8 @@ export default function InpaintStudio() {
       if (def) setOutputDir(def);
     })();
     const off = electron?.onInpaintProgress?.((v: any) => { if (v?.stage) setStage(v.stage); });
-    return () => { if (typeof off === 'function') off(); };
+    const offSam = electron?.onSamProgress?.((v: any) => { if (v?.stage) setStage(v.stage); });
+    return () => { if (typeof off === 'function') off(); if (typeof offSam === 'function') offSam(); };
   }, []);
 
   // Size the mask canvas to the image's natural resolution.
@@ -57,7 +61,7 @@ export default function InpaintStudio() {
     const probe = new Image();
     probe.onload = () => {
       const im = { path, url, w: probe.naturalWidth, h: probe.naturalHeight };
-      setImg(im); setHistory([]); setError(null);
+      setImg(im); setHistory([]); setError(null); setSamPts([]); samEmbedded.current = null;
       requestAnimationFrame(() => resetMask(im.w, im.h));
     };
     probe.onerror = () => setError('Impossible de charger cette image.');
@@ -87,6 +91,7 @@ export default function InpaintStudio() {
   };
   const onDown = (e: React.PointerEvent) => {
     if (!img || processing) return;
+    if (tool === 'sam') { const { x, y } = toCanvas(e); samClick(x, y, e.button === 2 || e.shiftKey || e.altKey); return; }
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     drawing.current = true; last.current = null;
     const { x, y, scale } = toCanvas(e); paint(x, y, scale); if (!erasing) setHasMask(true);
@@ -94,12 +99,48 @@ export default function InpaintStudio() {
   const onMove = (e: React.PointerEvent) => {
     const r = overlayRef.current?.getBoundingClientRect();
     if (r) setCursor({ x: e.clientX - r.left, y: e.clientY - r.top, show: true });
-    if (!drawing.current) return;
+    if (!drawing.current || tool === 'sam') return;
     const { x, y, scale } = toCanvas(e); paint(x, y, scale);
   };
   const onUp = () => { drawing.current = false; last.current = null; };
 
-  const clearMask = () => { if (img) resetMask(img.w, img.h); };
+  // ── SAM smart selection: click an object → precise mask ──
+  const renderMaskToOverlay = (maskUrl: string) => {
+    const oc = overlayRef.current; if (!oc) return;
+    const mimg = new Image();
+    mimg.onload = () => {
+      const octx = oc.getContext('2d'); if (!octx) return;
+      octx.clearRect(0, 0, oc.width, oc.height);
+      const t = document.createElement('canvas'); t.width = oc.width; t.height = oc.height;
+      const tctx = t.getContext('2d'); if (!tctx) return;
+      tctx.drawImage(mimg, 0, 0, oc.width, oc.height);
+      const id = tctx.getImageData(0, 0, oc.width, oc.height);
+      const od = octx.createImageData(oc.width, oc.height);
+      for (let i = 0; i < id.data.length; i += 4) { if (id.data[i] > 127) { od.data[i] = 236; od.data[i + 1] = 72; od.data[i + 2] = 153; od.data[i + 3] = 150; } }
+      octx.putImageData(od, 0, 0);
+      setHasMask(true);
+    };
+    mimg.src = maskUrl;
+  };
+  const samClick = async (natX: number, natY: number, negative: boolean) => {
+    if (!img || processing) return;
+    setError(null);
+    if (samEmbedded.current !== img.path) {
+      setProcessing(true); setStage('Analyse de l\'image…');
+      const r = await electron.samEmbed?.({ imagePath: img.path }).catch((e: any) => ({ error: String(e) }));
+      setProcessing(false); setStage('');
+      if (!r?.ok) { setError(r?.error || 'Sélection IA indisponible.'); return; }
+      samEmbedded.current = img.path;
+    }
+    const pts = [...samPts, { x: natX, y: natY, label: negative ? 0 : 1 }];
+    setSamPts(pts);
+    setProcessing(true); setStage('Sélection…');
+    const res = await electron.samPoints?.({ imagePath: img.path, points: pts }).catch((e: any) => ({ error: String(e) }));
+    setProcessing(false); setStage('');
+    if (res?.ok) renderMaskToOverlay(res.mask); else setError(res?.error || 'Sélection échouée.');
+  };
+
+  const clearMask = () => { if (img) resetMask(img.w, img.h); setSamPts([]); };
 
   // Export the painted overlay to a binary white-on-black mask PNG.
   const exportMask = (): string | null => {
@@ -185,17 +226,19 @@ export default function InpaintStudio() {
             </div>
           </div>
 
-          {/* Brush / Eraser */}
+          {/* Outils : sélection IA + pinceau + gomme */}
           <div>
             <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Outil</label>
-            <div className="grid grid-cols-2 gap-2 mt-1.5">
-              <button onClick={() => setErasing(false)} className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-1.5 transition-all ${!erasing ? 'bg-rose-500/25 text-rose-100 border-rose-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}><Brush className="w-4 h-4" /> Pinceau</button>
-              <button onClick={() => setErasing(true)} className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-1.5 transition-all ${erasing ? 'bg-rose-500/25 text-rose-100 border-rose-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}><Eraser className="w-4 h-4" /> Gomme</button>
+            <button onClick={() => setTool('sam')} className={`mt-1.5 w-full px-3 py-2 rounded-xl text-sm font-semibold border flex items-center justify-center gap-1.5 transition-all ${tool === 'sam' ? 'bg-fuchsia-500/25 text-fuchsia-100 border-fuchsia-500/50' : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'}`}><MousePointerClick className="w-4 h-4" /> Sélection IA (clic sur l'objet)</button>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <button onClick={() => setTool('brush')} className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-1.5 transition-all ${tool === 'brush' ? 'bg-rose-500/25 text-rose-100 border-rose-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}><Brush className="w-4 h-4" /> Pinceau</button>
+              <button onClick={() => setTool('eraser')} className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-1.5 transition-all ${tool === 'eraser' ? 'bg-rose-500/25 text-rose-100 border-rose-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}><Eraser className="w-4 h-4" /> Gomme</button>
             </div>
+            {tool === 'sam' && <p className="text-[10px] text-gray-500 mt-1.5">Clique sur un objet → masque auto. Re-clique pour agrandir. <span className="text-gray-400">Maj/clic-droit</span> = retirer une partie. (1ʳᵉ fois : ~40 Mo)</p>}
           </div>
 
           {/* Brush size */}
-          <div>
+          <div className={tool === 'sam' ? 'opacity-40 pointer-events-none' : ''}>
             <div className="flex justify-between mb-1.5"><label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Taille du pinceau</label><span className="text-[11px] font-mono text-gray-200">{brush}px</span></div>
             <div className="flex items-center gap-2">
               <button onClick={() => setBrush(b => Math.max(5, b - 5))} className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center"><Minus className="w-3.5 h-3.5" /></button>
@@ -249,10 +292,16 @@ export default function InpaintStudio() {
               onPointerLeave={() => setCursor(c => ({ ...c, show: false }))}>
               <img src={img.url} alt="" className="max-w-full max-h-[calc(100vh-220px)] rounded-xl select-none pointer-events-none" style={{ display: 'block' }} draggable={false} />
               <canvas ref={overlayRef}
-                className="absolute inset-0 w-full h-full rounded-xl cursor-none touch-none"
-                onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
-              {/* Brush cursor preview */}
-              {cursor.show && !processing && (() => {
+                className={`absolute inset-0 w-full h-full rounded-xl touch-none ${tool === 'sam' ? 'cursor-crosshair' : 'cursor-none'}`}
+                onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+                onContextMenu={(e) => { e.preventDefault(); if (tool === 'sam' && img && !processing) { const { x, y } = toCanvas(e as any); samClick(x, y, true); } }} />
+              {/* SAM click points */}
+              {tool === 'sam' && img && samPts.map((p, i) => (
+                <div key={i} className="absolute w-3 h-3 rounded-full border-2 pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${(p.x / img.w) * 100}%`, top: `${(p.y / img.h) * 100}%`, borderColor: '#fff', background: p.label ? '#22c55e' : '#ef4444', boxShadow: '0 0 0 1px rgba(0,0,0,0.5)' }} />
+              ))}
+              {/* Brush cursor preview (brush/eraser only) */}
+              {cursor.show && !processing && tool !== 'sam' && (() => {
                 const r = overlayRef.current?.getBoundingClientRect();
                 const disp = r ? brush * (r.width / (overlayRef.current!.width)) : brush;
                 return <div className="absolute rounded-full border-2 border-rose-400/80 pointer-events-none" style={{ left: cursor.x, top: cursor.y, width: disp, height: disp, transform: 'translate(-50%,-50%)', boxShadow: '0 0 0 1px rgba(0,0,0,0.4)' }} />;
