@@ -3869,7 +3869,7 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
       prog('Composition…');
       await new Promise((resolve, reject) => {
         const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', genTmp, '-i', maskTmp, '-filter_complex',
-          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${bw}:${bh}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${bx}:${by}[full];[2:v]scale=${W}:${H},format=gray,gblur=sigma=3[m];[b1][full][m]maskedmerge[o]`,
+          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${bw}:${bh}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${bx}:${by}:format=auto[full];[2:v]format=gray,scale=${W}:${H},gblur=sigma=3[m];[full][m]alphamerge[fulla];[b1][fulla]overlay=format=auto[o]`,
           '-map', '[o]', finalPath];
         const p = spawn(ff, args, { windowsHide: true }); let log = '';
         p.stderr.on('data', d => log += d); p.on('error', reject);
@@ -3933,7 +3933,7 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
     await new Promise((resolve, reject) => {
       const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', inpaintedTmp, '-i', maskTmp,
         '-filter_complex',
-        `[0:v]format=rgb24,scale=${W}:${H}[base];[1:v]scale=${W}:${H}:flags=lanczos,format=rgb24[ov];[2:v]scale=${W}:${H},format=gray,gblur=sigma=2[m];[base][ov][m]maskedmerge[o]`,
+        `[0:v]format=rgb24,scale=${W}:${H}[base];[1:v]scale=${W}:${H}:flags=lanczos,format=rgb24[ov];[2:v]format=gray,scale=${W}:${H},gblur=sigma=2[m];[ov][m]alphamerge[ova];[base][ova]overlay=format=auto[o]`,
         '-map', '[o]', finalPath];
       const p = spawn(ff, args, { windowsHide: true }); let log = '';
       p.stderr.on('data', d => log += d); p.on('error', reject);
