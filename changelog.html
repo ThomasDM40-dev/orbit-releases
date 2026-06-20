@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.19.0
+      Version actuelle : 0.19.1
     </div>
   </header>
 
@@ -343,12 +343,33 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.19.0 -->
+      <!-- v0.19.1 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.19.0</span>
+            <span>v0.19.1</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">20 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category perf">⚡ Génération SD accélérée par le GPU</div>
+          <div class="change">
+            <div class="change-icon perf">⚡</div>
+            <div><strong>L'inpainting Stable Diffusion tourne maintenant sur le GPU</strong> via <strong>DirectML</strong> (compatible toutes cartes : NVIDIA, AMD, Intel — aucune installation supplémentaire). <strong>~3× plus rapide</strong> : une génération passe de ~80 s à <strong>~25 s</strong> (et encore plus vite sur les retouches suivantes, moteur déjà chargé).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>Repli CPU automatique</strong> : si le GPU n'est pas disponible (pilote ancien, peu de VRAM), Orbit bascule tout seul sur le processeur — aucun plantage. L'indicateur affiche « GPU » ou « CPU » pendant la génération.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.19.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.19.0</span>
           </div>
           <span class="release-date">20 Juin 2026</span>
         </div>

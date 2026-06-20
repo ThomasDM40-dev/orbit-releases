@@ -3905,7 +3905,7 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
       const sdBuf = await sdinpaint.runSdInpaint({
         ort, ff, ffDecodeRaw, modelDir: SD_DIR, imagePath, maskPath: maskTmp, cropStr,
         prompt: genPrompt, steps: 22, guidance: 7.5, seed,
-        onStep: (i, n) => prog(`Génération IA locale… ${i}/${n}`),
+        onStep: (i, n) => prog(`Génération IA locale (${sdinpaint.getDevice() === 'gpu' ? 'GPU' : 'CPU'})… ${i}/${n}`),
       });
 
       const S = sdinpaint.SIZE;

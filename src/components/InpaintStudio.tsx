@@ -356,7 +356,7 @@ export default function InpaintStudio() {
                   <span className="text-sm text-gray-200">{stage || 'Traitement IA…'}</span>
                   {!prompt.trim()
                     ? <span className="text-[11px] text-gray-500">Mode effacer (LaMa) : la 1ʳᵉ fois, le moteur se télécharge (~200 Mo)</span>
-                    : <span className="text-[11px] text-gray-500 text-center">Mode générer : Stable Diffusion 100% local · 1ʳᵉ fois ~2,1 Go · ~1–2 min/image (CPU)</span>}
+                    : <span className="text-[11px] text-gray-500 text-center">Mode générer : Stable Diffusion 100% local · accéléré <span className="text-gray-400">GPU</span> (DirectML, repli CPU auto) · 1ʳᵉ fois ~2,1 Go</span>}
                 </div>
               )}
             </div>

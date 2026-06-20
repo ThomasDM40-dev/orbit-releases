@@ -163,14 +163,31 @@ function randn(n, seed) {
 }
 
 // Cached sessions (avoid reloading 1.7 GB on each edit).
-let _sess = null, _tok = null, _dir = null;
+let _sess = null, _tok = null, _dir = null, _device = null; // 'gpu' | 'cpu'
+
+// Create a session on the GPU (DirectML — works on any Windows GPU, no extra
+// install) and fall back to CPU per-session if that fails (old driver, low VRAM…).
+async function makeSession(ort, file) {
+  try {
+    const s = await ort.InferenceSession.create(file, { executionProviders: ['dml'], graphOptimizationLevel: 'all' });
+    if (_device !== 'cpu') _device = 'gpu';
+    return s;
+  } catch (e) {
+    const s = await ort.InferenceSession.create(file, { executionMode: 'parallel', graphOptimizationLevel: 'all' });
+    _device = 'cpu';
+    return s;
+  }
+}
+function getDevice() { return _device; }
+
 async function getSessions(ort, dir) {
   if (_sess && _dir === dir) return _sess;
-  const so = { graphOptimizationLevel: 'all', executionMode: 'parallel' };
-  const te = await ort.InferenceSession.create(path.join(dir, 'text_encoder.onnx'), so);
-  const vaeEnc = await ort.InferenceSession.create(path.join(dir, 'vae_encoder.onnx'), so);
-  const vaeDec = await ort.InferenceSession.create(path.join(dir, 'vae_decoder.onnx'), so);
-  const unet = await ort.InferenceSession.create(path.join(dir, 'unet.onnx'), so);
+  _device = null;
+  // UNet first so the GPU/CPU decision is driven by the model that dominates cost.
+  const unet = await makeSession(ort, path.join(dir, 'unet.onnx'));
+  const te = await makeSession(ort, path.join(dir, 'text_encoder.onnx'));
+  const vaeEnc = await makeSession(ort, path.join(dir, 'vae_encoder.onnx'));
+  const vaeDec = await makeSession(ort, path.join(dir, 'vae_decoder.onnx'));
   _sess = { te, vaeEnc, vaeDec, unet }; _dir = dir;
   _tok = new CLIPTokenizer(path.join(dir, 'vocab.json'), path.join(dir, 'merges.txt'));
   return _sess;
@@ -235,4 +252,4 @@ async function runSdInpaint(opts) {
   return out;
 }
 
-module.exports = { SD, SIZE, sdInstalled, installSd, runSdInpaint };
+module.exports = { SD, SIZE, sdInstalled, installSd, runSdInpaint, getDevice };
