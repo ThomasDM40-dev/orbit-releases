@@ -3875,7 +3875,9 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
       for (let y = 0; y < H; y++) { const row = y * W; for (let x = 0; x < W; x++) { if (mRaw[row + x] > 127) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; } } }
       if (maxX < 0) return { error: 'Aucune zone sélectionnée — peins la zone à générer.' };
       let bw = maxX - minX + 1, bh = maxY - minY + 1;
-      const padX = Math.round(bw * 0.12), padY = Math.round(bh * 0.12);
+      // Generous margin so the generated content extends well beyond the mask,
+      // leaving room for a wide, seamless feather.
+      const padX = Math.round(bw * 0.22), padY = Math.round(bh * 0.22);
       let bx = Math.max(0, minX - padX), by = Math.max(0, minY - padY);
       const ex = Math.min(W - 1, maxX + padX), ey = Math.min(H - 1, maxY + padY);
       bx -= bx % 2; by -= by % 2; bw = ex - bx + 1; bh = ey - by + 1; bw -= bw % 2; bh -= bh % 2;
@@ -3892,9 +3894,13 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
       const genTmp = path.join(os.tmpdir(), `orbit_gen_${Date.now()}.${/png/.test(contentType) ? 'png' : 'jpg'}`); tmp.push(genTmp);
       fs.writeFileSync(genTmp, buffer);
       prog('Composition…');
+      // Wide, image-adaptive feather → the join becomes a smooth gradient (no
+      // visible seam). The generated content extends past the mask (padding),
+      // so the blur fades over generated pixels, not a hard edge.
+      const feather = Math.max(14, Math.min(110, Math.round(Math.min(W, H) * 0.035)));
       await new Promise((resolve, reject) => {
         const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', genTmp, '-i', maskTmp, '-filter_complex',
-          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${bw}:${bh}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${bx}:${by}:format=auto[full];[2:v]format=gray,scale=${W}:${H},gblur=sigma=3[m];[full][m]alphamerge[fulla];[b1][fulla]overlay=format=auto[o]`,
+          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${bw}:${bh}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${bx}:${by}:format=auto[full];[2:v]format=gray,scale=${W}:${H},gblur=sigma=${feather}:steps=3[m];[full][m]alphamerge[fulla];[b1][fulla]overlay=format=auto[o]`,
           '-map', '[o]', finalPath];
         const p = spawn(ff, args, { windowsHide: true }); let log = '';
         p.stderr.on('data', d => log += d); p.on('error', reject);
@@ -3958,7 +3964,7 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
     await new Promise((resolve, reject) => {
       const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', inpaintedTmp, '-i', maskTmp,
         '-filter_complex',
-        `[0:v]format=rgb24,scale=${W}:${H}[base];[1:v]scale=${W}:${H}:flags=lanczos,format=rgb24[ov];[2:v]format=gray,scale=${W}:${H},gblur=sigma=2[m];[ov][m]alphamerge[ova];[base][ova]overlay=format=auto[o]`,
+        `[0:v]format=rgb24,scale=${W}:${H}[base];[1:v]scale=${W}:${H}:flags=lanczos,format=rgb24[ov];[2:v]format=gray,scale=${W}:${H},gblur=sigma=${Math.max(3, Math.min(28, Math.round(Math.min(W, H) * 0.01)))}:steps=2[m];[ov][m]alphamerge[ova];[base][ova]overlay=format=auto[o]`,
         '-map', '[o]', finalPath];
       const p = spawn(ff, args, { windowsHide: true }); let log = '';
       p.stderr.on('data', d => log += d); p.on('error', reject);
