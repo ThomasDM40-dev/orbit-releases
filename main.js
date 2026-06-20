@@ -3630,6 +3630,7 @@ const matting = require('./matting.js');
 const inpaint = require('./inpaint.js');
 const sam = require('./sam.js');
 const yolo = require('./yolo.js');
+const sdinpaint = require('./sdinpaint.js');
 let _ort = null;
 function getOrt() { if (!_ort) { _ort = require('onnxruntime-node'); try { _ort.env.logLevel = 'error'; } catch (e) {} } return _ort; }
 const RVM_DIR = path.join(ORBIT_DIR, 'modules', 'rvm');
@@ -3788,6 +3789,7 @@ ipcMain.on('matting-start', async (event, job) => {
 
 // ─── Gomme magique IA · suppression d'objet (LaMa · ONNX, local & gratuit) ─────
 const LAMA_DIR = path.join(ORBIT_DIR, 'modules', 'lama');
+const SD_DIR = path.join(ORBIT_DIR, 'modules', 'sd-inpaint');
 
 async function installLamaModel(onLog) {
   if (!fs.existsSync(LAMA_DIR)) fs.mkdirSync(LAMA_DIR, { recursive: true });
@@ -3868,42 +3870,55 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
 
     const prompt = (params.prompt || '').trim();
 
-    // ── Mode « Ajouter / Remplacer » : prompt fourni → génération Flux dans la zone ──
-    // (aucun téléchargement de modèle requis — la zone peinte est remplacée par
-    //  une génération Flux, fondue dans l'image via le masque adouci.)
+    // ── Mode « Ajouter / Remplacer » : prompt fourni → inpainting Stable Diffusion local ──
+    // Contrairement au texte→image, l'inpainting conditionne le UNet sur la PHOTO
+    // (latent de l'image masquée + canal masque), donc le rendu comprend la scène
+    // et se fond dedans au lieu d'inventer une image aléatoire. 100% local, hors-ligne.
     if (prompt) {
+      const ort = getOrt();
       prog('Analyse de la zone…');
       const mRaw = await ffDecodeRaw(ff, maskTmp, W, H, 'gray');
       let minX = W, minY = H, maxX = -1, maxY = -1;
       for (let y = 0; y < H; y++) { const row = y * W; for (let x = 0; x < W; x++) { if (mRaw[row + x] > 127) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; } } }
       if (maxX < 0) return { error: 'Aucune zone sélectionnée — peins la zone à générer.' };
-      let bw = maxX - minX + 1, bh = maxY - minY + 1;
-      // Generous margin so the generated content extends well beyond the mask,
-      // leaving room for a wide, seamless feather.
-      const padX = Math.round(bw * 0.22), padY = Math.round(bh * 0.22);
-      let bx = Math.max(0, minX - padX), by = Math.max(0, minY - padY);
-      const ex = Math.min(W - 1, maxX + padX), ey = Math.min(H - 1, maxY + padY);
-      bx -= bx % 2; by -= by % 2; bw = ex - bx + 1; bh = ey - by + 1; bw -= bw % 2; bh -= bh % 2;
-      // Generation size: cap the long edge to 1024, snap to /8.
-      let gw = bw, gh = bh; const lng = Math.max(bw, bh); if (lng > 1024) { const s = 1024 / lng; gw = Math.round(bw * s); gh = Math.round(bh * s); }
-      gw = Math.max(64, Math.round(gw / 8) * 8); gh = Math.max(64, Math.round(gh / 8) * 8);
-      prog('Génération IA…');
-      // English prompt + blend hints so the fill matches the photo better.
-      const genPrompt = (await toImagePrompt(prompt)) + ', photorealistic, natural lighting, seamless, high detail';
-      const q = new URLSearchParams({ width: String(gw), height: String(gh), seed: String((params.seed != null && params.seed !== '') ? params.seed : Math.floor(Math.random() * 1e9)), model: params.model || 'flux', nologo: 'true', enhance: 'true', private: 'true', safe: 'false' });
-      const genUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(genPrompt) + '?' + q.toString();
-      const { buffer, contentType } = await httpGetBuffer(genUrl, { timeout: 180000 });
-      if (!buffer || buffer.length < 800) return { error: 'Génération vide — réessaie ou change le prompt.' };
-      const genTmp = path.join(os.tmpdir(), `orbit_gen_${Date.now()}.${/png/.test(contentType) ? 'png' : 'jpg'}`); tmp.push(genTmp);
-      fs.writeFileSync(genTmp, buffer);
+      const bw0 = maxX - minX + 1, bh0 = maxY - minY + 1;
+
+      // Work window: bbox + context, made square (SD runs 512×512), clamped to image.
+      const padBase = Math.round(Math.max(bw0, bh0) * 0.35) + 32;
+      let cx0 = Math.max(0, minX - padBase), cy0 = Math.max(0, minY - padBase);
+      const cx1 = Math.min(W, maxX + padBase + 1), cy1 = Math.min(H, maxY + padBase + 1);
+      let side = Math.min(Math.max(cx1 - cx0, cy1 - cy0), Math.min(W, H));
+      const ccx = (cx0 + cx1) / 2, ccy = (cy0 + cy1) / 2;
+      cx0 = Math.max(0, Math.min(W - side, Math.round(ccx - side / 2)));
+      cy0 = Math.max(0, Math.min(H - side, Math.round(ccy - side / 2)));
+      let cw = side, ch = side;
+      cx0 -= cx0 % 2; cy0 -= cy0 % 2; cw -= cw % 2; ch -= ch % 2;
+      if (cw < 8 || ch < 8) return { error: 'Zone trop petite.' };
+      const cropStr = `crop=${cw}:${ch}:${cx0}:${cy0}`;
+
+      // Auto-install the local SD engine on first use.
+      if (!sdinpaint.sdInstalled(SD_DIR)) { prog('Installation du moteur SD local (~2,1 Go, première utilisation)…'); await sdinpaint.installSd(SD_DIR, m => prog(m)); }
+
+      const seed = (params.seed != null && params.seed !== '') ? (parseInt(params.seed, 10) | 0) : ((Math.random() * 1e9) | 0);
+      const genPrompt = (await toImagePrompt(prompt)) + ', photorealistic, natural lighting, highly detailed';
+      prog('Génération IA locale… (préparation)');
+      const sdBuf = await sdinpaint.runSdInpaint({
+        ort, ff, ffDecodeRaw, modelDir: SD_DIR, imagePath, maskPath: maskTmp, cropStr,
+        prompt: genPrompt, steps: 22, guidance: 7.5, seed,
+        onStep: (i, n) => prog(`Génération IA locale… ${i}/${n}`),
+      });
+
+      const S = sdinpaint.SIZE;
+      const genTmp = path.join(os.tmpdir(), `orbit_sd_${Date.now()}.png`); tmp.push(genTmp);
+      await ffEncodeRaw(ff, sdBuf, S, S, 'rgb24', genTmp);
+
       prog('Composition…');
-      // Wide, image-adaptive feather → the join becomes a smooth gradient (no
-      // visible seam). The generated content extends past the mask (padding),
-      // so the blur fades over generated pixels, not a hard edge.
-      const feather = Math.max(14, Math.min(110, Math.round(Math.min(W, H) * 0.035)));
+      // Paste the generated window back, blended via the feathered mask so only the
+      // painted pixels change and the join is invisible (unmasked stays identical).
+      const feather = Math.max(6, Math.min(60, Math.round(Math.max(cw, ch) * 0.02)));
       await new Promise((resolve, reject) => {
         const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', genTmp, '-i', maskTmp, '-filter_complex',
-          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${bw}:${bh}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${bx}:${by}:format=auto[full];[2:v]format=gray,scale=${W}:${H},gblur=sigma=${feather}:steps=3[m];[full][m]alphamerge[fulla];[b1][fulla]overlay=format=auto[o]`,
+          `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${cw}:${ch}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${cx0}:${cy0}:format=auto[full];[2:v]format=gray,scale=${W}:${H},gblur=sigma=${feather}:steps=2[m];[full][m]alphamerge[fulla];[b1][fulla]overlay=format=auto[o]`,
           '-map', '[o]', finalPath];
         const p = spawn(ff, args, { windowsHide: true }); let log = '';
         p.stderr.on('data', d => log += d); p.on('error', reject);

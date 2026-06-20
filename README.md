@@ -55,8 +55,10 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - Génération **par lot** (jusqu'à 4), **seed verrouillable**, galerie avec aperçu plein écran, réutilisation prompt+seed, sauvegarde auto
 
 ### 🧽 Gomme magique IA (suppression / remplacement d'objet)
-- Comme le **Remplissage génératif** de Photoshop : peins une zone pour **effacer** un objet (le fond est reconstruit par **LaMa**, en local) ou **décris un prompt** pour générer/remplacer le contenu de la zone (Flux)
+- Comme le **Remplissage génératif** de Photoshop, mais **100% local & gratuit** : peins une zone pour **effacer** un objet (le fond est reconstruit par **LaMa**) ou **décris un prompt** pour générer/remplacer le contenu de la zone par un vrai **inpainting Stable Diffusion exécuté sur ton PC** — le modèle est conditionné sur la photo autour de la zone, donc le rendu se fond dans la scène (plus d'image aléatoire)
+- **Sélection intelligente** : clique sur un objet pour le sélectionner automatiquement (**SAM**), ou lance la **détection automatique** d'objets (**YOLO** : personnes, voitures, animaux, meubles…)
 - Pinceau & gomme réglables, 3 niveaux de précision, annulation, retouches en chaîne — la zone non peinte garde sa qualité d'origine au pixel près
+- Tout tourne en local (ONNX) : moteurs téléchargés une seule fois (LaMa ~200 Mo, SAM ~40 Mo, YOLO ~13 Mo, Stable Diffusion ~2,1 Go), aucune clé ni compte
 
 ### 🚀 Amélioration IA (moteur libre, gratuit)
 - **Upscale** Real-ESRGAN (vidéo / photo / anime) jusqu'à 8× + résolutions cibles 720p→8K
@@ -130,7 +132,10 @@ orbit/
 ├── main.js              # Process principal Electron (IPC, moteurs)
 ├── preload.js           # Bridge IPC sécurisé
 ├── enhance.js           # Moteur libre (Real-ESRGAN + RIFE + ffmpeg)
-├── inpaint.js           # Gomme magique IA (LaMa ONNX + ffmpeg)
+├── inpaint.js           # Gomme magique IA — effacer (LaMa ONNX + ffmpeg)
+├── sdinpaint.js         # Inpainting Stable Diffusion local (ONNX, tokenizer CLIP + DDIM)
+├── sam.js               # Sélection intelligente au clic (SAM ONNX)
+├── yolo.js              # Détection automatique d'objets (YOLOv8 ONNX)
 ├── handbrake.js         # Bridge HandBrakeCLI
 ├── topaz.js             # Bridge Topaz Video AI
 ├── transcription.js     # Whisper → formats d'export
@@ -169,7 +174,9 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
-- **v0.17.x** — **Génération d'image IA** (Flux — gratuit, sans clé) · **Gomme magique IA** : effacer un objet (LaMa, local) ou le remplacer/ajouter via un prompt (Flux), comme le Remplissage génératif de Photoshop
+- **v0.19.x** — **Remplacer/Ajouter par inpainting Stable Diffusion 100% local** : l'IA est conditionnée sur la photo autour de la zone et fond le rendu dans la scène (fini les images aléatoires) — gratuit, hors-ligne, sans clé (~2,1 Go téléchargés une fois, ~1–2 min/image sur CPU)
+- **v0.18.x** — **AI Eraser** complet : sélection au clic (**SAM**), détection automatique d'objets (**YOLO**), suppression haute résolution (LaMa) — 100% local & gratuit
+- **v0.17.x** — **Génération d'image IA** (Flux — gratuit, sans clé) · **Gomme magique IA** : effacer un objet (LaMa, local) ou le remplacer/ajouter via un prompt, comme le Remplissage génératif de Photoshop
 - **v0.16.x** — Assistant IA local gratuit (Qwen via llama.cpp) · interface repensée (Markdown, Liquid Glass) · **pilotage de l'app par l'IA** : navigation, onglets, réglages **et téléchargement réel d'un lien** (« télécharge cette vidéo… ») — hors-ligne · **lecteur universel** : Play robuste (accents/espaces) + **lecture de TOUS les formats** (MKV/H.265/AV1) par conversion ffmpeg automatique à la volée (remux instantané si H.264, mise en cache), pochette audio, repli lecteur système · **sniffer intégré** : navigateur d'interception dans l'app (plus de fenêtre séparée), les flux cachés (Patreon/HLS/DASH) s'ajoutent automatiquement aux téléchargements · **chemin de fichier exact** récupéré auprès de yt-dlp (fini les vidéos « illisibles » après fusion/remux) · **menus déroulants Liquid Glass** custom sur TOUT l'app (51 menus : clavier, groupes, coche, positionnement intelligent)
 - **v0.15.0** — Onboarding au premier lancement · icônes d'onglets sur-mesure · prompt de mise à jour au démarrage
 - **v0.14.0** — Onglet Détourage IA (Robust Video Matting · transparent/vert/flou/image)

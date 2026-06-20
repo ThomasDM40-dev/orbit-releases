@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.18.0
+      Version actuelle : 0.19.0
     </div>
   </header>
 
@@ -343,12 +343,37 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.18.0 -->
+      <!-- v0.19.0 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.18.0</span>
+            <span>v0.19.0</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">20 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ Remplacer/Ajouter : Stable Diffusion 100% local</div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>L'IA comprend enfin la photo avant de générer.</strong> Le mode « Générer / Remplacer » utilise désormais un vrai <strong>inpainting Stable Diffusion exécuté en local</strong> (ONNX, sur ton PC) : le modèle est conditionné sur l'image autour de la zone, donc le rendu <strong>se fond dans la scène</strong> (lumière, perspective, couleurs) au lieu de coller une image aléatoire.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon feat">✦</div>
+            <div><strong>100% gratuit, hors-ligne, sans clé ni compte.</strong> Moteur téléchargé une seule fois (~2,1 Go), puis ~1–2 min par génération sur CPU. Seule la zone peinte change — le reste de la photo reste identique au pixel près (fondu sans démarcation).</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div><strong>Fini les « images aléatoires ».</strong> L'ancien remplacement passait par un générateur texte→image qui ne voyait jamais ta photo (d'où les résultats hors-sujet). Remplacé par l'inpainting local conditionné sur l'image.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.18.0 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.18.0</span>
           </div>
           <span class="release-date">20 Juin 2026</span>
         </div>

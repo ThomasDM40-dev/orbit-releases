@@ -1,6 +1,6 @@
 {
     "name": "frontend",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "private": true,
     "main": "main.js",
     "scripts": {
@@ -32,6 +32,7 @@
             "inpaint.js",
             "sam.js",
             "yolo.js",
+            "sdinpaint.js",
             "package.json",
             "changelog.html"
         ],

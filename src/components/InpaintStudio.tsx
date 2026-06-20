@@ -252,6 +252,7 @@ export default function InpaintStudio() {
               <span className={`px-2 py-0.5 rounded-full border ${!prompt.trim() ? 'bg-rose-500/15 border-rose-500/40 text-rose-200' : 'bg-white/5 border-white/10 text-gray-500'}`}>🧽 Effacer</span>
               <span className={`px-2 py-0.5 rounded-full border ${prompt.trim() ? 'bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-200' : 'bg-white/5 border-white/10 text-gray-500'}`}>✨ Générer / Remplacer</span>
             </div>
+            {prompt.trim() && <p className="text-[10px] text-gray-500 mt-1.5">Inpainting Stable Diffusion <span className="text-gray-400">local</span> : l'IA analyse la photo autour de la zone et fond le rendu dans la scène (plus d'image aléatoire).</p>}
           </div>
 
           {/* Outils : sélection IA + pinceau + gomme */}
@@ -353,7 +354,9 @@ export default function InpaintStudio() {
                 <div className="absolute inset-0 rounded-xl bg-black/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
                   <Loader2 className="w-9 h-9 text-rose-400 animate-spin" />
                   <span className="text-sm text-gray-200">{stage || 'Traitement IA…'}</span>
-                  {!prompt.trim() && <span className="text-[11px] text-gray-500">Mode effacer : la 1ʳᵉ fois, le moteur se télécharge (~200 Mo)</span>}
+                  {!prompt.trim()
+                    ? <span className="text-[11px] text-gray-500">Mode effacer (LaMa) : la 1ʳᵉ fois, le moteur se télécharge (~200 Mo)</span>
+                    : <span className="text-[11px] text-gray-500 text-center">Mode générer : Stable Diffusion 100% local · 1ʳᵉ fois ~2,1 Go · ~1–2 min/image (CPU)</span>}
                 </div>
               )}
             </div>
