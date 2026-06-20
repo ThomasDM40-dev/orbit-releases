@@ -3629,6 +3629,7 @@ ipcMain.on('lib-convert', async (event, job) => {
 const matting = require('./matting.js');
 const inpaint = require('./inpaint.js');
 const sam = require('./sam.js');
+const yolo = require('./yolo.js');
 let _ort = null;
 function getOrt() { if (!_ort) { _ort = require('onnxruntime-node'); try { _ort.env.logLevel = 'error'; } catch (e) {} } return _ort; }
 const RVM_DIR = path.join(ORBIT_DIR, 'modules', 'rvm');
@@ -4101,4 +4102,74 @@ ipcMain.handle('sam-points', async (e, params = {}) => {
     try { fs.unlinkSync(maskTmp); fs.unlinkSync(outPng); } catch (e) {}
     return { ok: true, mask: 'data:image/png;base64,' + buf.toString('base64'), width: W, height: H };
   } catch (err) { return { error: 'Sélection : ' + ((err && err.message) || String(err)) }; }
+});
+
+// ─── Détection automatique d'objets (YOLOv8, local & gratuit) ──────────────────
+const YOLO_DIR = path.join(ORBIT_DIR, 'modules', 'yolo');
+let _yolo = null;
+
+async function installYolo(onLog) {
+  if (!fs.existsSync(YOLO_DIR)) fs.mkdirSync(YOLO_DIR, { recursive: true });
+  const dest = path.join(YOLO_DIR, yolo.YOLO.file);
+  if (fs.existsSync(dest) && fs.statSync(dest).size >= yolo.YOLO.minBytes) return dest;
+  let lastErr = null;
+  for (const url of yolo.YOLO.urls) {
+    try {
+      onLog && onLog('Téléchargement du modèle de détection (~13 Mo)…');
+      await new Promise((resolve, reject) => {
+        const c = spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '2', url]);
+        c.on('error', e => reject(new Error('curl ' + e.message)));
+        c.on('close', code => code === 0 ? resolve() : reject(new Error('curl ' + code)));
+      });
+      if (fs.existsSync(dest) && fs.statSync(dest).size >= yolo.YOLO.minBytes) return dest;
+    } catch (e) { lastErr = e; }
+  }
+  try { fs.unlinkSync(dest); } catch (e) {}
+  throw new Error('Téléchargement du modèle de détection échoué' + (lastErr ? ' (' + lastErr.message + ')' : ''));
+}
+
+ipcMain.handle('yolo-detect', async (e, params = {}) => {
+  const win = uiWin(); const prog = (s) => win?.webContents.send('sam-progress', { stage: s });
+  try {
+    const ort = getOrt();
+    const eng = enhanceLib.detectEngines(ORBIT_DIR);
+    if (!eng.ffmpeg) return { error: 'ffmpeg introuvable.' };
+    const ff = eng.ffmpeg;
+    const imagePath = params.imagePath;
+    if (!imagePath || !fs.existsSync(imagePath)) return { error: 'Image introuvable.' };
+    prog('Préparation de la détection…');
+    const modelPath = await installYolo(m => prog(m));
+    if (!_yolo) _yolo = await ort.InferenceSession.create(modelPath);
+    const meta = await enhanceProbe(ff, imagePath);
+    const W = meta.width, H = meta.height;
+    if (!W || !H) return { error: 'Image illisible.' };
+    prog('Détection des objets…');
+    const S = yolo.YOLO.size;
+    const r = Math.min(S / W, S / H), nw = Math.round(W * r), nh = Math.round(H * r);
+    const px = Math.floor((S - nw) / 2), py = Math.floor((S - nh) / 2);
+    // Letterbox to S×S (centred, black padding) → raw rgb.
+    const raw = await new Promise((resolve, reject) => {
+      const p = spawn(ff, ['-hide_banner', '-nostdin', '-i', imagePath, '-vf', `scale=${nw}:${nh},pad=${S}:${S}:${px}:${py}:color=black`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], { windowsHide: true });
+      const c = []; p.stdout.on('data', d => c.push(d)); p.on('error', reject);
+      p.on('close', x => x === 0 ? resolve(Buffer.concat(c)) : reject(new Error('décodage ' + x)));
+    });
+    const inp = new Float32Array(3 * S * S);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const o = (y * S + x) * 3; inp[y * S + x] = raw[o] / 255; inp[S * S + y * S + x] = raw[o + 1] / 255; inp[2 * S * S + y * S + x] = raw[o + 2] / 255; }
+    const out = await _yolo.run({ images: new ort.Tensor('float32', inp, [1, 3, S, S]) });
+    const o = out[_yolo.outputNames[0]];
+    const cols = o.dims[2], rows = o.dims[1], d = o.data, nc = rows - 4;
+    const conf = params.conf != null ? params.conf : 0.3;
+    let dets = [];
+    for (let i = 0; i < cols; i++) {
+      let best = 0, bc = 0;
+      for (let c = 0; c < nc; c++) { const v = d[(4 + c) * cols + i]; if (v > best) { best = v; bc = c; } }
+      if (best < conf) continue;
+      const cx = d[i], cy = d[cols + i], ww = d[2 * cols + i], hh = d[3 * cols + i];
+      const x = (cx - ww / 2 - px) / r, y = (cy - hh / 2 - py) / r, bw = ww / r, bh = hh / r;
+      const label = yolo.COCO[bc] || ('obj' + bc);
+      dets.push({ label, labelFr: yolo.COCO_FR[label] || label, score: best, box: [Math.max(0, x), Math.max(0, y), bw, bh] });
+    }
+    dets = yolo.nms(dets, 0.45).slice(0, 50);
+    return { ok: true, detections: dets, width: W, height: H };
+  } catch (err) { return { error: 'Détection : ' + ((err && err.message) || String(err)) }; }
 });

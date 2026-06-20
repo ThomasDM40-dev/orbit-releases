@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eraser, Brush, FolderOpen, Download, Undo2, Trash2, Wand2, Loader2,
-  AlertCircle, Check, ImagePlus, Maximize2, Plus, Minus, MousePointerClick,
+  AlertCircle, Check, ImagePlus, Maximize2, Plus, Minus, MousePointerClick, Scan,
 } from 'lucide-react';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
 
 type Img = { path: string; url: string; w: number; h: number };
+type Det = { label: string; labelFr: string; score: number; box: [number, number, number, number] };
 
 export default function InpaintStudio() {
   const electron = api();
@@ -20,6 +21,8 @@ export default function InpaintStudio() {
   const [hasMask, setHasMask] = useState(false);
   const [samPts, setSamPts] = useState<{ x: number; y: number; label: number }[]>([]);
   const samEmbedded = useRef<string | null>(null);
+  const [detections, setDetections] = useState<Det[]>([]);
+  const [showDetections, setShowDetections] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [stage, setStage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export default function InpaintStudio() {
     const probe = new Image();
     probe.onload = () => {
       const im = { path, url, w: probe.naturalWidth, h: probe.naturalHeight };
-      setImg(im); setHistory([]); setError(null); setSamPts([]); samEmbedded.current = null;
+      setImg(im); setHistory([]); setError(null); setSamPts([]); samEmbedded.current = null; setDetections([]); setShowDetections(false);
       requestAnimationFrame(() => resetMask(im.w, im.h));
     };
     probe.onerror = () => setError('Impossible de charger cette image.');
@@ -122,22 +125,47 @@ export default function InpaintStudio() {
     };
     mimg.src = maskUrl;
   };
+  const ensureEmbed = async (): Promise<boolean> => {
+    if (!img) return false;
+    if (samEmbedded.current === img.path) return true;
+    setProcessing(true); setStage('Analyse de l\'image…');
+    const r = await electron.samEmbed?.({ imagePath: img.path }).catch((e: any) => ({ error: String(e) }));
+    setProcessing(false); setStage('');
+    if (!r?.ok) { setError(r?.error || 'Sélection IA indisponible.'); return false; }
+    samEmbedded.current = img.path; return true;
+  };
+  const runSam = async (pts: { x: number; y: number; label: number }[]) => {
+    if (!await ensureEmbed()) return;
+    setProcessing(true); setStage('Sélection…');
+    const res = await electron.samPoints?.({ imagePath: img!.path, points: pts }).catch((e: any) => ({ error: String(e) }));
+    setProcessing(false); setStage('');
+    if (res?.ok) renderMaskToOverlay(res.mask); else setError(res?.error || 'Sélection échouée.');
+  };
   const samClick = async (natX: number, natY: number, negative: boolean) => {
     if (!img || processing) return;
     setError(null);
-    if (samEmbedded.current !== img.path) {
-      setProcessing(true); setStage('Analyse de l\'image…');
-      const r = await electron.samEmbed?.({ imagePath: img.path }).catch((e: any) => ({ error: String(e) }));
-      setProcessing(false); setStage('');
-      if (!r?.ok) { setError(r?.error || 'Sélection IA indisponible.'); return; }
-      samEmbedded.current = img.path;
-    }
     const pts = [...samPts, { x: natX, y: natY, label: negative ? 0 : 1 }];
     setSamPts(pts);
-    setProcessing(true); setStage('Sélection…');
-    const res = await electron.samPoints?.({ imagePath: img.path, points: pts }).catch((e: any) => ({ error: String(e) }));
+    await runSam(pts);
+  };
+  const selectBox = async (det: Det) => {
+    if (!img || processing) return;
+    setError(null); setTool('sam');
+    const cx = det.box[0] + det.box[2] / 2, cy = det.box[1] + det.box[3] / 2;
+    const pts = [{ x: cx, y: cy, label: 1 }];
+    setSamPts(pts);
+    await runSam(pts);
+  };
+  const detectObjects = async () => {
+    if (!img || processing) return;
+    setError(null); setProcessing(true); setStage('Détection des objets…');
+    const res = await electron.yoloDetect?.({ imagePath: img.path }).catch((e: any) => ({ error: String(e) }));
     setProcessing(false); setStage('');
-    if (res?.ok) renderMaskToOverlay(res.mask); else setError(res?.error || 'Sélection échouée.');
+    if (res?.ok) {
+      setDetections(res.detections || []); setShowDetections(true); setTool('sam');
+      if (!res.detections?.length) showToast('Aucun objet détecté.');
+      else showToast(`${res.detections.length} objet(s) détecté(s) — clique pour sélectionner.`);
+    } else setError(res?.error || 'Détection échouée.');
   };
 
   const clearMask = () => { if (img) resetMask(img.w, img.h); setSamPts([]); };
@@ -235,6 +263,13 @@ export default function InpaintStudio() {
               <button onClick={() => setTool('eraser')} className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-1.5 transition-all ${tool === 'eraser' ? 'bg-rose-500/25 text-rose-100 border-rose-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}><Eraser className="w-4 h-4" /> Gomme</button>
             </div>
             {tool === 'sam' && <p className="text-[10px] text-gray-500 mt-1.5">Clique sur un objet → masque auto. Re-clique pour agrandir. <span className="text-gray-400">Maj/clic-droit</span> = retirer une partie. (1ʳᵉ fois : ~40 Mo)</p>}
+            <button onClick={detectObjects} disabled={!img || processing} className="mt-2 w-full px-3 py-2 rounded-xl text-xs font-medium bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 flex items-center justify-center gap-1.5"><Scan className="w-3.5 h-3.5" /> Détecter les objets</button>
+            {detections.length > 0 && (
+              <label className="flex items-center gap-2 text-[11px] text-gray-400 mt-1.5 cursor-pointer">
+                <input type="checkbox" checked={showDetections} onChange={e => setShowDetections(e.target.checked)} className="accent-fuchsia-500" />
+                Afficher les {detections.length} objets détectés
+              </label>
+            )}
           </div>
 
           {/* Brush size */}
@@ -295,6 +330,14 @@ export default function InpaintStudio() {
                 className={`absolute inset-0 w-full h-full rounded-xl touch-none ${tool === 'sam' ? 'cursor-crosshair' : 'cursor-none'}`}
                 onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
                 onContextMenu={(e) => { e.preventDefault(); if (tool === 'sam' && img && !processing) { const { x, y } = toCanvas(e as any); samClick(x, y, true); } }} />
+              {/* Detected objects — click a box to select it precisely (SAM) */}
+              {showDetections && img && !processing && detections.map((dt, i) => (
+                <button key={'d' + i} onClick={() => selectBox(dt)} title={`${dt.labelFr} ${(dt.score * 100) | 0}%`}
+                  className="absolute border-2 border-cyan-400/80 hover:border-cyan-300 hover:bg-cyan-400/15 rounded-sm group/box"
+                  style={{ left: `${(dt.box[0] / img.w) * 100}%`, top: `${(dt.box[1] / img.h) * 100}%`, width: `${(dt.box[2] / img.w) * 100}%`, height: `${(dt.box[3] / img.h) * 100}%` }}>
+                  <span className="absolute -top-4 left-0 text-[9px] px-1 rounded bg-cyan-500/90 text-white whitespace-nowrap opacity-90">{dt.labelFr} {(dt.score * 100) | 0}%</span>
+                </button>
+              ))}
               {/* SAM click points */}
               {tool === 'sam' && img && samPts.map((p, i) => (
                 <div key={i} className="absolute w-3 h-3 rounded-full border-2 pointer-events-none -translate-x-1/2 -translate-y-1/2"

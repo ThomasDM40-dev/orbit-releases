@@ -134,6 +134,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   samEmbed: (params) => ipcRenderer.invoke('sam-embed', params),
   samPoints: (params) => ipcRenderer.invoke('sam-points', params),
   onSamProgress: (cb) => { const h = (_e, v) => cb(v); ipcRenderer.on('sam-progress', h); return () => ipcRenderer.removeListener('sam-progress', h); },
+  yoloDetect: (params) => ipcRenderer.invoke('yolo-detect', params),
 
   // ── HandBrake ──
   hbDetect: () => ipcRenderer.invoke('hb-detect'),
