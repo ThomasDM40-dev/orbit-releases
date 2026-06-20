@@ -3345,6 +3345,26 @@ function httpGetBuffer(url, opts = {}, redirects = 0) {
   });
 }
 
+// Turn a user's request (often French / conversational) into a clean English
+// text-to-image prompt. Flux is English-trained, so "couchée de soleil" was read
+// as "couch"; this fixes the subject. Cached; falls back to the raw text.
+const _promptCache = new Map();
+async function toImagePrompt(text) {
+  const t = (text || '').trim();
+  if (!t) return t;
+  if (_promptCache.has(t)) return _promptCache.get(t);
+  let result = t;
+  try {
+    const sys = encodeURIComponent("You are an image-prompt engineer. Translate and rewrite the user's request into a single concise English text-to-image prompt describing the subject and style. Output ONLY the prompt — no quotes, no preface, no explanation.");
+    const q = encodeURIComponent(t);
+    const { buffer } = await httpGetBuffer(`https://text.pollinations.ai/${q}?system=${sys}`, { timeout: 25000 });
+    const out = (buffer.toString('utf8') || '').trim();
+    if (out && !out.startsWith('{') && !/queue full|error|<html/i.test(out.slice(0, 60)) && out.length <= 600) result = out;
+  } catch (e) {}
+  _promptCache.set(t, result);
+  return result;
+}
+
 ipcMain.handle('image-gen-models', async () => {
   try {
     const { buffer, contentType } = await httpGetBuffer('https://image.pollinations.ai/models', { timeout: 8000 });
@@ -3376,7 +3396,10 @@ ipcMain.handle('image-gen', async (e, params = {}) => {
       width: String(width), height: String(height), seed, model,
       nologo: 'true', enhance: params.enhance ? 'true' : 'false', private: 'true', safe: 'false',
     });
-    const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?' + q.toString();
+    // Translate/clean the request into a proper English prompt (Flux is
+    // English-trained — French phrasing produced wrong subjects).
+    const finalPrompt = await toImagePrompt(prompt);
+    const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(finalPrompt) + '?' + q.toString();
     const { buffer, contentType } = await httpGetBuffer(url, { timeout: 180000 });
     if (!buffer || buffer.length < 800) return { error: 'Image vide — réessaie ou change de modèle.' };
     if (/json|text\/(?!plain)/.test(contentType) && buffer.length < 4000) {
@@ -3860,8 +3883,10 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
       let gw = bw, gh = bh; const lng = Math.max(bw, bh); if (lng > 1024) { const s = 1024 / lng; gw = Math.round(bw * s); gh = Math.round(bh * s); }
       gw = Math.max(64, Math.round(gw / 8) * 8); gh = Math.max(64, Math.round(gh / 8) * 8);
       prog('Génération IA…');
+      // English prompt + blend hints so the fill matches the photo better.
+      const genPrompt = (await toImagePrompt(prompt)) + ', photorealistic, natural lighting, seamless, high detail';
       const q = new URLSearchParams({ width: String(gw), height: String(gh), seed: String((params.seed != null && params.seed !== '') ? params.seed : Math.floor(Math.random() * 1e9)), model: params.model || 'flux', nologo: 'true', enhance: 'true', private: 'true', safe: 'false' });
-      const genUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?' + q.toString();
+      const genUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(genPrompt) + '?' + q.toString();
       const { buffer, contentType } = await httpGetBuffer(genUrl, { timeout: 180000 });
       if (!buffer || buffer.length < 800) return { error: 'Génération vide — réessaie ou change le prompt.' };
       const genTmp = path.join(os.tmpdir(), `orbit_gen_${Date.now()}.${/png/.test(contentType) ? 'png' : 'jpg'}`); tmp.push(genTmp);
