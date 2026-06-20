@@ -3803,9 +3803,10 @@ async function installLamaModel(onLog) {
 }
 
 // Decode any image to a raw pixel Buffer at an exact size via ffmpeg.
-function ffDecodeRaw(ff, input, w, h, pix) {
+function ffDecodeRaw(ff, input, w, h, pix, crop) {
+  const vf = (crop ? crop + ',' : '') + `scale=${w}:${h}:flags=bilinear`;
   return new Promise((resolve, reject) => {
-    const p = spawn(ff, ['-hide_banner', '-nostdin', '-i', input, '-vf', `scale=${w}:${h}:flags=bilinear`, '-f', 'rawvideo', '-pix_fmt', pix, 'pipe:1'], { windowsHide: true });
+    const p = spawn(ff, ['-hide_banner', '-nostdin', '-i', input, '-vf', vf, '-f', 'rawvideo', '-pix_fmt', pix, 'pipe:1'], { windowsHide: true });
     const chunks = []; let err = '';
     p.stdout.on('data', d => chunks.push(d)); p.stderr.on('data', d => err += d);
     p.on('error', reject);
@@ -3912,18 +3913,34 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
       return { ok: true, path: finalPath, dataUrl: 'data:image/png;base64,' + gb.toString('base64'), width: W, height: H };
     }
 
-    // ── Mode « Effacer » : pas de prompt → LaMa (suppression d'objet, local) ──
+    // ── Mode « Effacer » : LaMa, recadrage haute résolution ──
+    // LaMa a une entrée fixe 512×512. Plutôt que d'écraser TOUTE l'image en 512,
+    // on recadre une fenêtre autour de l'objet (avec contexte), on l'inpainte en
+    // 512, puis on la replace en pleine résolution → bien plus net dans la zone.
     const ort = getOrt();
     prog('Préparation du moteur…');
     const modelPath = await installLamaModel(m => prog(m));
-    // This LaMa export has a FIXED 512×512 input. Run at 512; the inpainted
-    // region is scaled back to full resolution during the composite below.
-    const pw = inpaint.LAMA.size || 512, ph = inpaint.LAMA.size || 512;
+    const S = inpaint.LAMA.size || 512;
 
-    prog('Analyse de l\'image…');
-    const imgRaw = await ffDecodeRaw(ff, imagePath, pw, ph, 'rgb24');
-    const maskRaw = await ffDecodeRaw(ff, maskTmp, pw, ph, 'gray');
-    const N = pw * ph;
+    prog('Analyse de la zone…');
+    const mFull = await ffDecodeRaw(ff, maskTmp, W, H, 'gray');
+    let minX = W, minY = H, maxX = -1, maxY = -1;
+    for (let y = 0; y < H; y++) { const row = y * W; for (let x = 0; x < W; x++) { if (mFull[row + x] > 127) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; } } }
+    if (maxX < 0) return { error: 'Aucune zone sélectionnée — peins sur l\'objet à effacer.' };
+    const bw0 = maxX - minX + 1, bh0 = maxY - minY + 1;
+    // Context window around the object (LaMa needs surroundings to rebuild well).
+    const pad = Math.round(Math.max(bw0, bh0) * 0.7) + 24;
+    let cx0 = Math.max(0, minX - pad), cy0 = Math.max(0, minY - pad);
+    const cx1 = Math.min(W, maxX + pad + 1), cy1 = Math.min(H, maxY + pad + 1);
+    cx0 -= cx0 % 2; cy0 -= cy0 % 2;
+    let cw = cx1 - cx0, ch = cy1 - cy0; cw -= cw % 2; ch -= ch % 2;
+    if (cw < 8 || ch < 8) return { error: 'Zone trop petite.' };
+    const cropStr = `crop=${cw}:${ch}:${cx0}:${cy0}`;
+
+    prog('Reconstruction IA…');
+    const N = S * S;
+    const imgRaw = await ffDecodeRaw(ff, imagePath, S, S, 'rgb24', cropStr);
+    const maskRaw = await ffDecodeRaw(ff, maskTmp, S, S, 'gray', cropStr);
     if (imgRaw.length < 3 * N || maskRaw.length < N) return { error: 'Décodage incomplet de l\'image.' };
 
     // CHW float tensors. LaMa: image in [0,1], mask binary (1 = à reconstruire).
@@ -3934,37 +3951,34 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
     for (let i = 0; i < N; i++) { const v = maskRaw[i] > 127 ? 1 : 0; mask[i] = v; painted += v; }
     if (!painted) return { error: 'Aucune zone sélectionnée — peins sur l\'objet à effacer.' };
 
-    prog('Reconstruction IA…');
     const session = await ort.InferenceSession.create(modelPath);
     const inNames = session.inputNames || [];
     const outNames = session.outputNames || [];
     if (inNames.length < 2 || !outNames.length) return { error: 'Modèle LaMa inattendu.' };
-    // Robust name mapping (works whatever the export names the tensors).
     let maskName = inNames.find(n => /mask/i.test(n));
     let imgName = inNames.find(n => /image|img|src|input/i.test(n) && !/mask/i.test(n));
     if (!imgName) imgName = inNames.find(n => n !== maskName) || inNames[0];
     if (!maskName) maskName = inNames.find(n => n !== imgName) || inNames[1];
     const feeds = {};
-    feeds[imgName] = new ort.Tensor('float32', img, [1, 3, ph, pw]);
-    feeds[maskName] = new ort.Tensor('float32', mask, [1, 1, ph, pw]);
+    feeds[imgName] = new ort.Tensor('float32', img, [1, 3, S, S]);
+    feeds[maskName] = new ort.Tensor('float32', mask, [1, 1, S, S]);
     const out = await session.run(feeds);
     const od = out[outNames[0]].data;
     if (!od || od.length < 3 * N) return { error: 'Sortie du modèle invalide.' };
-    // Auto-detect output range (0..1 vs 0..255).
     let mx = 0; for (let i = 0; i < od.length; i += 1009) if (od[i] > mx) mx = od[i];
     const sc = mx <= 1.5 ? 255 : 1;
     const outBuf = Buffer.allocUnsafe(3 * N);
     for (let i = 0; i < N; i++) { outBuf[i * 3] = _byte(od[i] * sc); outBuf[i * 3 + 1] = _byte(od[N + i] * sc); outBuf[i * 3 + 2] = _byte(od[2 * N + i] * sc); }
     const inpaintedTmp = path.join(os.tmpdir(), `orbit_inpaint_${Date.now()}.png`); tmp.push(inpaintedTmp);
-    await ffEncodeRaw(ff, outBuf, pw, ph, 'rgb24', inpaintedTmp);
+    await ffEncodeRaw(ff, outBuf, S, S, 'rgb24', inpaintedTmp);
 
     prog('Finalisation…');
-    // Keep the original pixels everywhere except the (feathered) painted region:
-    // base = original, overlay = AI result upscaled, mask = painted area.
+    // Paste the inpainted window back at full resolution, blended with a feather
+    // so only the painted region changes and the join is invisible.
+    const fE = Math.max(3, Math.min(40, Math.round(Math.max(cw, ch) * 0.03)));
     await new Promise((resolve, reject) => {
-      const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', inpaintedTmp, '-i', maskTmp,
-        '-filter_complex',
-        `[0:v]format=rgb24,scale=${W}:${H}[base];[1:v]scale=${W}:${H}:flags=lanczos,format=rgb24[ov];[2:v]format=gray,scale=${W}:${H},gblur=sigma=${Math.max(3, Math.min(28, Math.round(Math.min(W, H) * 0.01)))}:steps=2[m];[ov][m]alphamerge[ova];[base][ova]overlay=format=auto[o]`,
+      const args = ['-hide_banner', '-nostdin', '-y', '-i', imagePath, '-i', inpaintedTmp, '-i', maskTmp, '-filter_complex',
+        `[0:v]format=rgb24,scale=${W}:${H},split=2[b1][b2];[1:v]scale=${cw}:${ch}:flags=lanczos,format=rgb24[gen];[b2][gen]overlay=${cx0}:${cy0}:format=auto[full];[2:v]format=gray,scale=${W}:${H},gblur=sigma=${fE}:steps=2[m];[full][m]alphamerge[fulla];[b1][fulla]overlay=format=auto[o]`,
         '-map', '[o]', finalPath];
       const p = spawn(ff, args, { windowsHide: true }); let log = '';
       p.stderr.on('data', d => log += d); p.on('error', reject);
