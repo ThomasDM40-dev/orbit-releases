@@ -15,9 +15,28 @@ const LABEL_CLS = "text-[11px] font-semibold text-gray-400 uppercase tracking-wi
 
 type GalleryItem = {
   id: string; status: 'loading' | 'done' | 'error';
-  src?: string; path?: string; prompt: string; model: string;
+  src?: string; path?: string; thumb?: string; prompt: string; model: string;
   width: number; height: number; seed?: string; error?: string;
 };
+
+// Downscale an image (data/media URL) to a small JPEG data URL so the gallery
+// keeps showing the picture even if the saved file is later moved or deleted.
+const makeThumb = (url: string, max = 320): Promise<string> => new Promise((resolve) => {
+  try {
+    const im = new Image();
+    im.onload = () => {
+      const scale = Math.min(1, max / Math.max(im.naturalWidth || 1, im.naturalHeight || 1));
+      const w = Math.max(1, Math.round((im.naturalWidth || max) * scale));
+      const h = Math.max(1, Math.round((im.naturalHeight || max) * scale));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d'); if (!ctx) return resolve('');
+      ctx.drawImage(im, 0, 0, w, h);
+      try { resolve(c.toDataURL('image/jpeg', 0.72)); } catch (e) { resolve(''); }
+    };
+    im.onerror = () => resolve('');
+    im.src = url;
+  } catch (e) { resolve(''); }
+});
 
 const RATIOS = [
   { label: '1:1', w: 1024, h: 1024 },
@@ -60,6 +79,7 @@ export default function ImageGen() {
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState<{ type: 'error' | 'info'; msg: string } | null>(null);
   const [lightbox, setLightbox] = useState<GalleryItem | null>(null);
+  const [broken, setBroken] = useState<Record<string, boolean>>({});
   const cancelRef = useRef(false);
 
   const showToast = (type: 'error' | 'info', msg: string) => { setToast({ type, msg }); setTimeout(() => setToast(null), 4000); };
@@ -77,16 +97,19 @@ export default function ImageGen() {
       const saved = localStorage.getItem('orbit_imagegen_gallery');
       if (saved) {
         const arr = JSON.parse(saved) as GalleryItem[];
-        if (Array.isArray(arr)) setGallery(arr.filter(g => g.path).map(g => ({ ...g, status: 'done', src: mediaUrl(g.path!) })));
+        // Show the full file via media:// when available, with the stored thumb
+        // as a guaranteed fallback (full file may have been moved/deleted).
+        if (Array.isArray(arr)) setGallery(arr.filter(g => g.path || g.thumb).map(g => ({ ...g, status: 'done', src: g.path ? mediaUrl(g.path) : (g.thumb || '') })));
       }
     } catch (e) {}
   }, []);
 
-  // Persist the finished gallery (paths only — re-resolved via media:// on load).
+  // Persist the finished gallery: keep the path AND a small thumbnail so tiles
+  // always render even if the saved image file later disappears.
   useEffect(() => {
-    const done = gallery.filter(g => g.status === 'done' && g.path)
-      .slice(0, 60)
-      .map(({ id, path, prompt, model, width, height, seed }) => ({ id, path, prompt, model, width, height, seed, status: 'done' as const }));
+    const done = gallery.filter(g => g.status === 'done' && (g.path || g.thumb))
+      .slice(0, 40)
+      .map(({ id, path, thumb, prompt, model, width, height, seed }) => ({ id, path, thumb, prompt, model, width, height, seed, status: 'done' as const }));
     try { localStorage.setItem('orbit_imagegen_gallery', JSON.stringify(done)); } catch (e) {}
   }, [gallery]);
 
@@ -107,8 +130,9 @@ export default function ImageGen() {
       }).catch((e: any) => ({ error: String(e) }));
       if (cancelRef.current) { setGallery(prev => prev.filter(g => g.id !== id)); break; }
       if (res?.ok) {
+        const thumb = await makeThumb(res.dataUrl).catch(() => '');
         setGallery(prev => prev.map(g => g.id === id ? {
-          ...g, status: 'done', src: res.dataUrl, path: res.path, seed: res.seed, width: res.width, height: res.height,
+          ...g, status: 'done', src: res.dataUrl, path: res.path, thumb, seed: res.seed, width: res.width, height: res.height,
         } : g));
         if (!seedLock && i === 0 && res.seed) setSeed(res.seed);
       } else {
@@ -288,9 +312,17 @@ export default function ImageGen() {
                       <button onClick={() => removeItem(g.id)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">retirer</button>
                     </div>
                   )}
-                  {g.status === 'done' && g.src && (
+                  {g.status === 'done' && (broken[g.id] || (!g.src && !g.thumb)) && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
+                      <ImageIcon className="w-7 h-7 text-gray-600" />
+                      <span className="text-[10px] text-gray-500 line-clamp-2">Fichier introuvable<br/>(déplacé ou supprimé)</span>
+                      <button onClick={() => removeItem(g.id)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">retirer</button>
+                    </div>
+                  )}
+                  {g.status === 'done' && (g.src || g.thumb) && !broken[g.id] && (
                     <>
-                      <img src={g.src} alt={g.prompt} className="w-full h-full object-cover cursor-zoom-in" onClick={() => setLightbox(g)} loading="lazy" />
+                      <img src={g.src || g.thumb} alt={g.prompt} className="w-full h-full object-cover cursor-zoom-in" onClick={() => setLightbox(g)} loading="lazy"
+                        onError={(e) => { const t = e.currentTarget; if (g.thumb && t.src !== g.thumb) { t.src = g.thumb; } else { setBroken(b => ({ ...b, [g.id]: true })); } }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <p className="text-[10px] text-gray-300 line-clamp-2 mb-1.5">{g.prompt}</p>
                         <div className="flex items-center gap-1.5">
@@ -312,12 +344,13 @@ export default function ImageGen() {
 
       {/* Lightbox */}
       <AnimatePresence>
-        {lightbox && lightbox.src && (
+        {lightbox && (lightbox.src || lightbox.thumb) && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-8" onClick={() => setLightbox(null)}>
             <button className="absolute top-5 right-5 text-gray-400 hover:text-white" onClick={() => setLightbox(null)}><X className="w-7 h-7" /></button>
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="max-w-full max-h-full flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
-              <img src={lightbox.src} alt={lightbox.prompt} className="max-w-full max-h-[78vh] rounded-xl shadow-2xl object-contain" />
+              <img src={lightbox.src || lightbox.thumb} alt={lightbox.prompt} className="max-w-full max-h-[78vh] rounded-xl shadow-2xl object-contain"
+                onError={(e) => { const t = e.currentTarget; if (lightbox.thumb && t.src !== lightbox.thumb) t.src = lightbox.thumb; }} />
               <div className="flex items-center gap-2 flex-wrap justify-center">
                 <span className="text-xs text-gray-400 max-w-xl text-center px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 select-text">{lightbox.prompt}</span>
                 <span className="text-[11px] text-gray-500 px-2 py-1.5">{lightbox.width}×{lightbox.height} · {lightbox.model} · seed {lightbox.seed}</span>

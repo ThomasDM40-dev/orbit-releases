@@ -3382,9 +3382,10 @@ ipcMain.handle('image-gen', async (e, params = {}) => {
     if (/json|text\/(?!plain)/.test(contentType) && buffer.length < 4000) {
       return { error: 'Le service a renvoyé une erreur : ' + buffer.toString('utf8').slice(0, 200) };
     }
-    let outDir = (params.outputDir && fs.existsSync(params.outputDir)) ? params.outputDir
-      : path.join(app.getPath('pictures') || app.getPath('downloads'), IMAGEGEN_DIR_NAME);
-    try { if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true }); } catch (e2) { outDir = app.getPath('downloads'); }
+    // Save into a dedicated, writable subfolder so the images are organised and
+    // not lost among other downloads (and survive Downloads-root cleanups).
+    let outDir = path.join(usableDownloadDir(params.outputDir), IMAGEGEN_DIR_NAME);
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e2) { outDir = usableDownloadDir(params.outputDir); }
     const ext = /png/.test(contentType) ? 'png' : 'jpg';
     const safeName = prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'image';
     const file = path.join(outDir, `orbit-${safeName}-${Date.now().toString(36)}.${ext}`);
@@ -3833,10 +3834,9 @@ ipcMain.handle('inpaint-run', async (e, params = {}) => {
     const maskTmp = path.join(os.tmpdir(), `orbit_mask_${Date.now()}.png`); tmp.push(maskTmp);
     fs.writeFileSync(maskTmp, Buffer.from(maskB64, 'base64'));
 
-    // Shared output target.
-    let outDir = (params.outputDir && fs.existsSync(params.outputDir)) ? params.outputDir
-      : path.join(app.getPath('pictures') || app.getPath('downloads'), IMAGEGEN_DIR_NAME);
-    try { if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true }); } catch (e2) { outDir = app.getPath('downloads'); }
+    // Shared output target — dedicated, writable subfolder.
+    let outDir = path.join(usableDownloadDir(params.outputDir), IMAGEGEN_DIR_NAME);
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e2) { outDir = usableDownloadDir(params.outputDir); }
     const base = path.basename(imagePath, path.extname(imagePath));
     const finalPath = path.join(outDir, `${base}-retouche-${Date.now().toString(36)}.png`);
 
