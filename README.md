@@ -180,6 +180,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.21.0** — **Modules & IA** plus complet (vraie détection des MAJ yt-dlp, versions/tailles, bouton Annuler, progression en %) + **démarrage plus rapide** (studios chargés à la demande, ~855→636 Ko) + vérificateur de traductions
 - **v0.20.3** — **Modules & IA** : un module déjà installé affiche « À jour » au lieu de « Mettre à jour » (icône ↻ pour forcer une réinstallation)
 - **v0.20.2** — **Nouvel onglet « Modules & IA »** dans les réglages : installe/met à jour tous les moteurs et modèles d'IA (yt-dlp, IA locale, Real-ESRGAN+RIFE, HandBrake, LaMa, RVM) depuis un seul endroit, avec état et progression en direct
 - **v0.20.1** — **Correctif** : changer de langue ne relance plus la vérification des mises à jour (la notification « Tout est à jour » n'apparaît qu'au démarrage)

@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
   startUpdateDownload: () => ipcRenderer.invoke('start-update-download'),
   checkToolUpdates: () => ipcRenderer.invoke('check-tool-updates'),
+  cancelInstall: () => ipcRenderer.invoke('cancel-install'),
   onUpdaterStatus: (cb) => ipcRenderer.on('updater-status', (_e, v) => cb(v)),
   rpcUpdate: (data) => ipcRenderer.send('rpc-update', data),
   openSniffer: (url) => ipcRenderer.send('open-sniffer', url),

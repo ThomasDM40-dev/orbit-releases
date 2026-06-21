@@ -1,27 +1,30 @@
 import DownloadInterface from "@/components/DownloadInterface";
-import Converter from "@/components/Converter";
-import Subscriptions from "@/components/Subscriptions";
 import SettingsModal from "@/components/SettingsModal";
 import ImportModal from "@/components/ImportModal";
-import AIInterpolator from "@/components/AIInterpolator";
 import SegmentedTabs from "@/components/SegmentedTabs";
-import Transcription from "@/components/Transcription";
-import TopazVideoAI from "@/components/TopazVideoAI";
-import OrbitEnhance from "@/components/OrbitEnhance";
-import ImageGen from "@/components/ImageGen";
-import InpaintStudio from "@/components/InpaintStudio";
-import HandBrake from "@/components/HandBrake";
-import MediaLibrary from "@/components/MediaLibrary";
-import MattingStudio from "@/components/MattingStudio";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import OnboardingModal from "@/components/OnboardingModal";
 import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import AIAssistant from "@/components/AIAssistant";
-import { Sparkles, UploadCloud } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Sparkles, UploadCloud, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { t, getLang, setLang, LANGS, type Lang } from "@/i18n";
+
+// Heavy studio tabs are code-split and only loaded the first time their tab is
+// opened (see `visited` below). This keeps the initial app launch light.
+const Converter = lazy(() => import("@/components/Converter"));
+const Subscriptions = lazy(() => import("@/components/Subscriptions"));
+const AIInterpolator = lazy(() => import("@/components/AIInterpolator"));
+const Transcription = lazy(() => import("@/components/Transcription"));
+const TopazVideoAI = lazy(() => import("@/components/TopazVideoAI"));
+const OrbitEnhance = lazy(() => import("@/components/OrbitEnhance"));
+const ImageGen = lazy(() => import("@/components/ImageGen"));
+const InpaintStudio = lazy(() => import("@/components/InpaintStudio"));
+const HandBrake = lazy(() => import("@/components/HandBrake"));
+const MediaLibrary = lazy(() => import("@/components/MediaLibrary"));
+const MattingStudio = lazy(() => import("@/components/MattingStudio"));
 
 // Fires only once per real process launch. The whole tree is remounted when the
 // language changes (<App key={lang}/>), so without this guard the launch update
@@ -74,6 +77,10 @@ export default function App() {
   const [showMainTabSettings, setShowMainTabSettings] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(mainTabConfig.find(t => t.visible)?.id || 'downloads');
+  // Tabs the user has opened at least once → their (lazy) component gets mounted
+  // and then stays mounted so its state survives switching tabs.
+  const [visited, setVisited] = useState<Set<string>>(() => new Set(['downloads', activeTab]));
+  useEffect(() => { setVisited(prev => prev.has(activeTab) ? prev : new Set(prev).add(activeTab)); }, [activeTab]);
 
   // Discord Rich Presence: update on tab change
   useEffect(() => {
@@ -415,6 +422,18 @@ export default function App() {
     }
   };
 
+  // Render a code-split tab: kept hidden (not unmounted) once visited so its
+  // state survives, and only mounted the first time the tab is opened.
+  const renderLazyTab = (id: string, node: any) => (
+    <div className={activeTab === id ? '' : 'hidden'} style={{ height: '100%' }}>
+      {visited.has(id) && (
+        <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-gray-600"><Loader2 className="w-7 h-7 animate-spin" /></div>}>
+          {node}
+        </Suspense>
+      )}
+    </div>
+  );
+
   return (
     <main className="h-screen w-screen space-bg text-gray-300 flex flex-col overflow-hidden font-sans selection:bg-pink-500/30 select-none">
       {/* Custom Title Bar */}
@@ -631,39 +650,17 @@ export default function App() {
           <div className={activeTab === 'downloads' ? '' : 'hidden'} style={{ height: '100%' }}>
             <DownloadInterface language={language} globalSettings={settings} setGlobalSettings={saveSettings} />
           </div>
-          <div className={activeTab === 'converter' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <Converter language={language} globalSettings={settings} />
-          </div>
-          <div className={activeTab === 'interpolator' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <AIInterpolator />
-          </div>
-          <div className={activeTab === 'subscriptions' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <Subscriptions />
-          </div>
-          <div className={activeTab === 'enhance' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <OrbitEnhance />
-          </div>
-          <div className={activeTab === 'imagegen' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <ImageGen />
-          </div>
-          <div className={activeTab === 'inpaint' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <InpaintStudio />
-          </div>
-          <div className={activeTab === 'library' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <MediaLibrary />
-          </div>
-          <div className={activeTab === 'matting' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <MattingStudio />
-          </div>
-          <div className={activeTab === 'handbrake' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <HandBrake />
-          </div>
-          <div className={activeTab === 'topaz' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <TopazVideoAI />
-          </div>
-          <div className={activeTab === 'transcription' ? '' : 'hidden'} style={{ height: '100%' }}>
-            <Transcription />
-          </div>
+          {renderLazyTab('converter', <Converter language={language} globalSettings={settings} />)}
+          {renderLazyTab('interpolator', <AIInterpolator />)}
+          {renderLazyTab('subscriptions', <Subscriptions />)}
+          {renderLazyTab('enhance', <OrbitEnhance />)}
+          {renderLazyTab('imagegen', <ImageGen />)}
+          {renderLazyTab('inpaint', <InpaintStudio />)}
+          {renderLazyTab('library', <MediaLibrary />)}
+          {renderLazyTab('matting', <MattingStudio />)}
+          {renderLazyTab('handbrake', <HandBrake />)}
+          {renderLazyTab('topaz', <TopazVideoAI />)}
+          {renderLazyTab('transcription', <Transcription />)}
         </div>
       </div>
 

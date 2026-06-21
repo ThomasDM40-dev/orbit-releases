@@ -171,12 +171,17 @@ function findLlamaServer(dir) {
 function llmModelOk() { try { return fs.existsSync(path.join(LLM_DIR, 'models', LLM_MODEL_FILE)) && fs.statSync(path.join(LLM_DIR, 'models', LLM_MODEL_FILE)).size >= LLM_MIN_MODEL_BYTES; } catch (e) { return false; } }
 function llmInstalled() { return !!findLlamaServer(LLM_DIR) && llmModelOk(); }
 
+// ── Module install process tracking (lets the UI cancel a running install) ──
+const installProcs = new Set();
+function trackInstall(child) { installProcs.add(child); child.on('close', () => installProcs.delete(child)); return child; }
+function cancelInstalls() { let n = 0; for (const c of installProcs) { try { c.kill('SIGKILL'); n++; } catch (e) {} } installProcs.clear(); return n; }
+
 function curlTo(url, dest, onPct) {
   return new Promise((resolve, reject) => {
-    const c = spawn('curl', ['-L', '--fail', '--retry', '3', '--progress-bar', '-o', dest, url]);
+    const c = trackInstall(spawn('curl', ['-L', '--fail', '--retry', '3', '--progress-bar', '-o', dest, url]));
     c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
     c.stderr.on('data', d => { const m = d.toString().match(/([\d.]+)%/); if (m && onPct) onPct(parseFloat(m[1])); });
-    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+    c.on('close', code => code === 0 ? resolve() : reject(new Error(code === null ? 'Annulé' : 'Téléchargement échoué (curl ' + code + ')')));
   });
 }
 
@@ -234,7 +239,11 @@ async function localChat(messages, systemPrompt, onLog) {
 app.on('before-quit', () => { try { llmState.proc && llmState.proc.kill('SIGKILL'); } catch (e) {} });
 
 // Pre-download / verify the local AI (with progress) — from Settings.
-ipcMain.handle('llm-status', () => ({ installed: llmInstalled(), running: !!(llmState.ready && llmState.proc) }));
+ipcMain.handle('llm-status', () => {
+  let size = 0;
+  try { size = fs.statSync(path.join(LLM_DIR, 'models', LLM_MODEL_FILE)).size; } catch (e) {}
+  return { installed: llmInstalled(), running: !!(llmState.ready && llmState.proc), size };
+});
 ipcMain.handle('llm-install', async () => {
   try { await startLocalLlm(d => uiWin()?.webContents.send('llm-progress', d)); return { ok: true }; }
   catch (e) { return { ok: false, error: e.message }; }
@@ -814,6 +823,8 @@ ipcMain.handle('check-updates', async () => {
 
   return { upToDate: allGood, message, details: results };
 });
+
+ipcMain.handle('cancel-install', () => ({ ok: true, killed: cancelInstalls() }));
 
 ipcMain.handle('update-ytdlp', async () => {
   try {
@@ -2934,11 +2945,11 @@ async function installRealEsrgan(onLine) {
   onLine && onLine('Téléchargement de Real-ESRGAN (~45 Mo, première utilisation)…');
   const zip = path.join(dir, 'realesrgan.zip');
   await new Promise((resolve, reject) => {
-    const c = spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', enhanceLib.REALESRGAN.url]);
+    const c = trackInstall(spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', enhanceLib.REALESRGAN.url]));
     c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
     c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLine && onLine('Real-ESRGAN: ' + s.replace(/\r/g, '').split('\n').pop()); });
     c.on('close', code => {
-      if (code !== 0) return reject(new Error('Téléchargement échoué (curl ' + code + ')'));
+      if (code !== 0) return reject(new Error(code === null ? 'Annulé' : 'Téléchargement échoué (curl ' + code + ')'));
       try { if (fs.statSync(zip).size < enhanceLib.REALESRGAN.minZipBytes) { fs.unlinkSync(zip); return reject(new Error('archive incomplète')); } }
       catch (e) { return reject(e); }
       resolve();
@@ -3439,10 +3450,10 @@ async function installHandBrake(onLine) {
   onLine && onLine(`Téléchargement de HandBrake ${rel.tag_name} (~26 Mo, première utilisation)…`);
   const zip = path.join(dir, 'handbrake.zip');
   await new Promise((resolve, reject) => {
-    const c = spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', asset.browser_download_url]);
+    const c = trackInstall(spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', asset.browser_download_url]));
     c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
     c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLine && onLine('HandBrake: ' + s.replace(/\r/g, '').split('\n').pop()); });
-    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+    c.on('close', code => code === 0 ? resolve() : reject(new Error(code === null ? 'Annulé' : 'Téléchargement échoué (curl ' + code + ')')));
   });
   onLine && onLine('Extraction de HandBrake…');
   require('child_process').execSync(`powershell -Command "Expand-Archive -Path '${zip}' -DestinationPath '${dir}' -Force"`, { timeout: 120000 });
@@ -3642,10 +3653,10 @@ async function installRvmModel(modelKey, onLog) {
   if (fs.existsSync(dest) && fs.statSync(dest).size >= m.minBytes) return dest;
   onLog && onLog(`Téléchargement du modèle RVM « ${m.label} »…`);
   await new Promise((resolve, reject) => {
-    const c = spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '3', m.url]);
+    const c = trackInstall(spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '3', m.url]));
     c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
     c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLog && onLog('RVM: ' + s.replace(/\r/g, '').split('\n').pop()); });
-    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+    c.on('close', code => code === 0 ? resolve() : reject(new Error(code === null ? 'Annulé' : 'Téléchargement échoué (curl ' + code + ')')));
   });
   if (!fs.existsSync(dest) || fs.statSync(dest).size < m.minBytes) { try { fs.unlinkSync(dest); } catch (e) {} throw new Error('Modèle RVM incomplet.'); }
   return dest;
@@ -3654,7 +3665,7 @@ async function installRvmModel(modelKey, onLog) {
 ipcMain.handle('matting-detect', async () => {
   let ready = false, err = null;
   try { getOrt(); ready = true; } catch (e) { err = (e && e.message) || String(e); }
-  const models = Object.entries(matting.MODELS).map(([k, m]) => ({ key: k, label: m.label, installed: (() => { try { return fs.existsSync(path.join(RVM_DIR, m.file)) && fs.statSync(path.join(RVM_DIR, m.file)).size >= m.minBytes; } catch (e) { return false; } })() }));
+  const models = Object.entries(matting.MODELS).map(([k, m]) => { let size = 0, installed = false; try { size = fs.statSync(path.join(RVM_DIR, m.file)).size; installed = size >= m.minBytes; } catch (e) {} return { key: k, label: m.label, installed, size }; });
   return { ready, err, models };
 });
 ipcMain.handle('matting-install', async (e, modelKey) => {
@@ -3797,10 +3808,10 @@ async function installLamaModel(onLog) {
   if (fs.existsSync(dest) && fs.statSync(dest).size >= inpaint.LAMA.minBytes) return dest;
   onLog && onLog('Téléchargement du moteur LaMa (~200 Mo, première utilisation)…');
   await new Promise((resolve, reject) => {
-    const c = spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '3', inpaint.LAMA.url]);
+    const c = trackInstall(spawn('curl', ['-L', '--output', dest, '--progress-bar', '--retry', '3', inpaint.LAMA.url]));
     c.on('error', e => reject(new Error('curl indisponible: ' + e.message)));
     c.stderr.on('data', d => { const s = d.toString().trim(); if (s) onLog && onLog('LaMa: ' + s.replace(/\r/g, '').split('\n').pop()); });
-    c.on('close', code => code === 0 ? resolve() : reject(new Error('Téléchargement échoué (curl ' + code + ')')));
+    c.on('close', code => code === 0 ? resolve() : reject(new Error(code === null ? 'Annulé' : 'Téléchargement échoué (curl ' + code + ')')));
   });
   if (!fs.existsSync(dest) || fs.statSync(dest).size < inpaint.LAMA.minBytes) { try { fs.unlinkSync(dest); } catch (e) {} throw new Error('Modèle LaMa incomplet.'); }
   return dest;
@@ -3830,9 +3841,9 @@ const _byte = (v) => v < 0 ? 0 : v > 255 ? 255 : v;
 ipcMain.handle('inpaint-detect', async () => {
   let ready = false, err = null;
   try { getOrt(); ready = true; } catch (e) { err = (e && e.message) || String(e); }
-  let installed = false;
-  try { const d = path.join(LAMA_DIR, inpaint.LAMA.file); installed = fs.existsSync(d) && fs.statSync(d).size >= inpaint.LAMA.minBytes; } catch (e) {}
-  return { ready, err, installed };
+  let installed = false, size = 0;
+  try { const d = path.join(LAMA_DIR, inpaint.LAMA.file); const st = fs.statSync(d); size = st.size; installed = fs.existsSync(d) && st.size >= inpaint.LAMA.minBytes; } catch (e) {}
+  return { ready, err, installed, size };
 });
 
 ipcMain.handle('inpaint-install', async () => {

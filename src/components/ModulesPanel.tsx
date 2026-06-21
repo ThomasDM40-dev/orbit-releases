@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   Download, Bot, Sparkles, Video, Zap, Cpu, Monitor,
-  Loader2, Check, RefreshCw, AlertCircle, ExternalLink,
+  Loader2, Check, RefreshCw, AlertCircle, ExternalLink, X,
 } from 'lucide-react';
 import { t } from '@/i18n';
 
-type Status = { installed?: boolean; partial?: boolean; ready?: boolean; version?: string; detail?: string; models?: any[]; reason?: string };
+type Status = { installed?: boolean; partial?: boolean; ready?: boolean; version?: string; latest?: string; outdated?: boolean; size?: number; models?: any[]; reason?: string };
 type Prog = { label?: string; percent?: number };
 
 type Mod = {
@@ -25,7 +25,12 @@ const MODULES: Mod[] = [
     name: 'yt-dlp',
     desc: t("Moteur de téléchargement (YouTube et 1000+ sites)"),
     icon: Download,
-    detect: async () => ({ installed: true }),
+    detect: async (api) => {
+      const r = await api.checkToolUpdates?.().catch(() => null);
+      const y = r?.ytdlp;
+      if (!y) return { installed: true };
+      return { installed: true, version: y.current, latest: y.latest, outdated: !!y.outdated };
+    },
     install: (api) => api.updateYtdlp?.(),
   },
   {
@@ -76,7 +81,8 @@ const MODULES: Mod[] = [
     detect: async (api) => {
       const d = await api.mattingDetect?.();
       if (!d) return {};
-      return { installed: !!d.models?.some((m: any) => m.installed), models: d.models };
+      const inst = d.models?.find((m: any) => m.installed);
+      return { installed: !!inst, models: d.models, size: inst?.size };
     },
     install: (api, s) => api.mattingInstall?.(s.models?.[0]?.key || 'mobilenetv3'),
     subscribe: (api, cb) => api.onMattingProgress?.((d: any) => { if (d.id === 'install') cb({ label: d.log }); }),
@@ -90,6 +96,9 @@ const MODULES: Mod[] = [
     detect: (api) => api.topazDetect?.() ?? Promise.resolve({}),
   },
 ];
+
+const fmtSize = (b?: number) => !b ? '' : b > 1e9 ? (b / 1e9).toFixed(1) + ' Go' : Math.round(b / 1e6) + ' Mo';
+const pctFromText = (s?: string): number | null => { if (!s) return null; const m = s.match(/([\d.]+)\s*%/); return m ? Math.min(100, Math.round(parseFloat(m[1]))) : null; };
 
 export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
   const [status, setStatus] = useState<Record<string, Status>>({});
@@ -112,7 +121,11 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
 
   useEffect(() => {
     refreshAll();
-    const offs = MODULES.map(m => m.subscribe?.(electronAPI, (p) => setProg(prev => ({ ...prev, [m.id]: { ...prev[m.id], ...p } })))).filter(Boolean) as (() => void)[];
+    const offs = MODULES.map(m => m.subscribe?.(electronAPI, (p) => setProg(prev => {
+      const cur = { ...prev[m.id], ...p };
+      if (cur.percent == null) { const pc = pctFromText(cur.label); if (pc != null) cur.percent = pc; }
+      return { ...prev, [m.id]: cur };
+    }))).filter(Boolean) as (() => void)[];
     return () => offs.forEach(off => { try { off(); } catch {} });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [electronAPI]);
@@ -124,16 +137,19 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
     setProg(prev => ({ ...prev, [m.id]: { label: t("Préparation…") } }));
     try {
       const r = await m.install(electronAPI, status[m.id] || {});
-      if (r && r.ok === false) setErrors(prev => ({ ...prev, [m.id]: r.error || t("Échec de l'installation") }));
-      if (r && r.success === false) setErrors(prev => ({ ...prev, [m.id]: r.message || t("Échec de l'installation") }));
+      if (r && r.ok === false) throw new Error(r.error || t("Échec de l'installation"));
+      if (r && r.success === false) throw new Error(r.message || t("Échec de l'installation"));
       await detectOne(m);
     } catch (e: any) {
-      setErrors(prev => ({ ...prev, [m.id]: (e && e.message) || String(e) }));
+      const msg = (e && e.message) || String(e);
+      if (!/annul/i.test(msg)) setErrors(prev => ({ ...prev, [m.id]: msg }));
     } finally {
       setBusy(null);
       setProg(prev => { const n = { ...prev }; delete n[m.id]; return n; });
     }
   };
+
+  const cancel = () => electronAPI?.cancelInstall?.();
 
   const badge = (m: Mod, s: Status) => {
     if (m.external) {
@@ -141,9 +157,17 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
         ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-300">{t("Détecté")}{s.version ? ` · v${s.version}` : ''}</span>
         : <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-gray-400">{t("Non détecté")}</span>;
     }
+    if (s.outdated) return <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent) 18%, transparent)', color: 'var(--accent)' }}>{t("Mise à jour dispo")}</span>;
     if (s.installed) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-300">{t("Installé")}</span>;
     if (s.partial) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">{t("Partiel")}</span>;
     return <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-gray-400">{t("Non installé")}</span>;
+  };
+
+  // Version / size shown next to the description.
+  const detailText = (m: Mod, s: Status): string => {
+    if (m.id === 'ytdlp' && s.version) return s.outdated && s.latest ? `${s.version} → ${s.latest}` : s.version;
+    if (s.size) return fmtSize(s.size);
+    return '';
   };
 
   return (
@@ -162,6 +186,7 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
           const isBusy = busy === m.id;
           const err = errors[m.id];
           const Icon = m.icon;
+          const detail = detailText(m, s);
           return (
             <div key={m.id} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
               <div className="flex items-center gap-3">
@@ -170,14 +195,21 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><p className="text-sm font-semibold text-gray-100 truncate">{m.name}</p>{badge(m, s)}</div>
-                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">{m.desc}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">{m.desc}{detail ? <span className="text-gray-400 font-mono"> · {detail}</span> : null}</p>
                 </div>
                 <div className="shrink-0 flex items-center gap-1.5">
                   {m.external ? (
                     <button onClick={() => electronAPI?.openExternalUrl?.('https://www.topazlabs.com/topaz-video-ai')} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5"><ExternalLink className="w-4 h-4" /> {t("Site")}</button>
                   ) : isBusy ? (
-                    <button disabled className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm flex items-center gap-1.5 disabled:opacity-50 min-w-[120px] justify-center">
-                      <Loader2 className="w-4 h-4 animate-spin" /> {t("En cours…")}
+                    <>
+                      <button disabled className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm flex items-center gap-1.5 disabled:opacity-70 min-w-[120px] justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin" /> {t("En cours…")}
+                      </button>
+                      <button onClick={cancel} title={t("Annuler")} aria-label={t("Annuler")} className="p-2 rounded-lg bg-red-500/10 border border-red-500/25 text-red-300 hover:bg-red-500/20"><X className="w-4 h-4" /></button>
+                    </>
+                  ) : s.outdated ? (
+                    <button onClick={() => handleInstall(m)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-white text-sm flex items-center gap-1.5 disabled:opacity-50 min-w-[120px] justify-center" style={{ background: 'var(--accent,#ec4899)' }}>
+                      <Download className="w-4 h-4" /> {t("Mettre à jour")}
                     </button>
                   ) : s.installed ? (
                     <>
