@@ -23,6 +23,12 @@ import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { t, getLang, setLang, LANGS, type Lang } from "@/i18n";
 
+// Fires only once per real process launch. The whole tree is remounted when the
+// language changes (<App key={lang}/>), so without this guard the launch update
+// check would re-run on every language switch and flash the "Tout est à jour"
+// toast each time.
+let launchUpdateCheckDone = false;
+
 export default function App() {
   const defaultMainTabs = [
     { id: 'downloads', label: t('Téléchargements') },
@@ -132,24 +138,27 @@ export default function App() {
     }
     document.addEventListener("mousedown", handleClickOutside);
 
-    // Update check on launch
-    setUpdateStatus(t("Vérification des mises à jour..."));
-    if (typeof window !== "undefined" && (window as any).electronAPI?.checkUpdates) {
-      (window as any).electronAPI.checkUpdates().then((res: any) => {
-        setUpdateOk(res.upToDate);
-        setUpdateStatus(res.message);
-        setTimeout(() => setUpdateStatus(null), 6000);
-      }).catch(() => {
-        setUpdateOk(null);
-        setUpdateStatus(t("Impossible de vérifier les mises à jour"));
-        setTimeout(() => setUpdateStatus(null), 4000);
-      });
-    } else {
-      setTimeout(() => {
-        setUpdateOk(true);
-        setUpdateStatus(t("Tout est à jour !"));
-      }, 1200);
-      setTimeout(() => setUpdateStatus(null), 5000);
+    // Update check — only on the real app launch, not on language remounts.
+    if (!launchUpdateCheckDone) {
+      launchUpdateCheckDone = true;
+      setUpdateStatus(t("Vérification des mises à jour..."));
+      if (typeof window !== "undefined" && (window as any).electronAPI?.checkUpdates) {
+        (window as any).electronAPI.checkUpdates().then((res: any) => {
+          setUpdateOk(res.upToDate);
+          setUpdateStatus(res.message);
+          setTimeout(() => setUpdateStatus(null), 6000);
+        }).catch(() => {
+          setUpdateOk(null);
+          setUpdateStatus(t("Impossible de vérifier les mises à jour"));
+          setTimeout(() => setUpdateStatus(null), 4000);
+        });
+      } else {
+        setTimeout(() => {
+          setUpdateOk(true);
+          setUpdateStatus(t("Tout est à jour !"));
+        }, 1200);
+        setTimeout(() => setUpdateStatus(null), 5000);
+      }
     }
 
     const onUpdateAvailable = () => {

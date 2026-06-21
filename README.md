@@ -180,6 +180,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.20.1** — **Correctif** : changer de langue ne relance plus la vérification des mises à jour (la notification « Tout est à jour » n'apparaît qu'au démarrage)
 - **v0.20.0** — **Interface entièrement multilingue** : toute l'app retraduite de A à Z en **6 langues** (FR, EN, ES, DE, IT, PT) · détection auto de la langue système · sélecteur dans le menu Langue et les Réglages
 - **v0.19.x** — **Remplacer/Ajouter par inpainting Stable Diffusion 100% local** : l'IA est conditionnée sur la photo autour de la zone et fond le rendu dans la scène (fini les images aléatoires) — gratuit, hors-ligne, sans clé · **accéléré GPU** (DirectML, repli CPU auto, ~25 s/génération)
 - **v0.18.x** — **AI Eraser** complet : sélection au clic (**SAM**), détection automatique d'objets (**YOLO**), suppression haute résolution (LaMa) — 100% local & gratuit
