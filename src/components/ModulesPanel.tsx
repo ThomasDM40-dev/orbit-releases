@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Download, Bot, Sparkles, Video, Zap, Cpu, Monitor,
   Loader2, Check, RefreshCw, AlertCircle, ExternalLink,
@@ -14,7 +14,6 @@ type Mod = {
   desc: string;
   icon: any;
   external?: boolean;            // licensed/3rd-party, status only (no install button)
-  actionLabel: (s: Status) => string;
   detect: (api: any) => Promise<Status>;
   install?: (api: any, s: Status) => Promise<any>;
   subscribe?: (api: any, cb: (p: Prog) => void) => (() => void) | undefined;
@@ -26,7 +25,6 @@ const MODULES: Mod[] = [
     name: 'yt-dlp',
     desc: t("Moteur de téléchargement (YouTube et 1000+ sites)"),
     icon: Download,
-    actionLabel: () => t("Mettre à jour"),
     detect: async () => ({ installed: true }),
     install: (api) => api.updateYtdlp?.(),
   },
@@ -35,7 +33,6 @@ const MODULES: Mod[] = [
     name: t("IA locale (Assistant)"),
     desc: t("Modèle de langage hors-ligne, sans clé (~2 Go)"),
     icon: Bot,
-    actionLabel: (s) => s.installed ? t("Réinstaller") : t("Installer"),
     detect: (api) => api.llmStatus?.() ?? Promise.resolve({}),
     install: (api) => api.llmInstall?.(),
     subscribe: (api, cb) => api.onLlmProgress?.((d: any) => cb({ label: d.stage, percent: d.percent })),
@@ -45,7 +42,6 @@ const MODULES: Mod[] = [
     name: t("Amélioration IA (Real-ESRGAN + RIFE)"),
     desc: t("Upscale et interpolation de fluidité"),
     icon: Sparkles,
-    actionLabel: (s) => s.installed ? t("Réinstaller") : t("Installer"),
     detect: async (api) => {
       const d = await api.enhanceDetect?.();
       if (!d) return {};
@@ -59,7 +55,6 @@ const MODULES: Mod[] = [
     name: 'HandBrake',
     desc: t("Compression et conversion vidéo avancée"),
     icon: Video,
-    actionLabel: (s) => s.installed ? t("Réinstaller") : t("Installer"),
     detect: (api) => api.hbDetect?.() ?? Promise.resolve({}),
     install: (api) => api.hbInstall?.(),
     subscribe: (api, cb) => api.onHbProgress?.((d: any) => { if (d.id === 'install') cb({ label: d.log }); }),
@@ -69,7 +64,6 @@ const MODULES: Mod[] = [
     name: t("Gomme magique IA (LaMa)"),
     desc: t("Suppression d'objets sur les images"),
     icon: Zap,
-    actionLabel: (s) => s.installed ? t("Réinstaller") : t("Installer"),
     detect: (api) => api.inpaintDetect?.() ?? Promise.resolve({}),
     install: (api) => api.inpaintInstall?.(),
     subscribe: (api, cb) => api.onInpaintProgress?.((d: any) => cb({ label: d.stage })),
@@ -79,7 +73,6 @@ const MODULES: Mod[] = [
     name: t("Détourage IA (Robust Video Matting)"),
     desc: t("Suppression de fond sur les vidéos"),
     icon: Cpu,
-    actionLabel: (s) => s.installed ? t("Réinstaller") : t("Installer"),
     detect: async (api) => {
       const d = await api.mattingDetect?.();
       if (!d) return {};
@@ -94,7 +87,6 @@ const MODULES: Mod[] = [
     desc: t("Logiciel sous licence — détecté automatiquement"),
     icon: Monitor,
     external: true,
-    actionLabel: () => '',
     detect: (api) => api.topazDetect?.() ?? Promise.resolve({}),
   },
 ];
@@ -105,7 +97,6 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
   const [prog, setProg] = useState<Record<string, Prog>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
-  const progRef = useRef(setProg); progRef.current = setProg;
 
   const detectOne = async (m: Mod) => {
     try { const s = await m.detect(electronAPI); setStatus(prev => ({ ...prev, [m.id]: s || {} })); }
@@ -181,13 +172,21 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
                   <div className="flex items-center gap-2"><p className="text-sm font-semibold text-gray-100 truncate">{m.name}</p>{badge(m, s)}</div>
                   <p className="text-[11px] text-gray-500 mt-0.5 truncate">{m.desc}</p>
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 flex items-center gap-1.5">
                   {m.external ? (
                     <button onClick={() => electronAPI?.openExternalUrl?.('https://www.topazlabs.com/topaz-video-ai')} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5"><ExternalLink className="w-4 h-4" /> {t("Site")}</button>
+                  ) : isBusy ? (
+                    <button disabled className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm flex items-center gap-1.5 disabled:opacity-50 min-w-[120px] justify-center">
+                      <Loader2 className="w-4 h-4 animate-spin" /> {t("En cours…")}
+                    </button>
+                  ) : s.installed ? (
+                    <>
+                      <span className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-300 text-sm flex items-center gap-1.5 min-w-[120px] justify-center"><Check className="w-4 h-4" /> {t("À jour")}</span>
+                      <button onClick={() => handleInstall(m)} disabled={!!busy} title={t("Réinstaller")} aria-label={t("Réinstaller")} className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-50"><RefreshCw className="w-4 h-4" /></button>
+                    </>
                   ) : (
-                    <button onClick={() => handleInstall(m)} disabled={isBusy || (!!busy && !isBusy)} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5 disabled:opacity-50 min-w-[120px] justify-center">
-                      {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : s.installed ? <RefreshCw className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                      {isBusy ? t("En cours…") : m.actionLabel(s)}
+                    <button onClick={() => handleInstall(m)} disabled={!!busy} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5 disabled:opacity-50 min-w-[120px] justify-center">
+                      <Download className="w-4 h-4" /> {t("Installer")}
                     </button>
                   )}
                 </div>

@@ -180,6 +180,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.20.3** — **Modules & IA** : un module déjà installé affiche « À jour » au lieu de « Mettre à jour » (icône ↻ pour forcer une réinstallation)
 - **v0.20.2** — **Nouvel onglet « Modules & IA »** dans les réglages : installe/met à jour tous les moteurs et modèles d'IA (yt-dlp, IA locale, Real-ESRGAN+RIFE, HandBrake, LaMa, RVM) depuis un seul endroit, avec état et progression en direct
 - **v0.20.1** — **Correctif** : changer de langue ne relance plus la vérification des mises à jour (la notification « Tout est à jour » n'apparaît qu'au démarrage)
 - **v0.20.0** — **Interface entièrement multilingue** : toute l'app retraduite de A à Z en **6 langues** (FR, EN, ES, DE, IT, PT) · détection auto de la langue système · sélecteur dans le menu Langue et les Réglages

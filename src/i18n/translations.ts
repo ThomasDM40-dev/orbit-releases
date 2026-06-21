@@ -867,6 +867,7 @@ const entries: Record<string, Row> = {
   "Modules & IA": { en: "Modules & AI", es: "Módulos e IA", de: "Module & KI", it: "Moduli e IA", pt: "Módulos e IA" },
   "Gère les moteurs et modèles d'IA d'Orbit. Chaque module est téléchargé une seule fois et tourne sur ta machine.": { en: "Manage Orbit's engines and AI models. Each module is downloaded once and runs on your machine.", es: "Gestiona los motores y modelos de IA de Orbit. Cada módulo se descarga una sola vez y se ejecuta en tu equipo.", de: "Verwalte Orbits Engines und KI-Modelle. Jedes Modul wird einmal heruntergeladen und läuft auf deinem Rechner.", it: "Gestisci i motori e i modelli IA di Orbit. Ogni modulo viene scaricato una sola volta e funziona sul tuo computer.", pt: "Gerencie os motores e modelos de IA do Orbit. Cada módulo é baixado uma única vez e roda na sua máquina." },
   "Actualiser": { en: "Refresh", es: "Actualizar", de: "Aktualisieren", it: "Aggiorna", pt: "Atualizar" },
+  "À jour": { en: "Up to date", es: "Actualizado", de: "Aktuell", it: "Aggiornato", pt: "Atualizado" },
   "Installé": { en: "Installed", es: "Instalado", de: "Installiert", it: "Installato", pt: "Instalado" },
   "Non installé": { en: "Not installed", es: "No instalado", de: "Nicht installiert", it: "Non installato", pt: "Não instalado" },
   "Partiel": { en: "Partial", es: "Parcial", de: "Teilweise", it: "Parziale", pt: "Parcial" },
