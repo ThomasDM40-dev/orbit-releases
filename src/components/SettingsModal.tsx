@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, Download, Palette, Monitor, Cpu, Globe, Info,
-  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot
+  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot, Boxes
 } from 'lucide-react';
 import ChangelogModal from './ChangelogModal';
+import ModulesPanel from './ModulesPanel';
 import GlassSelect from './GlassSelect';
 import { t, LANGS, type Lang } from '@/i18n';
 
@@ -105,6 +106,7 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
     { id: 'downloads', label: t('Téléchargements'), icon: <Download className="w-4 h-4" /> },
     { id: 'appearance', label: t('Apparence'), icon: <Palette className="w-4 h-4" /> },
     { id: 'ai', label: t('IA & Performance'), icon: <Cpu className="w-4 h-4" /> },
+    { id: 'modules', label: t('Modules & IA'), icon: <Boxes className="w-4 h-4" /> },
     { id: 'network', label: t('Réseau'), icon: <Globe className="w-4 h-4" /> },
     { id: 'system', label: t('Système'), icon: <Monitor className="w-4 h-4" /> },
     { id: 'about', label: t('À propos'), icon: <Info className="w-4 h-4" /> },
@@ -262,6 +264,9 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
             </Card>
           </div>
         );
+
+      case 'modules':
+        return <ModulesPanel electronAPI={electronAPI} />;
 
       case 'network':
         return (

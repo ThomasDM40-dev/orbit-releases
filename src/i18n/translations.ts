@@ -862,6 +862,29 @@ const entries: Record<string, Row> = {
   "Convertir": { en: "Convert", es: "Convertir", de: "Konvertieren", it: "Converti", pt: "Converter" },
   "Annuler": { en: "Cancel", es: "Cancelar", de: "Abbrechen", it: "Annulla", pt: "Cancelar" },
   "Voir le fichier source": { en: "Show source file", es: "Ver archivo de origen", de: "Quelldatei anzeigen", it: "Mostra file di origine", pt: "Ver arquivo de origem" },
+
+  // ── Settings: Modules & AI tab ─────────────────────────────────────
+  "Modules & IA": { en: "Modules & AI", es: "Módulos e IA", de: "Module & KI", it: "Moduli e IA", pt: "Módulos e IA" },
+  "Gère les moteurs et modèles d'IA d'Orbit. Chaque module est téléchargé une seule fois et tourne sur ta machine.": { en: "Manage Orbit's engines and AI models. Each module is downloaded once and runs on your machine.", es: "Gestiona los motores y modelos de IA de Orbit. Cada módulo se descarga una sola vez y se ejecuta en tu equipo.", de: "Verwalte Orbits Engines und KI-Modelle. Jedes Modul wird einmal heruntergeladen und läuft auf deinem Rechner.", it: "Gestisci i motori e i modelli IA di Orbit. Ogni modulo viene scaricato una sola volta e funziona sul tuo computer.", pt: "Gerencie os motores e modelos de IA do Orbit. Cada módulo é baixado uma única vez e roda na sua máquina." },
+  "Actualiser": { en: "Refresh", es: "Actualizar", de: "Aktualisieren", it: "Aggiorna", pt: "Atualizar" },
+  "Installé": { en: "Installed", es: "Instalado", de: "Installiert", it: "Installato", pt: "Instalado" },
+  "Non installé": { en: "Not installed", es: "No instalado", de: "Nicht installiert", it: "Non installato", pt: "Não instalado" },
+  "Partiel": { en: "Partial", es: "Parcial", de: "Teilweise", it: "Parziale", pt: "Parcial" },
+  "Détecté": { en: "Detected", es: "Detectado", de: "Erkannt", it: "Rilevato", pt: "Detectado" },
+  "Non détecté": { en: "Not detected", es: "No detectado", de: "Nicht erkannt", it: "Non rilevato", pt: "Não detectado" },
+  "Site": { en: "Website", es: "Sitio web", de: "Website", it: "Sito web", pt: "Site" },
+  "Échec de l'installation": { en: "Installation failed", es: "Error de instalación", de: "Installation fehlgeschlagen", it: "Installazione non riuscita", pt: "Falha na instalação" },
+  "Moteur de téléchargement (YouTube et 1000+ sites)": { en: "Download engine (YouTube & 1000+ sites)", es: "Motor de descargas (YouTube y más de 1000 sitios)", de: "Download-Engine (YouTube & 1000+ Seiten)", it: "Motore di download (YouTube e oltre 1000 siti)", pt: "Motor de download (YouTube e mais de 1000 sites)" },
+  "IA locale (Assistant)": { en: "Local AI (Assistant)", es: "IA local (Asistente)", de: "Lokale KI (Assistent)", it: "IA locale (Assistente)", pt: "IA local (Assistente)" },
+  "Modèle de langage hors-ligne, sans clé (~2 Go)": { en: "Offline language model, no key (~2 GB)", es: "Modelo de lenguaje sin conexión, sin clave (~2 GB)", de: "Offline-Sprachmodell, ohne Schlüssel (~2 GB)", it: "Modello linguistico offline, senza chiave (~2 GB)", pt: "Modelo de linguagem offline, sem chave (~2 GB)" },
+  "Amélioration IA (Real-ESRGAN + RIFE)": { en: "AI Enhance (Real-ESRGAN + RIFE)", es: "Mejora IA (Real-ESRGAN + RIFE)", de: "KI-Verbesserung (Real-ESRGAN + RIFE)", it: "Miglioramento IA (Real-ESRGAN + RIFE)", pt: "Melhoria IA (Real-ESRGAN + RIFE)" },
+  "Upscale et interpolation de fluidité": { en: "Upscaling and smoothness interpolation", es: "Escalado e interpolación de fluidez", de: "Hochskalierung und Bewegungsinterpolation", it: "Upscaling e interpolazione della fluidità", pt: "Upscaling e interpolação de fluidez" },
+  "Compression et conversion vidéo avancée": { en: "Advanced video compression and conversion", es: "Compresión y conversión de vídeo avanzada", de: "Erweiterte Videokomprimierung und -konvertierung", it: "Compressione e conversione video avanzata", pt: "Compressão e conversão de vídeo avançada" },
+  "Gomme magique IA (LaMa)": { en: "AI Magic Eraser (LaMa)", es: "Borrador mágico IA (LaMa)", de: "KI-Zauberradierer (LaMa)", it: "Gomma magica IA (LaMa)", pt: "Borracha mágica IA (LaMa)" },
+  "Suppression d'objets sur les images": { en: "Object removal on images", es: "Eliminación de objetos en imágenes", de: "Objektentfernung in Bildern", it: "Rimozione di oggetti dalle immagini", pt: "Remoção de objetos em imagens" },
+  "Détourage IA (Robust Video Matting)": { en: "AI Cutout (Robust Video Matting)", es: "Recorte IA (Robust Video Matting)", de: "KI-Freistellung (Robust Video Matting)", it: "Scontorno IA (Robust Video Matting)", pt: "Recorte IA (Robust Video Matting)" },
+  "Suppression de fond sur les vidéos": { en: "Background removal on videos", es: "Eliminación de fondo en vídeos", de: "Hintergrundentfernung in Videos", it: "Rimozione dello sfondo dai video", pt: "Remoção de fundo em vídeos" },
+  "Logiciel sous licence — détecté automatiquement": { en: "Licensed software — auto-detected", es: "Software con licencia: detectado automáticamente", de: "Lizenzierte Software – automatisch erkannt", it: "Software con licenza — rilevato automaticamente", pt: "Software licenciado — detectado automaticamente" },
 };
 
 export const dict: Record<Target, Record<string, string>> = {
