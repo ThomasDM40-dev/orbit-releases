@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import SegmentedTabs from './SegmentedTabs';
 import GlassSelect from './GlassSelect';
+import { t } from '@/i18n';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -95,9 +96,9 @@ export default function TopazVideoAI() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [subTab, setSubTab] = useState('queue');
   const [subTabs, setSubTabs] = useState([
-    { id: 'queue', label: 'File & Réglages', visible: true },
-    { id: 'preview', label: 'Aperçu Avant/Après', visible: true },
-    { id: 'perf', label: 'Performance GPU', visible: true },
+    { id: 'queue', label: t('File & Réglages'), visible: true },
+    { id: 'preview', label: t('Aperçu Avant/Après'), visible: true },
+    { id: 'perf', label: t('Performance GPU'), visible: true },
   ]);
   const [presets, setPresets] = useState<any[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -139,8 +140,8 @@ export default function TopazVideoAI() {
   // ── persist queue (autosave) ──
   useEffect(() => {
     if (!electron?.topazQueueSave) return;
-    const t = setTimeout(() => electron.topazQueueSave(jobs), 600);
-    return () => clearTimeout(t);
+    const tm = setTimeout(() => electron.topazQueueSave(jobs), 600);
+    return () => clearTimeout(tm);
   }, [jobs]);
 
   // ── GPU stats polling ──
@@ -166,7 +167,7 @@ export default function TopazVideoAI() {
       } : j));
     });
     electron.onTopazComplete?.((data: any) => {
-      setJobs(prev => prev.map(j => j.id === data.id ? { ...j, status: 'done', percent: 100, outputPath: data.outputPath, stage: 'Terminé' } : j));
+      setJobs(prev => prev.map(j => j.id === data.id ? { ...j, status: 'done', percent: 100, outputPath: data.outputPath, stage: t('Terminé') } : j));
       // auto-start next queued
       setTimeout(() => runNext(), 400);
     });
@@ -227,7 +228,7 @@ export default function TopazVideoAI() {
   const applyToAll = () => {
     if (!selected) return;
     setJobs(prev => prev.map(j => ({ ...j, settings: { ...selected.settings } })));
-    showToast('info', 'Réglages appliqués à toute la file.');
+    showToast('info', t('Réglages appliqués à toute la file.'));
   };
 
   // ── build a backend job spec from settings ──
@@ -274,8 +275,8 @@ export default function TopazVideoAI() {
   };
 
   const startJob = (job: Job) => {
-    if (!detect?.installed) { showToast('error', 'Topaz non détecté.'); return; }
-    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'running', percent: 0, stage: 'Démarrage…', error: undefined } : j));
+    if (!detect?.installed) { showToast('error', t('Topaz non détecté.')); return; }
+    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'running', percent: 0, stage: t('Démarrage…'), error: undefined } : j));
     electron.topazStart?.(toSpec(job));
   };
 
@@ -290,7 +291,7 @@ export default function TopazVideoAI() {
     if (!jobs.some(j => j.status === 'running')) {
       const next = jobs.find(j => j.status === 'idle');
       if (next) startJob(next);
-      else showToast('info', 'Aucun élément en attente.');
+      else showToast('info', t('Aucun élément en attente.'));
     }
   };
 
@@ -300,7 +301,7 @@ export default function TopazVideoAI() {
   };
 
   const applyPreset = (patch: Partial<Settings>) => {
-    if (!selected) { showToast('info', 'Sélectionnez d\'abord un fichier.'); return; }
+    if (!selected) { showToast('info', t('Sélectionnez d\'abord un fichier.')); return; }
     // For "Anime" the model is left blank → pick anime-appropriate (Iris/Proteus).
     const resolved = { ...patch };
     if (patch.enhanceModel === '') {
@@ -308,17 +309,17 @@ export default function TopazVideoAI() {
     }
     if (patch.scaleMode === 'resolution') resolved.scaleMode = 'resolution';
     patchSettings(resolved);
-    showToast('info', 'Préréglage appliqué.');
+    showToast('info', t('Préréglage appliqué.'));
   };
 
   const savePreset = async () => {
     if (!selected) return;
-    const name = prompt('Nom du préréglage :');
+    const name = prompt(t('Nom du préréglage :'));
     if (!name) return;
     const np = [...presets, { name, settings: selected.settings }];
     setPresets(np);
     await electron.topazPresetsSave?.(np);
-    showToast('info', 'Préréglage enregistré.');
+    showToast('info', t('Préréglage enregistré.'));
   };
 
   const browseOutput = async () => {
@@ -333,12 +334,12 @@ export default function TopazVideoAI() {
         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-fuchsia-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
           <Sparkles className="w-9 h-9 text-fuchsia-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white">Topaz Video AI introuvable</h2>
-        <p className="text-gray-400 max-w-md text-sm">{detect.reason || 'Aucune installation de Topaz Video détectée.'}</p>
-        <p className="text-gray-500 max-w-md text-xs">Orbit pilote votre installation Topaz Video AI. Installez-la et activez votre licence, puis relancez la détection.</p>
+        <h2 className="text-2xl font-bold text-white">{t("Topaz Video AI introuvable")}</h2>
+        <p className="text-gray-400 max-w-md text-sm">{detect.reason || t('Aucune installation de Topaz Video détectée.')}</p>
+        <p className="text-gray-500 max-w-md text-xs">{t("Orbit pilote votre installation Topaz Video AI. Installez-la et activez votre licence, puis relancez la détection.")}</p>
         <button onClick={async () => { const d = await electron.topazDetect?.(); setDetect(d); if (d?.installed) setModels(d.models); }}
           className="px-5 py-2.5 rounded-xl bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 hover:bg-fuchsia-500/30 transition-all text-sm font-semibold flex items-center gap-2">
-          <RotateCcw className="w-4 h-4" /> Relancer la détection
+          <RotateCcw className="w-4 h-4" /> {t("Relancer la détection")}
         </button>
       </div>
     );
@@ -356,8 +357,8 @@ export default function TopazVideoAI() {
             <h2 className="text-lg font-bold text-white">Topaz Video AI</h2>
             <p className="text-[11px] text-gray-500">
               {detect?.installed
-                ? <>Moteur détecté{detect.nvidia ? ` · ${detect.nvidia}` : ''}{detect.hasNvenc ? ' · NVENC' : ''}</>
-                : 'Détection…'}
+                ? <>{t("Moteur détecté")}{detect.nvidia ? ` · ${detect.nvidia}` : ''}{detect.hasNvenc ? ' · NVENC' : ''}</>
+                : t('Détection…')}
             </p>
           </div>
         </div>
@@ -392,11 +393,11 @@ export default function TopazVideoAI() {
               className={`m-3 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 py-6 cursor-pointer ${dragOver ? 'border-fuchsia-500/60 bg-fuchsia-500/10' : 'border-white/10 hover:border-white/20 bg-white/[0.02]'}`}
               onClick={handleBrowse}>
               <Plus className="w-6 h-6 text-fuchsia-400" />
-              <p className="text-sm text-gray-300 font-medium">Glissez vos vidéos ici</p>
-              <p className="text-[11px] text-gray-500">ou cliquez pour parcourir · sélection multiple</p>
+              <p className="text-sm text-gray-300 font-medium">{t("Glissez vos vidéos ici")}</p>
+              <p className="text-[11px] text-gray-500">{t("ou cliquez pour parcourir · sélection multiple")}</p>
             </div>
             <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
-              {jobs.length === 0 && <p className="text-center text-gray-600 text-xs mt-6">File d'attente vide</p>}
+              {jobs.length === 0 && <p className="text-center text-gray-600 text-xs mt-6">{t("File d'attente vide")}</p>}
               {jobs.map(job => (
                 <button key={job.id} onClick={() => setSelectedId(job.id)}
                   className={`w-full text-left rounded-xl border p-2 flex gap-2.5 transition-all ${selectedId === job.id ? 'border-fuchsia-500/50 bg-fuchsia-500/10' : 'border-white/8 bg-white/[0.03] hover:bg-white/[0.06]'}`}>
@@ -406,15 +407,15 @@ export default function TopazVideoAI() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-200 truncate font-medium">{job.name}</p>
                     <p className="text-[10px] text-gray-500 truncate">
-                      {job.meta ? `${job.meta.width}×${job.meta.height} · ${Math.round(job.meta.fps)}fps · ${fmtDur(job.meta.duration)} · ${fmtSize(job.meta.size)}` : 'Analyse…'}
+                      {job.meta ? `${job.meta.width}×${job.meta.height} · ${Math.round(job.meta.fps)}fps · ${fmtDur(job.meta.duration)} · ${fmtSize(job.meta.size)}` : t('Analyse…')}
                     </p>
                     {job.status === 'running' && (
                       <div className="mt-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-500" style={{ width: `${job.percent}%` }} />
                       </div>
                     )}
-                    {job.status === 'done' && <span className="text-[10px] text-green-400">✓ Terminé</span>}
-                    {job.status === 'error' && <span className="text-[10px] text-red-400">✕ Erreur</span>}
+                    {job.status === 'done' && <span className="text-[10px] text-green-400">{t("✓ Terminé")}</span>}
+                    {job.status === 'error' && <span className="text-[10px] text-red-400">{t("✕ Erreur")}</span>}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); job.status === 'running' ? cancelJob(job) : removeJob(job.id); }}
                     className="shrink-0 text-gray-600 hover:text-red-400 transition-colors self-start">
@@ -427,7 +428,7 @@ export default function TopazVideoAI() {
               <button onClick={startAll} disabled={!jobs.length}
                 className="flex-1 px-3 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
                 style={{ background: 'linear-gradient(135deg, rgba(217,70,239,0.7), rgba(168,85,247,0.7))', border: '1px solid rgba(255,255,255,0.2)', color: 'white', boxShadow: '0 4px 20px rgba(217,70,239,0.35)' }}>
-                <Play className="w-4 h-4 fill-current" /> Lancer la file
+                <Play className="w-4 h-4 fill-current" /> {t("Lancer la file")}
               </button>
             </div>
           </div>
@@ -435,7 +436,7 @@ export default function TopazVideoAI() {
           {/* Right: settings */}
           <div className="flex-1 overflow-y-auto">
             {!selected ? (
-              <div className="h-full flex items-center justify-center text-gray-600 text-sm">Sélectionnez un fichier pour configurer le traitement</div>
+              <div className="h-full flex items-center justify-center text-gray-600 text-sm">{t("Sélectionnez un fichier pour configurer le traitement")}</div>
             ) : (
               <SettingsPanel
                 job={selected} models={models} gpuList={gpuList} encoders={detect?.encoders || []}
@@ -534,7 +535,7 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
         {BUILTIN_PRESETS.map(p => (
           <button key={p.name} onClick={() => onApplyPreset(p.patch)}
             className="px-3 py-1.5 rounded-xl text-xs font-medium bg-white/5 border border-white/10 hover:bg-white/10 hover:border-fuchsia-500/30 transition-all flex items-center gap-1.5">
-            <span>{p.icon}</span> {p.name}
+            <span>{p.icon}</span> {t(p.name)}
           </button>
         ))}
         {presets.map((p: any, i: number) => (
@@ -544,23 +545,23 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
           </button>
         ))}
         <button onClick={onSavePreset} className="px-3 py-1.5 rounded-xl text-xs font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center gap-1.5">
-          <Save className="w-3 h-3" /> Enregistrer
+          <Save className="w-3 h-3" /> {t("Enregistrer")}
         </button>
       </div>
 
       {/* Enhance / Upscale */}
-      <Section title="Amélioration & Upscale" icon={<Wand2 className="w-3.5 h-3.5 text-fuchsia-400" />} on={s.enhanceEnabled} onToggle={() => patch({ enhanceEnabled: !s.enhanceEnabled })}>
+      <Section title={t("Amélioration & Upscale")} icon={<Wand2 className="w-3.5 h-3.5 text-fuchsia-400" />} on={s.enhanceEnabled} onToggle={() => patch({ enhanceEnabled: !s.enhanceEnabled })}>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={LABEL_CLS}>Modèle IA</label>
-            <GlassSelect className="mt-1 w-full" value={enhanceModel?.family || ''} ariaLabel="Modèle IA"
+            <label className={LABEL_CLS}>{t("Modèle IA")}</label>
+            <GlassSelect className="mt-1 w-full" value={enhanceModel?.family || ''} ariaLabel={t("Modèle IA")}
               onChange={v => { const m = models.upscale.find((x: ModelEntry) => x.family === v); if (m) patch({ enhanceModel: m.defaultCode, proteusMode: m.supportsManual ? s.proteusMode : 'auto' }); }}
               options={(models?.upscale || []).map((m: ModelEntry) => ({ value: m.family, label: m.name }))} />
           </div>
           {enhanceModel && enhanceModel.codes.length > 1 && (
             <div>
-              <label className={LABEL_CLS}>Version</label>
-              <GlassSelect className="mt-1 w-full" value={s.enhanceModel} onChange={v => patch({ enhanceModel: v })} ariaLabel="Version"
+              <label className={LABEL_CLS}>{t("Version")}</label>
+              <GlassSelect className="mt-1 w-full" value={s.enhanceModel} onChange={v => patch({ enhanceModel: v })} ariaLabel={t("Version")}
                 options={enhanceModel.codes.map(c => ({ value: c, label: c }))} />
             </div>
           )}
@@ -568,7 +569,7 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
 
         {/* Scale buttons + resolution */}
         <div>
-          <label className={LABEL_CLS}>Échelle</label>
+          <label className={LABEL_CLS}>{t("Échelle")}</label>
           <div className="flex gap-1.5 flex-wrap mt-1.5">
             {SCALES.map(sc => (
               <button key={sc} onClick={() => patch({ scaleMode: 'scale', scale: sc, resPreset: 'Auto' })}
@@ -578,15 +579,15 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
         </div>
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
-            <label className={LABEL_CLS}>Résolution cible</label>
-            <GlassSelect className="mt-1 w-full" value={s.scaleMode === 'resolution' ? s.resPreset : 'Auto'} ariaLabel="Résolution cible"
+            <label className={LABEL_CLS}>{t("Résolution cible")}</label>
+            <GlassSelect className="mt-1 w-full" value={s.scaleMode === 'resolution' ? s.resPreset : 'Auto'} ariaLabel={t("Résolution cible")}
               onChange={v => { patch(v === 'Auto' ? { scaleMode: 'scale', resPreset: 'Auto' } : { scaleMode: 'resolution', resPreset: v }); }}
-              options={RES_PRESETS.map(r => ({ value: r, label: r }))} />
+              options={RES_PRESETS.map(r => ({ value: r, label: t(r) }))} />
           </div>
           {s.scaleMode === 'resolution' && s.resPreset === 'Personnalisé' && (
             <div className="flex gap-2 items-end">
-              <div><label className={LABEL_CLS}>Largeur</label><input type="number" className={INPUT_CLS + ' mt-1'} value={s.targetW} onChange={e => patch({ targetW: Number(e.target.value) })} /></div>
-              <div><label className={LABEL_CLS}>Hauteur</label><input type="number" className={INPUT_CLS + ' mt-1'} value={s.targetH} onChange={e => patch({ targetH: Number(e.target.value) })} /></div>
+              <div><label className={LABEL_CLS}>{t("Largeur")}</label><input type="number" className={INPUT_CLS + ' mt-1'} value={s.targetW} onChange={e => patch({ targetW: Number(e.target.value) })} /></div>
+              <div><label className={LABEL_CLS}>{t("Hauteur")}</label><input type="number" className={INPUT_CLS + ' mt-1'} value={s.targetH} onChange={e => patch({ targetH: Number(e.target.value) })} /></div>
             </div>
           )}
         </div>
@@ -598,101 +599,101 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
               {(['auto', 'manual'] as const).map(mode => (
                 <button key={mode} onClick={() => patch({ proteusMode: mode })}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${s.proteusMode === mode ? 'bg-fuchsia-500/30 text-fuchsia-100 border border-fuchsia-500/50' : 'bg-white/5 text-gray-400 border border-white/10'}`}>
-                  {mode === 'auto' ? 'Auto' : 'Manuel'}
+                  {mode === 'auto' ? t('Auto') : t('Manuel')}
                 </button>
               ))}
             </div>
             {s.proteusMode === 'manual' ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-1">
-                <Slider label="Réduire compression" value={s.manual.compression} min={-100} max={100} onChange={(v: number) => patchManual({ compression: v })} />
-                <Slider label="Améliorer détail" value={s.manual.details} min={-100} max={100} onChange={(v: number) => patchManual({ details: v })} />
-                <Slider label="Netteté" value={s.manual.blur} min={-100} max={100} onChange={(v: number) => patchManual({ blur: v })} />
-                <Slider label="Réduire bruit" value={s.manual.noise} min={-100} max={100} onChange={(v: number) => patchManual({ noise: v })} />
-                <Slider label="Dehalo" value={s.manual.halo} min={-100} max={100} onChange={(v: number) => patchManual({ halo: v })} />
-                <Slider label="Anti-alias / Deblur" value={s.manual.preblur} min={-100} max={100} onChange={(v: number) => patchManual({ preblur: v })} />
+                <Slider label={t("Réduire compression")} value={s.manual.compression} min={-100} max={100} onChange={(v: number) => patchManual({ compression: v })} />
+                <Slider label={t("Améliorer détail")} value={s.manual.details} min={-100} max={100} onChange={(v: number) => patchManual({ details: v })} />
+                <Slider label={t("Netteté")} value={s.manual.blur} min={-100} max={100} onChange={(v: number) => patchManual({ blur: v })} />
+                <Slider label={t("Réduire bruit")} value={s.manual.noise} min={-100} max={100} onChange={(v: number) => patchManual({ noise: v })} />
+                <Slider label={t("Dehalo")} value={s.manual.halo} min={-100} max={100} onChange={(v: number) => patchManual({ halo: v })} />
+                <Slider label={t("Anti-alias / Deblur")} value={s.manual.preblur} min={-100} max={100} onChange={(v: number) => patchManual({ preblur: v })} />
               </div>
             ) : (
-              <Slider label="Frames d'estimation auto" value={s.estimate} min={0} max={100} onChange={(v: number) => patch({ estimate: v })} />
+              <Slider label={t("Frames d'estimation auto")} value={s.estimate} min={0} max={100} onChange={(v: number) => patch({ estimate: v })} />
             )}
             <div className="grid grid-cols-2 gap-4">
-              <Slider label="Grain" value={s.grain} min={0} max={100} onChange={(v: number) => patch({ grain: v })} />
-              <Slider label="Taille grain" value={s.gsize} min={0} max={5} step={0.1} onChange={(v: number) => patch({ gsize: v })} />
+              <Slider label={t("Grain")} value={s.grain} min={0} max={100} onChange={(v: number) => patch({ grain: v })} />
+              <Slider label={t("Taille grain")} value={s.gsize} min={0} max={5} step={0.1} onChange={(v: number) => patch({ gsize: v })} />
             </div>
           </>
         )}
       </Section>
 
       {/* Interpolation */}
-      <Section title="Interpolation d'images (Frame Interpolation)" icon={<Film className="w-3.5 h-3.5 text-purple-400" />} accent="#a855f7" on={s.interpEnabled} onToggle={() => patch({ interpEnabled: !s.interpEnabled })}>
+      <Section title={t("Interpolation d'images (Frame Interpolation)")} icon={<Film className="w-3.5 h-3.5 text-purple-400" />} accent="#a855f7" on={s.interpEnabled} onToggle={() => patch({ interpEnabled: !s.interpEnabled })}>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={LABEL_CLS}>Modèle</label>
-            <GlassSelect className="mt-1 w-full" value={models?.interpolate.find((m: ModelEntry) => m.codes.includes(s.interpModel))?.family || ''} ariaLabel="Modèle"
+            <label className={LABEL_CLS}>{t("Modèle")}</label>
+            <GlassSelect className="mt-1 w-full" value={models?.interpolate.find((m: ModelEntry) => m.codes.includes(s.interpModel))?.family || ''} ariaLabel={t("Modèle")}
               onChange={v => { const m = models.interpolate.find((x: ModelEntry) => x.family === v); if (m) patch({ interpModel: m.defaultCode }); }}
               options={(models?.interpolate || []).map((m: ModelEntry) => ({ value: m.family, label: m.name }))} />
           </div>
           <div>
-            <label className={LABEL_CLS}>FPS de sortie</label>
-            <GlassSelect className="mt-1 w-full" value={s.fpsPreset} onChange={v => patch({ fpsPreset: v, fps: parseInt(v) || s.fps })} ariaLabel="FPS de sortie"
-              options={FPS_PRESETS.map(f => ({ value: f, label: (f === 'Conserver' || f === 'Personnalisé') ? f : f + ' fps' }))} />
+            <label className={LABEL_CLS}>{t("FPS de sortie")}</label>
+            <GlassSelect className="mt-1 w-full" value={s.fpsPreset} onChange={v => patch({ fpsPreset: v, fps: parseInt(v) || s.fps })} ariaLabel={t("FPS de sortie")}
+              options={FPS_PRESETS.map(f => ({ value: f, label: (f === 'Conserver' || f === 'Personnalisé') ? t(f) : f + ' fps' }))} />
           </div>
         </div>
         {s.fpsPreset === 'Personnalisé' && (
           <input type="number" className={INPUT_CLS} value={s.fps} onChange={e => patch({ fps: Number(e.target.value) })} placeholder="FPS" />
         )}
-        <Slider label="Ralenti (slow motion) ×" value={s.slowmo} min={1} max={16} step={0.5} onChange={(v: number) => patch({ slowmo: v })} suffix="×" accent="#a855f7" />
-        <p className="text-[10px] text-gray-500">Le ralenti génère les images manquantes par IA. L'audio est retiré en mode ralenti.</p>
+        <Slider label={t("Ralenti (slow motion) ×")} value={s.slowmo} min={1} max={16} step={0.5} onChange={(v: number) => patch({ slowmo: v })} suffix="×" accent="#a855f7" />
+        <p className="text-[10px] text-gray-500">{t("Le ralenti génère les images manquantes par IA. L'audio est retiré en mode ralenti.")}</p>
       </Section>
 
       {/* Stabilization */}
-      <Section title="Stabilisation" icon={<Crosshair className="w-3.5 h-3.5 text-blue-400" />} accent="#3b82f6" on={s.stabEnabled} onToggle={() => patch({ stabEnabled: !s.stabEnabled })}>
-        <Slider label="Force du lissage" value={s.smoothness} min={0} max={16} step={0.5} onChange={(v: number) => patch({ smoothness: v })} accent="#3b82f6" />
-        <Slider label="Réduction des secousses" value={s.reduce} min={0} max={5} onChange={(v: number) => patch({ reduce: v })} accent="#3b82f6" />
+      <Section title={t("Stabilisation")} icon={<Crosshair className="w-3.5 h-3.5 text-blue-400" />} accent="#3b82f6" on={s.stabEnabled} onToggle={() => patch({ stabEnabled: !s.stabEnabled })}>
+        <Slider label={t("Force du lissage")} value={s.smoothness} min={0} max={16} step={0.5} onChange={(v: number) => patch({ smoothness: v })} accent="#3b82f6" />
+        <Slider label={t("Réduction des secousses")} value={s.reduce} min={0} max={5} onChange={(v: number) => patch({ reduce: v })} accent="#3b82f6" />
         <div className="flex items-center gap-6 pt-1">
-          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={s.rollingShutter} onClick={() => patch({ rollingShutter: !s.rollingShutter })} /> Correction rolling shutter</label>
-          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={s.fullFrame} onClick={() => patch({ fullFrame: !s.fullFrame })} /> Image pleine (sinon recadrage auto)</label>
+          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={s.rollingShutter} onClick={() => patch({ rollingShutter: !s.rollingShutter })} /> {t("Correction rolling shutter")}</label>
+          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={s.fullFrame} onClick={() => patch({ fullFrame: !s.fullFrame })} /> {t("Image pleine (sinon recadrage auto)")}</label>
         </div>
       </Section>
 
       {/* Export */}
-      <Section title="Export" icon={<Download className="w-3.5 h-3.5 text-green-400" />} accent="#22c55e" on={true}>
+      <Section title={t("Export")} icon={<Download className="w-3.5 h-3.5 text-green-400" />} accent="#22c55e" on={true}>
         <div className="grid grid-cols-3 gap-3">
-          <div><label className={LABEL_CLS}>Format</label>
-            <GlassSelect className="mt-1 w-full" value={s.format} onChange={v => patch({ format: v })} ariaLabel="Format" options={FORMATS.map(f => ({ value: f, label: f }))} /></div>
-          <div><label className={LABEL_CLS}>Codec</label>
-            <GlassSelect className="mt-1 w-full" value={s.codec} onChange={v => patch({ codec: v })} ariaLabel="Codec" options={CODECS.map(c => ({ value: c.v, label: c.l }))} /></div>
+          <div><label className={LABEL_CLS}>{t("Format")}</label>
+            <GlassSelect className="mt-1 w-full" value={s.format} onChange={v => patch({ format: v })} ariaLabel={t("Format")} options={FORMATS.map(f => ({ value: f, label: f }))} /></div>
+          <div><label className={LABEL_CLS}>{t("Codec")}</label>
+            <GlassSelect className="mt-1 w-full" value={s.codec} onChange={v => patch({ codec: v })} ariaLabel={t("Codec")} options={CODECS.map(c => ({ value: c.v, label: c.l }))} /></div>
           {s.codec !== 'prores' && (
-            <div><label className={LABEL_CLS}>Préréglage</label>
-              <GlassSelect className="mt-1 w-full" value={s.preset} onChange={v => patch({ preset: v })} ariaLabel="Préréglage" options={X264_PRESETS.map(p => ({ value: p, label: p }))} /></div>
+            <div><label className={LABEL_CLS}>{t("Préréglage")}</label>
+              <GlassSelect className="mt-1 w-full" value={s.preset} onChange={v => patch({ preset: v })} ariaLabel={t("Préréglage")} options={X264_PRESETS.map(p => ({ value: p, label: p }))} /></div>
           )}
         </div>
-        <Slider label="Qualité" value={s.quality} min={0} max={100} onChange={(v: number) => patch({ quality: v })} suffix="%" accent="#22c55e" />
-        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={s.audioCopy} onClick={() => patch({ audioCopy: !s.audioCopy })} /> Copier la piste audio</label>
+        <Slider label={t("Qualité")} value={s.quality} min={0} max={100} onChange={(v: number) => patch({ quality: v })} suffix="%" accent="#22c55e" />
+        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer"><Toggle on={s.audioCopy} onClick={() => patch({ audioCopy: !s.audioCopy })} /> {t("Copier la piste audio")}</label>
         <div className="flex gap-2 items-end">
-          <div className="flex-1"><label className={LABEL_CLS}>Dossier de sortie</label>
-            <input className={INPUT_CLS + ' mt-1'} value={s.outputDir} onChange={e => patch({ outputDir: e.target.value })} placeholder="Dossier de destination…" /></div>
+          <div className="flex-1"><label className={LABEL_CLS}>{t("Dossier de sortie")}</label>
+            <input className={INPUT_CLS + ' mt-1'} value={s.outputDir} onChange={e => patch({ outputDir: e.target.value })} placeholder={t("Dossier de destination…")} /></div>
           <button onClick={onBrowseOutput} className="px-3 py-2 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-1.5"><FolderOpen className="w-4 h-4" /></button>
         </div>
       </Section>
 
       {/* Device */}
       <div className="grid grid-cols-2 gap-3">
-        <div><label className={LABEL_CLS}>Processeur (Device)</label>
-          <GlassSelect className="mt-1 w-full" value={s.device} onChange={v => patch({ device: v })} ariaLabel="Processeur (Device)"
-            options={[{ value: 'auto', label: 'Auto' }, ...gpuList.map((g: any) => ({ value: g.id, label: g.name })), { value: 'cpu', label: 'CPU uniquement' }]} /></div>
-        <div className="pt-0.5"><Slider label="VRAM max" value={Math.round(s.vram * 100)} min={10} max={100} onChange={(v: number) => patch({ vram: v / 100 })} suffix="%" /></div>
+        <div><label className={LABEL_CLS}>{t("Processeur (Device)")}</label>
+          <GlassSelect className="mt-1 w-full" value={s.device} onChange={v => patch({ device: v })} ariaLabel={t("Processeur (Device)")}
+            options={[{ value: 'auto', label: 'Auto' }, ...gpuList.map((g: any) => ({ value: g.id, label: g.name })), { value: 'cpu', label: t('CPU uniquement') }]} /></div>
+        <div className="pt-0.5"><Slider label={t("VRAM max")} value={Math.round(s.vram * 100)} min={10} max={100} onChange={(v: number) => patch({ vram: v / 100 })} suffix="%" /></div>
       </div>
 
       {/* Action bar */}
       <div className="flex items-center gap-3 pt-2 sticky bottom-0">
         {running ? (
           <button onClick={onCancel} className="flex-1 px-4 py-3 rounded-xl font-bold text-sm bg-red-500/20 border border-red-500/40 text-red-200 hover:bg-red-500/30 flex items-center justify-center gap-2">
-            <Square className="w-4 h-4" /> Arrêter ({job.percent}% · {job.stage}{job.speed ? ` · ${job.speed}` : ''})
+            <Square className="w-4 h-4" /> {t("Arrêter")} ({job.percent}% · {job.stage}{job.speed ? ` · ${job.speed}` : ''})
           </button>
         ) : job.status === 'done' ? (
           <>
             <button onClick={() => job.outputPath && onOpenOutput(job.outputPath)} className="flex-1 px-4 py-3 rounded-xl font-bold text-sm bg-green-500/20 border border-green-500/40 text-green-200 hover:bg-green-500/30 flex items-center justify-center gap-2">
-              <CheckCircle2 className="w-4 h-4" /> Terminé — Ouvrir le dossier
+              <CheckCircle2 className="w-4 h-4" /> {t("Terminé — Ouvrir le dossier")}
             </button>
             <button onClick={onStart} className="px-4 py-3 rounded-xl font-bold text-sm bg-white/5 border border-white/10 hover:bg-white/10"><RotateCcw className="w-4 h-4" /></button>
           </>
@@ -700,11 +701,11 @@ function SettingsPanel({ job, models, gpuList, patch, patchManual, onApplyAll, o
           <button onClick={onStart}
             className="flex-1 px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
             style={{ background: 'linear-gradient(135deg, rgba(217,70,239,0.75), rgba(168,85,247,0.75))', border: '1px solid rgba(255,255,255,0.2)', color: 'white', boxShadow: '0 4px 24px rgba(217,70,239,0.4)' }}>
-            <Play className="w-4 h-4 fill-current" /> Traiter cette vidéo
+            <Play className="w-4 h-4 fill-current" /> {t("Traiter cette vidéo")}
           </button>
         )}
-        <button onClick={onApplyAll} title="Appliquer ces réglages à toute la file"
-          className="px-4 py-3 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-2"><Layers className="w-4 h-4" /> À tous</button>
+        <button onClick={onApplyAll} title={t("Appliquer ces réglages à toute la file")}
+          className="px-4 py-3 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-2"><Layers className="w-4 h-4" /> {t("À tous")}</button>
       </div>
 
       {job.status === 'error' && job.error && (
@@ -742,7 +743,7 @@ function BeforeAfter({ job, toSpec, electron, showToast }: any) {
     return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
   }, []);
 
-  if (!job) return <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">Sélectionnez un fichier pour comparer</div>;
+  if (!job) return <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">{t("Sélectionnez un fichier pour comparer")}</div>;
 
   // After = generated preview (or finished render). Before = matching unprocessed
   // clip from the preview (or the source for a finished render).
@@ -758,7 +759,7 @@ function BeforeAfter({ job, toSpec, electron, showToast }: any) {
     const res = await electron.topazPreview?.({ ...toSpec(job, { start, duration: 3 }) }).catch((e: any) => ({ error: String(e) }));
     setLoading(false);
     if (res?.outputPath) { setAfterUrl(mediaUrl(res.outputPath)); if (res.beforePath) setBeforeUrl(mediaUrl(res.beforePath)); }
-    else showToast('error', res?.error || 'Aperçu impossible.');
+    else showToast('error', res?.error || t('Aperçu impossible.'));
   };
 
   const togglePlay = () => {
@@ -775,21 +776,21 @@ function BeforeAfter({ job, toSpec, electron, showToast }: any) {
           className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, rgba(217,70,239,0.7), rgba(168,85,247,0.7))', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-          {loading ? 'Génération…' : (hasResult ? 'Régénérer (3s)' : 'Générer un aperçu (3s)')}
+          {loading ? t('Génération…') : (hasResult ? t('Régénérer (3s)') : t('Générer un aperçu (3s)'))}
         </button>
         {hasResult && (
           <button onClick={togglePlay} className="px-3 py-2 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-2">
-            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}{playing ? 'Pause' : 'Lecture'}
+            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}{playing ? t('Pause') : t('Lecture')}
           </button>
         )}
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span>Zoom</span>
+          <span>{t("Zoom")}</span>
           <input type="range" min={1} max={4} step={0.1} value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-28 accent-fuchsia-500" />
           <span className="font-mono w-8">{zoom.toFixed(1)}×</span>
         </div>
         {hasResult && (
           <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span>Comparaison</span>
+            <span>{t("Comparaison")}</span>
             <input type="range" min={0} max={100} value={split} onChange={e => setSplit(Number(e.target.value))} className="w-32 accent-fuchsia-500" />
           </div>
         )}
@@ -817,12 +818,12 @@ function BeforeAfter({ job, toSpec, electron, showToast }: any) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6-4 6 4 6" /><path d="m15 6 4 6-4 6" /></svg>
               </div>
             </div>
-            <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-md bg-black/70 text-[10px] font-semibold text-gray-200 tracking-wide z-10">AVANT</span>
-            <span className="absolute top-2.5 right-2.5 px-2 py-1 rounded-md bg-black/70 text-[10px] font-semibold text-fuchsia-300 tracking-wide z-10">APRÈS</span>
+            <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-md bg-black/70 text-[10px] font-semibold text-gray-200 tracking-wide z-10">{t("AVANT")}</span>
+            <span className="absolute top-2.5 right-2.5 px-2 py-1 rounded-md bg-black/70 text-[10px] font-semibold text-fuchsia-300 tracking-wide z-10">{t("APRÈS")}</span>
           </div>
         )}
       </div>
-      {hasResult && <p className="text-[11px] text-gray-500 text-center">Glissez la poignée pour comparer · les deux clips (3 s, même segment) sont synchronisés.</p>}
+      {hasResult && <p className="text-[11px] text-gray-500 text-center">{t("Glissez la poignée pour comparer · les deux clips (3 s, même segment) sont synchronisés.")}</p>}
     </div>
   );
 }
@@ -847,14 +848,14 @@ function PerfPanel({ stats, detect, gpuList, jobs }: any) {
         {bar('RAM', ramPct, '#22c55e', stats ? `${Math.round((stats.ramUsed || 0) / 1024)} / ${Math.round((stats.ramTotal || 0) / 1024)} Go` : '')}
       </div>
       <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-200 mb-2">Moteur</h3>
-        <Row k="Installation" v={detect?.install || '—'} />
-        <Row k="GPU NVIDIA" v={detect?.nvidia || 'Non détecté (CPU/AMD/Intel via Auto)'} />
-        <Row k="Encodeur matériel" v={detect?.hasNvenc ? 'NVENC disponible' : 'Encodage CPU'} />
-        <Row k="GPU détectés" v={gpuList.map((g: any) => g.name).join(', ') || '—'} />
-        <Row k="File d'attente" v={`${jobs.length} fichier(s) · ${jobs.filter((j: Job) => j.status === 'done').length} terminé(s)`} />
+        <h3 className="text-sm font-semibold text-gray-200 mb-2">{t("Moteur")}</h3>
+        <Row k={t("Installation")} v={detect?.install || '—'} />
+        <Row k={t("GPU NVIDIA")} v={detect?.nvidia || t('Non détecté (CPU/AMD/Intel via Auto)')} />
+        <Row k={t("Encodeur matériel")} v={detect?.hasNvenc ? t('NVENC disponible') : t('Encodage CPU')} />
+        <Row k={t("GPU détectés")} v={gpuList.map((g: any) => g.name).join(', ') || '—'} />
+        <Row k={t("File d'attente")} v={t("{n} fichier(s) · {m} terminé(s)", { n: jobs.length, m: jobs.filter((j: Job) => j.status === 'done').length })} />
       </div>
-      <p className="text-[11px] text-gray-500">Le suivi GPU/VRAM en direct nécessite une carte NVIDIA (nvidia-smi). CPU et RAM sont toujours affichés.</p>
+      <p className="text-[11px] text-gray-500">{t("Le suivi GPU/VRAM en direct nécessite une carte NVIDIA (nvidia-smi). CPU et RAM sont toujours affichés.")}</p>
     </div>
   );
 }

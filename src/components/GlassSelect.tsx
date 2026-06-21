@@ -3,6 +3,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
+import { t } from "@/i18n";
 
 export interface GlassOption {
   value: string;
@@ -25,7 +26,7 @@ interface GlassSelectProps {
 // A custom, fully-styled dropdown that replaces the native <select> (whose popup
 // is OS-rendered and impossible to theme). Rendered in a portal with fixed
 // positioning so it never gets clipped by overflow-hidden ancestors.
-export default function GlassSelect({ value, onChange, options, className = "", placeholder = "Sélectionner…", disabled, title, ariaLabel }: GlassSelectProps) {
+export default function GlassSelect({ value, onChange, options, className = "", placeholder = t("Sélectionner…"), disabled, title, ariaLabel }: GlassSelectProps) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
   const triggerRef = useRef<HTMLButtonElement>(null);

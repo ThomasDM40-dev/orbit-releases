@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Send, X, Loader2, Play, Copy, Check } from 'lucide-react';
 import { AIMessage, sendChatCompletion } from '../services/aiService';
+import { t as tr } from '@/i18n';
 
 interface AIAssistantProps {
   onClose: () => void;
@@ -9,10 +10,10 @@ interface AIAssistantProps {
   activeTab: string;
 }
 
-const WELCOME_MESSAGE: AIMessage = {
+const welcomeMessage = (): AIMessage => ({
   role: 'assistant',
-  content: "Bonjour 👋 Je suis **Orbit IA**. Pose-moi une question, demande-moi de **piloter l'app** (« va dans l'interpolateur IA », « coupe le proxy », « masque tous les onglets »…), ou glisse-dépose un fichier.",
-};
+  content: tr("Bonjour 👋 Je suis **Orbit IA**. Pose-moi une question, demande-moi de **piloter l'app** (« va dans l'interpolateur IA », « coupe le proxy », « masque tous les onglets »…), ou glisse-dépose un fichier."),
+});
 
 const openExternal = (url: string) => { try { (window as any).electronAPI?.openExternalUrl?.(url); } catch (e) {} };
 
@@ -48,7 +49,7 @@ function parseIntent(raw: string): Intent | null {
     return {
       actionName: 'downloadUrl',
       payload: { url: urlMatch[0], audioOnly },
-      reply: audioOnly ? "✅ Je récupère l'audio de ce lien — direction Téléchargements." : '✅ Je télécharge cette vidéo pour toi — direction Téléchargements.',
+      reply: audioOnly ? tr("✅ Je récupère l'audio de ce lien — direction Téléchargements.") : tr('✅ Je télécharge cette vidéo pour toi — direction Téléchargements.'),
     };
   }
 
@@ -61,45 +62,46 @@ function parseIntent(raw: string): Intent | null {
 
   // Download intent without a URL → take the user to Téléchargements.
   if (has('telecharge', 'telecharger', 'download', 'downloader', 'recupere', 'recuperer', 'dl ')) {
-    return { actionName: 'switchTab', payload: { tab: 'downloads' }, reply: "✅ Direction Téléchargements ! Colle le lien de la vidéo ici ou dans la barre, et je m'en occupe automatiquement." };
+    return { actionName: 'switchTab', payload: { tab: 'downloads' }, reply: tr("✅ Direction Téléchargements ! Colle le lien de la vidéo ici ou dans la barre, et je m'en occupe automatiquement.") };
   }
 
   // All tabs at once
   if (s.includes('onglet') && has('tous', 'toutes', 'tout')) {
-    if (has(...OFF)) return { actionName: 'disableAllTabs', payload: {}, reply: "✅ J'ai masqué tous les onglets (Téléchargements reste actif pour garder l'app utilisable)." };
-    if (has(...ON)) return { actionName: 'enableAllTabs', payload: {}, reply: "✅ J'ai réaffiché tous les onglets." };
+    if (has(...OFF)) return { actionName: 'disableAllTabs', payload: {}, reply: tr("✅ J'ai masqué tous les onglets (Téléchargements reste actif pour garder l'app utilisable).") };
+    if (has(...ON)) return { actionName: 'enableAllTabs', payload: {}, reply: tr("✅ J'ai réaffiché tous les onglets.") };
   }
 
   // Proxy
-  if (s.includes('proxy') && has(...OFF)) return { actionName: 'setSetting', payload: { key: 'proxy', value: '' }, reply: '✅ Proxy désactivé.' };
+  if (s.includes('proxy') && has(...OFF)) return { actionName: 'setSetting', payload: { key: 'proxy', value: '' }, reply: tr('✅ Proxy désactivé.') };
 
   // Theme
   if (has('theme', 'mode', 'apparence')) {
-    if (has('sombre', 'nuit', 'dark', 'noir')) return { actionName: 'setSetting', payload: { key: 'theme', value: 'dark' }, reply: '✅ Thème sombre activé.' };
-    if (has('clair', 'jour', 'light', 'blanc')) return { actionName: 'setSetting', payload: { key: 'theme', value: 'light' }, reply: '✅ Thème clair activé.' };
+    if (has('sombre', 'nuit', 'dark', 'noir')) return { actionName: 'setSetting', payload: { key: 'theme', value: 'dark' }, reply: tr('✅ Thème sombre activé.') };
+    if (has('clair', 'jour', 'light', 'blanc')) return { actionName: 'setSetting', payload: { key: 'theme', value: 'light' }, reply: tr('✅ Thème clair activé.') };
   }
 
   // Notifications
   if (s.includes('notification')) {
-    if (has(...OFF)) return { actionName: 'setSetting', payload: { key: 'notifications', value: false }, reply: '✅ Notifications désactivées.' };
-    if (has(...ON)) return { actionName: 'setSetting', payload: { key: 'notifications', value: true }, reply: '✅ Notifications activées.' };
+    if (has(...OFF)) return { actionName: 'setSetting', payload: { key: 'notifications', value: false }, reply: tr('✅ Notifications désactivées.') };
+    if (has(...ON)) return { actionName: 'setSetting', payload: { key: 'notifications', value: true }, reply: tr('✅ Notifications activées.') };
   }
 
   // Settings / import panels
   if (has('parametre', 'reglage', 'setting', 'preference', 'option') && has(...GO))
-    return { actionName: 'openSettings', payload: {}, reply: "✅ J'ai ouvert les paramètres." };
+    return { actionName: 'openSettings', payload: {}, reply: tr("✅ J'ai ouvert les paramètres.") };
   if (s.includes('import') && has(...GO, 'importer', 'ajoute', 'ajouter', 'charge', 'charger'))
-    return { actionName: 'openImport', payload: {}, reply: "✅ J'ai ouvert l'outil d'import." };
+    return { actionName: 'openImport', payload: {}, reply: tr("✅ J'ai ouvert l'outil d'import.") };
 
   // Tab-specific actions
   const tab = TABS.find(t => t.names.some(n => s.includes(n)));
   if (tab) {
+    const title = tr(tab.title);
     if (s.includes('onglet') && has(...OFF))
-      return { actionName: 'setTabVisible', payload: { tab: tab.id, visible: false }, reply: `✅ J'ai masqué l'onglet « ${tab.title} ».` };
+      return { actionName: 'setTabVisible', payload: { tab: tab.id, visible: false }, reply: tr("✅ J'ai masqué l'onglet « {tab} ».", { tab: title }) };
     if (s.includes('onglet') && has(...ON))
-      return { actionName: 'setTabVisible', payload: { tab: tab.id, visible: true }, reply: `✅ J'ai affiché l'onglet « ${tab.title} ».` };
+      return { actionName: 'setTabVisible', payload: { tab: tab.id, visible: true }, reply: tr("✅ J'ai affiché l'onglet « {tab} ».", { tab: title }) };
     if (has(...GO))
-      return { actionName: 'switchTab', payload: { tab: tab.id }, reply: `✅ Direction l'onglet « ${tab.title} » !` };
+      return { actionName: 'switchTab', payload: { tab: tab.id }, reply: tr("✅ Direction l'onglet « {tab} » !", { tab: title }) };
   }
   return null;
 }
@@ -109,6 +111,7 @@ const SUGGESTIONS: { label: string; text: string }[] = [
   { label: '✨ Amélioration IA', text: "ouvre l'amélioration ia" },
   { label: '⚙️ Paramètres', text: 'ouvre les paramètres' },
   { label: '🙈 Masquer tous les onglets', text: 'désactive tous les onglets' },
+  // (labels are translated at render; `text` stays in French — the parser matches FR/EN keywords)
 ];
 
 // ── Lightweight, safe markdown → JSX (bold, inline code, links) ──
@@ -135,7 +138,7 @@ function CodeBlock({ code, lang }: { code: string; lang?: string }) {
     <div className="my-1.5 rounded-xl overflow-hidden border border-white/10" style={{ background: 'rgba(0,0,0,0.45)' }}>
       <div className="flex items-center justify-between px-3 py-1 border-b border-white/8 bg-white/[0.03]">
         <span className="text-[10px] uppercase tracking-wider text-gray-500">{lang || 'code'}</span>
-        <button onClick={copy} className="text-gray-500 hover:text-gray-200 flex items-center gap-1 text-[10px]">{copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}{copied ? 'Copié' : 'Copier'}</button>
+        <button onClick={copy} className="text-gray-500 hover:text-gray-200 flex items-center gap-1 text-[10px]">{copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}{copied ? tr('Copié') : tr('Copier')}</button>
       </div>
       <pre className="p-3 overflow-x-auto custom-scrollbar"><code className="text-[12px] font-mono text-gray-200 whitespace-pre">{code}</code></pre>
     </div>
@@ -181,7 +184,7 @@ function Markdown({ content }: { content: string }) {
 }
 
 export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssistantProps) {
-  const [messages, setMessages] = useState<AIMessage[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<AIMessage[]>([welcomeMessage()]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -223,7 +226,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
   useEffect(() => {
     if (droppedFile && droppedFile !== processedDropRef.current) {
       processedDropRef.current = droppedFile;
-      sendMessage({ role: 'user', content: `Un fichier vient d'être déposé : "${droppedFile}". L'onglet actif est "${activeTab}". Propose-moi ce que je peux faire avec ce fichier.` });
+      sendMessage({ role: 'user', content: tr('Un fichier vient d\'être déposé : "{file}". L\'onglet actif est "{tab}". Propose-moi ce que je peux faire avec ce fichier.', { file: droppedFile, tab: activeTab }) });
     }
   }, [droppedFile]); // eslint-disable-line
 
@@ -275,7 +278,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
           </div>
           <div className="leading-tight">
             <p className="font-bold text-white text-sm">Orbit IA</p>
-            <p className="text-[10px] text-gray-400">Assistant intégré</p>
+            <p className="text-[10px] text-gray-400">{tr("Assistant intégré")}</p>
           </div>
         </div>
         <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/8"><X className="w-4 h-4" /></button>
@@ -294,7 +297,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
             {msg.functionCall && msg.functionCall.name === 'dispatch_action' && (
               <button onClick={() => executeAction(msg.functionCall)} className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl border transition-all hover:scale-[1.03]"
                 style={{ color: 'white', background: 'color-mix(in srgb, var(--accent,#ec4899) 30%, transparent)', borderColor: 'color-mix(in srgb, var(--accent,#ec4899) 50%, transparent)' }}>
-                <Play className="w-3 h-3 fill-current" /> Exécuter l'action
+                <Play className="w-3 h-3 fill-current" /> {tr("Exécuter l'action")}
               </button>
             )}
           </div>
@@ -306,7 +309,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
               <button key={s.text} onClick={() => runCommand(s.text)}
                 className="px-3 py-1.5 text-[12px] rounded-full border border-white/10 text-gray-200 transition-all hover:scale-[1.04] hover:border-white/25"
                 style={{ background: 'rgba(255,255,255,0.05)' }}>
-                {s.label}
+                {tr(s.label)}
               </button>
             ))}
           </div>
@@ -314,7 +317,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
         {isLoading && (
           <div className="self-start px-3.5 py-2.5 rounded-2xl rounded-bl-md text-[13px] flex items-center gap-2 border border-white/8" style={{ background: 'rgba(255,255,255,0.05)' }}>
             <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent,#ec4899)' }} />
-            <span className="text-gray-400">Réflexion…</span>
+            <span className="text-gray-400">{tr("Réflexion…")}</span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -326,7 +329,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
           <input
             type="text" value={input} onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
-            placeholder="Pose une question…"
+            placeholder={tr("Pose une question…")}
             className="w-full rounded-2xl pl-4 pr-11 py-2.5 text-sm text-gray-200 placeholder-gray-500 outline-none transition-all"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
           />

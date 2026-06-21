@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import GlassSelect from "./GlassSelect";
+import { t as tr } from "@/i18n";
 
 // Each export target maps to the file format(s) the app actually imports.
 const TARGETS: { id: string; label: string; icon: string; desc: string; formats: string[] }[] = [
@@ -56,7 +57,7 @@ export default function Transcription() {
     });
     api.onTranscribeError?.((d: any) => {
       if (d.id !== jobId.current) return;
-      setErrorMsg(d.error || 'Erreur inconnue'); setStatus('error'); setProgress('');
+      setErrorMsg(d.error || tr('Erreur inconnue')); setStatus('error'); setProgress('');
     });
   }, []);
 
@@ -84,7 +85,7 @@ export default function Transcription() {
     ));
     if (!formats.length && !burnIn) return;
     jobId.current = 'trx_' + Date.now();
-    setStatus('running'); setResults([]); setErrorMsg(''); setProgress('Initialisation…');
+    setStatus('running'); setResults([]); setErrorMsg(''); setProgress(tr('Initialisation…'));
     (window as any).electronAPI?.transcribe?.({
       id: jobId.current, inputPath, language, model, outputDir: outputDir || undefined,
       formats, burnIn,
@@ -105,7 +106,7 @@ export default function Transcription() {
             <span>📝</span> Orbit Transcription
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Transcris n'importe quelle vidéo/audio par IA, puis exporte vers Premiere, After Effects, CapCut, DaVinci…
+            {tr("Transcris n'importe quelle vidéo/audio par IA, puis exporte vers Premiere, After Effects, CapCut, DaVinci…")}
           </p>
         </div>
 
@@ -117,14 +118,14 @@ export default function Transcription() {
               <span className="text-2xl">🎞️</span>
               <div className="text-left">
                 <div className="text-sm font-medium text-white truncate max-w-md">{fileName}</div>
-                <div className="text-xs text-gray-500">Cliquer pour changer de fichier</div>
+                <div className="text-xs text-gray-500">{tr("Cliquer pour changer de fichier")}</div>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <span className="text-3xl">📂</span>
-              <div className="text-sm font-medium text-white">Choisir une vidéo ou un audio</div>
-              <div className="text-xs text-gray-500">MP4, MKV, MOV, MP3, WAV…</div>
+              <div className="text-sm font-medium text-white">{tr("Choisir une vidéo ou un audio")}</div>
+              <div className="text-xs text-gray-500">{tr("MP4, MKV, MOV, MP3, WAV…")}</div>
             </div>
           )}
         </button>
@@ -132,21 +133,21 @@ export default function Transcription() {
         {/* Language + model */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Langue</label>
-            <GlassSelect value={language} onChange={setLanguage} className="mt-1.5 w-full py-2.5" ariaLabel="Langue"
-              options={LANGUAGES.map(l => ({ value: l.code, label: l.label }))} />
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{tr("Langue")}</label>
+            <GlassSelect value={language} onChange={setLanguage} className="mt-1.5 w-full py-2.5" ariaLabel={tr("Langue")}
+              options={LANGUAGES.map(l => ({ value: l.code, label: tr(l.label) }))} />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Modèle IA</label>
-            <GlassSelect value={model} onChange={setModel} className="mt-1.5 w-full py-2.5" ariaLabel="Modèle IA"
-              options={MODELS.map(m => ({ value: m.id, label: `${m.label} — ${m.desc}` }))} />
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{tr("Modèle IA")}</label>
+            <GlassSelect value={model} onChange={setModel} className="mt-1.5 w-full py-2.5" ariaLabel={tr("Modèle IA")}
+              options={MODELS.map(m => ({ value: m.id, label: `${m.label} — ${tr(m.desc)}` }))} />
           </div>
         </div>
 
         {/* Export targets */}
         <div>
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-            Exporter vers {totalFormats > 0 && <span className="text-pink-400">({totalFormats} format{totalFormats > 1 ? 's' : ''})</span>}
+            {tr("Exporter vers")} {totalFormats > 0 && <span className="text-pink-400">{tr(totalFormats > 1 ? "({n} formats)" : "({n} format)", { n: totalFormats })}</span>}
           </label>
           <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {TARGETS.map(t => {
@@ -156,9 +157,9 @@ export default function Transcription() {
                   className={`relative rounded-xl border p-3 text-left transition-all ${on ? 'border-pink-500/50 bg-pink-500/10' : 'border-white/8 bg-white/[0.02] hover:border-white/20'}`}>
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{t.icon}</span>
-                    <span className="text-sm font-semibold text-white">{t.label}</span>
+                    <span className="text-sm font-semibold text-white">{tr(t.label)}</span>
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-1">{t.desc}</div>
+                  <div className="text-[11px] text-gray-500 mt-1">{tr(t.desc)}</div>
                   {on && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-pink-500 flex items-center justify-center text-[10px] text-white">✓</div>}
                 </button>
               );
@@ -171,18 +172,18 @@ export default function Transcription() {
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={burnIn} onChange={e => setBurnIn(e.target.checked)} className="accent-pink-500 w-4 h-4" />
             <div>
-              <div className="text-sm font-medium text-white">Incruster les sous-titres dans la vidéo</div>
-              <div className="text-xs text-gray-500">Génère aussi un .mp4 avec sous-titres gravés (non éditables)</div>
+              <div className="text-sm font-medium text-white">{tr("Incruster les sous-titres dans la vidéo")}</div>
+              <div className="text-xs text-gray-500">{tr("Génère aussi un .mp4 avec sous-titres gravés (non éditables)")}</div>
             </div>
           </label>
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">Taille police</span>
+              <span className="text-xs text-gray-400">{tr("Taille police")}</span>
               <input type="number" min={12} max={120} value={fontSize} onChange={e => setFontSize(+e.target.value)}
                 className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">Couleur</span>
+              <span className="text-xs text-gray-400">{tr("Couleur")}</span>
               <input type="color" value={primaryColour} onChange={e => setPrimaryColour(e.target.value)}
                 className="w-9 h-7 rounded-lg border border-white/10 bg-transparent cursor-pointer" />
             </div>
@@ -191,22 +192,22 @@ export default function Transcription() {
 
         {/* Output folder */}
         <div className="flex items-center gap-2">
-          <button onClick={pickDir} className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 whitespace-nowrap">📁 Dossier de sortie</button>
-          <div className="text-xs text-gray-500 truncate">{outputDir || 'À côté du fichier source'}</div>
+          <button onClick={pickDir} className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 whitespace-nowrap">📁 {tr("Dossier de sortie")}</button>
+          <div className="text-xs text-gray-500 truncate">{outputDir || tr('À côté du fichier source')}</div>
         </div>
 
         {/* Action */}
         <button onClick={start} disabled={!inputPath || status === 'running' || (totalFormats === 0 && !burnIn)}
           className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: 'linear-gradient(135deg, #ec4899, #a855f7)' }}>
-          {status === 'running' ? '⏳ Transcription en cours…' : '✨ Transcrire & exporter'}
+          {status === 'running' ? tr('⏳ Transcription en cours…') : tr('✨ Transcrire & exporter')}
         </button>
 
         {/* Progress */}
         {status === 'running' && (
           <div className="rounded-xl border border-pink-500/20 bg-pink-500/5 p-3 text-sm text-pink-200 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-            {progress || 'Traitement…'}
+            {progress || tr('Traitement…')}
           </div>
         )}
 
@@ -220,7 +221,7 @@ export default function Transcription() {
         {/* Results */}
         {status === 'done' && results.length > 0 && (
           <div className="rounded-2xl border border-green-500/20 bg-green-500/[0.04] p-4">
-            <div className="text-sm font-semibold text-green-300 mb-3">✅ {results.length} fichier(s) généré(s)</div>
+            <div className="text-sm font-semibold text-green-300 mb-3">{tr("✅ {n} fichier(s) généré(s)", { n: results.length })}</div>
             <div className="flex flex-col gap-1.5">
               {results.map((r, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2">
@@ -230,7 +231,7 @@ export default function Transcription() {
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => (window as any).electronAPI?.openFile?.(r.path)}
-                      className="text-[11px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-300">Ouvrir</button>
+                      className="text-[11px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-300">{tr("Ouvrir")}</button>
                     <button onClick={() => (window as any).electronAPI?.showItemInFolder?.(r.path)}
                       className="text-[11px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-300">📁</button>
                   </div>

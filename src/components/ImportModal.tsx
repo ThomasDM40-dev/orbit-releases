@@ -1,41 +1,24 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
+import { t as tr, type Lang } from '@/i18n';
 
 type ImportModalProps = {
   onClose: () => void;
-  language?: 'en' | 'fr' | 'es';
+  language?: Lang;
 };
 
-export default function ImportModal({ onClose, language = 'en' }: ImportModalProps) {
+export default function ImportModal({ onClose }: ImportModalProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = {
-    en: {
-      title: "Import Files",
-      desc: "You can import any type of file that is plain text. The file will be scanned for URL's and will automatically start downloading with the currently selected configuration. You can change your current configuration at the bottom left of this dialog.",
-      dragDrop: "Drag and drop files here to begin downloading",
-      orClick: "or click here for a file selection dialog",
-      cancel: "Cancel Import",
-      defaultConfig: "Default"
-    },
-    fr: {
-      title: "Importer des fichiers",
-      desc: "Vous pouvez importer tout type de fichier texte brut. Le fichier sera analysé pour trouver des URL et lancera automatiquement le téléchargement avec la configuration actuelle. Vous pouvez changer votre configuration en bas à gauche de ce dialogue.",
-      dragDrop: "Glissez et déposez des fichiers ici pour commencer",
-      orClick: "ou cliquez ici pour choisir un fichier",
-      cancel: "Annuler l'import",
-      defaultConfig: "Par défaut"
-    },
-    es: {
-      title: "Importar Archivos",
-      desc: "Puede importar cualquier tipo de archivo de texto sin formato. El archivo será escaneado en busca de URL y comenzará a descargar automáticamente con la configuración actual. Puede cambiar la configuración en la parte inferior izquierda.",
-      dragDrop: "Arrastre y suelte archivos aquí para comenzar",
-      orClick: "o haga clic aquí para seleccionar un archivo",
-      cancel: "Cancelar Importación",
-      defaultConfig: "Predeterminado"
-    }
-  }[language];
+    title: tr("Importer des fichiers"),
+    desc: tr("Vous pouvez importer tout type de fichier texte brut. Le fichier sera analysé pour trouver des URL et lancera automatiquement le téléchargement avec la configuration actuelle. Vous pouvez changer votre configuration en bas à gauche de ce dialogue."),
+    dragDrop: tr("Glissez et déposez des fichiers ici pour commencer"),
+    orClick: tr("ou cliquez ici pour choisir un fichier"),
+    cancel: tr("Annuler l'import"),
+    defaultConfig: tr("Par défaut"),
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

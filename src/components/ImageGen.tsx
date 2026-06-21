@@ -5,6 +5,7 @@ import {
   RotateCcw, Shuffle, Lock, Dice5, AlertCircle, Loader2, X, Maximize2, Check,
 } from 'lucide-react';
 import GlassSelect from './GlassSelect';
+import { t } from '@/i18n';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -66,7 +67,7 @@ const COUNTS = [1, 2, 3, 4];
 export default function ImageGen() {
   const electron = api();
   const [prompt, setPrompt] = useState('');
-  const [models, setModels] = useState<{ value: string; label: string }[]>([{ value: 'flux', label: 'Flux — qualité maximale (recommandé)' }]);
+  const [models, setModels] = useState<{ value: string; label: string }[]>([{ value: 'flux', label: t('Flux — qualité maximale (recommandé)') }]);
   const [model, setModel] = useState('flux');
   const [styleIdx, setStyleIdx] = useState(0);
   const [ratioIdx, setRatioIdx] = useState(0);
@@ -115,7 +116,7 @@ export default function ImageGen() {
 
   const generate = useCallback(async () => {
     const base = prompt.trim();
-    if (!base) { showToast('error', 'Écris une description (prompt) d\'abord.'); return; }
+    if (!base) { showToast('error', t('Écris une description (prompt) d\'abord.')); return; }
     if (generating) return;
     setGenerating(true); cancelRef.current = false;
     const ratio = RATIOS[ratioIdx];
@@ -136,7 +137,7 @@ export default function ImageGen() {
         } : g));
         if (!seedLock && i === 0 && res.seed) setSeed(res.seed);
       } else {
-        setGallery(prev => prev.map(g => g.id === id ? { ...g, status: 'error', error: res?.error || 'Échec.' } : g));
+        setGallery(prev => prev.map(g => g.id === id ? { ...g, status: 'error', error: res?.error || t('Échec.') } : g));
       }
     }
     setGenerating(false);
@@ -145,8 +146,8 @@ export default function ImageGen() {
   const stop = () => { cancelRef.current = true; setGenerating(false); };
   const browseOutput = async () => { const d = await electron.selectDirectory?.(); if (d) setOutputDir(d); };
   const removeItem = (id: string) => { setGallery(prev => prev.filter(g => g.id !== id)); if (lightbox?.id === id) setLightbox(null); };
-  const reuse = (g: GalleryItem) => { setPrompt(g.prompt); if (g.seed) { setSeed(g.seed); setSeedLock(true); } showToast('info', 'Prompt & seed réutilisés.'); };
-  const copyPrompt = (g: GalleryItem) => { navigator.clipboard?.writeText(g.prompt).then(() => showToast('info', 'Prompt copié.'), () => {}); };
+  const reuse = (g: GalleryItem) => { setPrompt(g.prompt); if (g.seed) { setSeed(g.seed); setSeedLock(true); } showToast('info', t('Prompt & seed réutilisés.')); };
+  const copyPrompt = (g: GalleryItem) => { navigator.clipboard?.writeText(g.prompt).then(() => showToast('info', t('Prompt copié.')), () => {}); };
 
   const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generate(); } };
 
@@ -159,11 +160,11 @@ export default function ImageGen() {
             <Wand2 className="w-5 h-5 text-fuchsia-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Génération d'image IA <span className="text-fuchsia-400">·</span> <span className="text-xs font-normal text-gray-500">Flux — gratuit & illimité</span></h2>
-            <p className="text-[11px] text-gray-500">Décris ton image, choisis un style, et laisse l'IA créer. Aucune clé requise.</p>
+            <h2 className="text-lg font-bold text-white">{t("Génération d'image IA")} <span className="text-fuchsia-400">·</span> <span className="text-xs font-normal text-gray-500">{t("Flux — gratuit & illimité")}</span></h2>
+            <p className="text-[11px] text-gray-500">{t("Décris ton image, choisis un style, et laisse l'IA créer. Aucune clé requise.")}</p>
           </div>
         </div>
-        <div className="text-[11px] text-gray-500 hidden md:block">{gallery.filter(g => g.status === 'done').length} image(s) générée(s)</div>
+        <div className="text-[11px] text-gray-500 hidden md:block">{t("{n} image(s) générée(s)", { n: gallery.filter(g => g.status === 'done').length })}</div>
       </div>
 
       <AnimatePresence>
@@ -181,21 +182,21 @@ export default function ImageGen() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Prompt */}
             <div>
-              <label className={LABEL_CLS}>Description (prompt)</label>
+              <label className={LABEL_CLS}>{t("Description (prompt)")}</label>
               <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={onKey} rows={4}
-                placeholder="Un renard roux majestueux dans une forêt enneigée au lever du soleil…"
+                placeholder={t("Un renard roux majestueux dans une forêt enneigée au lever du soleil…")}
                 className={INPUT_CLS + ' mt-1 resize-none leading-relaxed'} />
-              <p className="text-[10px] text-gray-600 mt-1">Astuce : écris en anglais pour de meilleurs résultats · Ctrl+Entrée pour générer</p>
+              <p className="text-[10px] text-gray-600 mt-1">{t("Astuce : écris en anglais pour de meilleurs résultats · Ctrl+Entrée pour générer")}</p>
             </div>
 
             {/* Styles */}
             <div>
-              <label className={LABEL_CLS}>Style</label>
+              <label className={LABEL_CLS}>{t("Style")}</label>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {STYLES.map((st, i) => (
                   <button key={st.name} onClick={() => setStyleIdx(i)}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${styleIdx === i ? 'bg-fuchsia-500/25 text-fuchsia-100 border-fuchsia-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}>
-                    <span>{st.icon}</span>{st.name}
+                    <span>{st.icon}</span>{t(st.name)}
                   </button>
                 ))}
               </div>
@@ -203,13 +204,13 @@ export default function ImageGen() {
 
             {/* Model */}
             <div>
-              <label className={LABEL_CLS}>Modèle IA</label>
-              <GlassSelect className="mt-1 w-full" value={model} onChange={setModel} options={models} ariaLabel="Modèle IA" />
+              <label className={LABEL_CLS}>{t("Modèle IA")}</label>
+              <GlassSelect className="mt-1 w-full" value={model} onChange={setModel} options={models} ariaLabel={t("Modèle IA")} />
             </div>
 
             {/* Ratio */}
             <div>
-              <label className={LABEL_CLS}>Format / Ratio</label>
+              <label className={LABEL_CLS}>{t("Format / Ratio")}</label>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {RATIOS.map((r, i) => (
                   <button key={r.label} onClick={() => setRatioIdx(i)}
@@ -223,7 +224,7 @@ export default function ImageGen() {
 
             {/* Count */}
             <div>
-              <label className={LABEL_CLS}>Nombre d'images</label>
+              <label className={LABEL_CLS}>{t("Nombre d'images")}</label>
               <div className="flex gap-1.5 mt-1.5">
                 {COUNTS.map(c => (
                   <button key={c} onClick={() => setCount(c)}
@@ -236,23 +237,23 @@ export default function ImageGen() {
 
             {/* Seed */}
             <div>
-              <label className={LABEL_CLS}>Seed (graine)</label>
+              <label className={LABEL_CLS}>{t("Seed (graine)")}</label>
               <div className="flex gap-2 mt-1.5">
-                <button onClick={() => setSeedLock(!seedLock)} title={seedLock ? 'Seed fixe' : 'Seed aléatoire'}
+                <button onClick={() => setSeedLock(!seedLock)} title={seedLock ? t('Seed fixe') : t('Seed aléatoire')}
                   className={`px-3 py-2 rounded-xl border text-xs flex items-center gap-1.5 transition-all ${seedLock ? 'bg-fuchsia-500/20 border-fuchsia-500/40 text-fuchsia-200' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}>
-                  {seedLock ? <Lock className="w-3.5 h-3.5" /> : <Shuffle className="w-3.5 h-3.5" />}{seedLock ? 'Fixe' : 'Aléatoire'}
+                  {seedLock ? <Lock className="w-3.5 h-3.5" /> : <Shuffle className="w-3.5 h-3.5" />}{seedLock ? t('Fixe') : t('Aléatoire')}
                 </button>
                 <input value={seed} onChange={e => setSeed(e.target.value.replace(/[^0-9]/g, ''))} disabled={!seedLock}
-                  placeholder="auto" className={INPUT_CLS + ' flex-1 disabled:opacity-40'} />
-                <button onClick={() => setSeed(String(Math.floor(Math.random() * 1e9)))} disabled={!seedLock} title="Nouvelle seed"
+                  placeholder={t("auto")} className={INPUT_CLS + ' flex-1 disabled:opacity-40'} />
+                <button onClick={() => setSeed(String(Math.floor(Math.random() * 1e9)))} disabled={!seedLock} title={t("Nouvelle seed")}
                   className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40"><Dice5 className="w-4 h-4" /></button>
               </div>
-              <p className="text-[10px] text-gray-600 mt-1">Seed fixe = résultats reproductibles pour ajuster un prompt.</p>
+              <p className="text-[10px] text-gray-600 mt-1">{t("Seed fixe = résultats reproductibles pour ajuster un prompt.")}</p>
             </div>
 
             {/* Enhance + output dir */}
             <label className="flex items-center justify-between gap-2 text-xs text-gray-300 cursor-pointer rounded-xl bg-white/[0.03] border border-white/8 px-3 py-2.5">
-              <span className="flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-fuchsia-400" /> Amélioration auto du prompt</span>
+              <span className="flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-fuchsia-400" /> {t("Amélioration auto du prompt")}</span>
               <span onClick={() => setEnhance(!enhance)} className="relative w-10 h-6 rounded-full transition-all shrink-0"
                 style={{ background: enhance ? 'linear-gradient(135deg,#d946ef,#a855f7)' : 'rgba(255,255,255,0.12)' }}>
                 <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all" style={{ left: enhance ? 'calc(100% - 22px)' : '2px' }} />
@@ -260,9 +261,9 @@ export default function ImageGen() {
             </label>
 
             <div>
-              <label className={LABEL_CLS}>Dossier de sortie</label>
+              <label className={LABEL_CLS}>{t("Dossier de sortie")}</label>
               <div className="flex gap-2 mt-1.5">
-                <input className={INPUT_CLS} value={outputDir} onChange={e => setOutputDir(e.target.value)} placeholder="Dossier de destination…" />
+                <input className={INPUT_CLS} value={outputDir} onChange={e => setOutputDir(e.target.value)} placeholder={t("Dossier de destination…")} />
                 <button onClick={browseOutput} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"><FolderOpen className="w-4 h-4" /></button>
               </div>
             </div>
@@ -272,12 +273,12 @@ export default function ImageGen() {
           <div className="p-4 border-t border-white/5">
             {generating ? (
               <button onClick={stop} className="w-full px-4 py-3 rounded-xl font-bold text-sm bg-red-500/20 border border-red-500/40 text-red-200 hover:bg-red-500/30 flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Génération en cours — Arrêter
+                <Loader2 className="w-4 h-4 animate-spin" /> {t("Génération en cours — Arrêter")}
               </button>
             ) : (
               <button onClick={generate} disabled={!prompt.trim()} className="w-full px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40"
                 style={{ background: 'linear-gradient(135deg, rgba(217,70,239,0.8), rgba(168,85,247,0.8))', border: '1px solid rgba(255,255,255,0.2)', color: 'white', boxShadow: '0 4px 24px rgba(217,70,239,0.35)' }}>
-                <Wand2 className="w-4 h-4" /> Générer {count > 1 ? `${count} images` : "l'image"}
+                <Wand2 className="w-4 h-4" /> {count > 1 ? t("Générer {n} images", { n: count }) : t("Générer l'image")}
               </button>
             )}
           </div>
@@ -290,8 +291,8 @@ export default function ImageGen() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-500/15 to-purple-500/15 flex items-center justify-center border border-white/10">
                 <ImageIcon className="w-7 h-7 text-fuchsia-400/70" />
               </div>
-              <p className="text-sm text-gray-400 font-medium">Tes créations apparaîtront ici</p>
-              <p className="text-xs max-w-xs">Décris une image à gauche, choisis un style et clique sur <span className="text-fuchsia-300">Générer</span>. Propulsé par Flux — gratuit.</p>
+              <p className="text-sm text-gray-400 font-medium">{t("Tes créations apparaîtront ici")}</p>
+              <p className="text-xs max-w-xs">{t("Décris une image à gauche, choisis un style et clique sur")} <span className="text-fuchsia-300">{t("Générer")}</span>. {t("Propulsé par Flux — gratuit.")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -302,21 +303,21 @@ export default function ImageGen() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-fuchsia-500/5 to-purple-500/5">
                       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
                       <Loader2 className="w-7 h-7 text-fuchsia-400 animate-spin" />
-                      <span className="text-[11px] text-gray-400">Création…</span>
+                      <span className="text-[11px] text-gray-400">{t("Création…")}</span>
                     </div>
                   )}
                   {g.status === 'error' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
                       <AlertCircle className="w-7 h-7 text-red-400" />
                       <span className="text-[10px] text-red-300 line-clamp-3">{g.error}</span>
-                      <button onClick={() => removeItem(g.id)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">retirer</button>
+                      <button onClick={() => removeItem(g.id)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">{t("retirer")}</button>
                     </div>
                   )}
                   {g.status === 'done' && (broken[g.id] || (!g.src && !g.thumb)) && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
                       <ImageIcon className="w-7 h-7 text-gray-600" />
-                      <span className="text-[10px] text-gray-500 line-clamp-2">Fichier introuvable<br/>(déplacé ou supprimé)</span>
-                      <button onClick={() => removeItem(g.id)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">retirer</button>
+                      <span className="text-[10px] text-gray-500 line-clamp-2">{t("Fichier introuvable")}<br/>{t("(déplacé ou supprimé)")}</span>
+                      <button onClick={() => removeItem(g.id)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">{t("retirer")}</button>
                     </div>
                   )}
                   {g.status === 'done' && (g.src || g.thumb) && !broken[g.id] && (
@@ -326,11 +327,11 @@ export default function ImageGen() {
                       <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <p className="text-[10px] text-gray-300 line-clamp-2 mb-1.5">{g.prompt}</p>
                         <div className="flex items-center gap-1.5">
-                          <IconBtn title="Ouvrir le dossier" onClick={() => g.path && electron.showItemInFolder?.(g.path)}><Download className="w-3.5 h-3.5" /></IconBtn>
-                          <IconBtn title="Ouvrir l'image" onClick={() => g.path && electron.openFile?.(g.path)}><Maximize2 className="w-3.5 h-3.5" /></IconBtn>
-                          <IconBtn title="Réutiliser prompt + seed" onClick={() => reuse(g)}><RotateCcw className="w-3.5 h-3.5" /></IconBtn>
-                          <IconBtn title="Copier le prompt" onClick={() => copyPrompt(g)}><Copy className="w-3.5 h-3.5" /></IconBtn>
-                          <IconBtn title="Supprimer de la galerie" onClick={() => removeItem(g.id)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
+                          <IconBtn title={t("Ouvrir le dossier")} onClick={() => g.path && electron.showItemInFolder?.(g.path)}><Download className="w-3.5 h-3.5" /></IconBtn>
+                          <IconBtn title={t("Ouvrir l'image")} onClick={() => g.path && electron.openFile?.(g.path)}><Maximize2 className="w-3.5 h-3.5" /></IconBtn>
+                          <IconBtn title={t("Réutiliser prompt + seed")} onClick={() => reuse(g)}><RotateCcw className="w-3.5 h-3.5" /></IconBtn>
+                          <IconBtn title={t("Copier le prompt")} onClick={() => copyPrompt(g)}><Copy className="w-3.5 h-3.5" /></IconBtn>
+                          <IconBtn title={t("Supprimer de la galerie")} onClick={() => removeItem(g.id)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
                         </div>
                       </div>
                     </>
@@ -354,8 +355,8 @@ export default function ImageGen() {
               <div className="flex items-center gap-2 flex-wrap justify-center">
                 <span className="text-xs text-gray-400 max-w-xl text-center px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 select-text">{lightbox.prompt}</span>
                 <span className="text-[11px] text-gray-500 px-2 py-1.5">{lightbox.width}×{lightbox.height} · {lightbox.model} · seed {lightbox.seed}</span>
-                <button onClick={() => lightbox.path && electron.showItemInFolder?.(lightbox.path)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 hover:bg-fuchsia-500/30 flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Dossier</button>
-                <button onClick={() => reuse(lightbox)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-1.5"><RotateCcw className="w-3.5 h-3.5" /> Réutiliser</button>
+                <button onClick={() => lightbox.path && electron.showItemInFolder?.(lightbox.path)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 hover:bg-fuchsia-500/30 flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> {t("Dossier")}</button>
+                <button onClick={() => reuse(lightbox)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-1.5"><RotateCcw className="w-3.5 h-3.5" /> {t("Réutiliser")}</button>
               </div>
             </motion.div>
           </motion.div>

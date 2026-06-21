@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { t } from '@/i18n';
 
 const changelog = [
   {
@@ -60,7 +61,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
           <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-purple-500/10 opacity-50" />
           <h2 className="text-xl font-bold text-white flex items-center gap-3 relative z-10">
             <Sparkles className="w-5 h-5 text-pink-400" />
-            Nouveautés & Historique
+            {t("Nouveautés & Historique")}
           </h2>
           <button 
             onClick={onClose}
@@ -79,7 +80,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
               
               <div className="flex items-end justify-between mb-4">
                 <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
-                  Version {release.version}
+                  {t("Version")} {release.version}
                 </h3>
                 <span className="text-xs font-mono text-gray-500">{release.date}</span>
               </div>
@@ -100,7 +101,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
           ))}
           
           <div className="text-center pt-8 text-xs text-gray-600 font-medium">
-            Propulsé par Orbit AI Studio.
+            {t("Propulsé par Orbit AI Studio.")}
           </div>
         </div>
       </div>

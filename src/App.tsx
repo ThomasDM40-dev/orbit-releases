@@ -21,21 +21,22 @@ import AIAssistant from "@/components/AIAssistant";
 import { Sparkles, UploadCloud } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { t, getLang, setLang, LANGS, type Lang } from "@/i18n";
 
 export default function App() {
   const defaultMainTabs = [
-    { id: 'downloads', label: 'Téléchargements' },
-    { id: 'converter', label: 'Convertisseur & Tags' },
-    { id: 'subscriptions', label: 'Abonnements' },
-    { id: 'interpolator', label: 'Interpolateur IA' },
-    { id: 'library', label: 'Médiathèque' },
-    { id: 'enhance', label: 'Amélioration IA' },
-    { id: 'imagegen', label: 'Génération IA' },
-    { id: 'inpaint', label: 'Gomme magique IA' },
-    { id: 'matting', label: 'Détourage IA' },
-    { id: 'handbrake', label: 'HandBrake' },
-    { id: 'topaz', label: 'Topaz Video AI' },
-    { id: 'transcription', label: 'Transcription' }
+    { id: 'downloads', label: t('Téléchargements') },
+    { id: 'converter', label: t('Convertisseur & Tags') },
+    { id: 'subscriptions', label: t('Abonnements') },
+    { id: 'interpolator', label: t('Interpolateur IA') },
+    { id: 'library', label: t('Médiathèque') },
+    { id: 'enhance', label: t('Amélioration IA') },
+    { id: 'imagegen', label: t('Génération IA') },
+    { id: 'inpaint', label: t('Gomme magique IA') },
+    { id: 'matting', label: t('Détourage IA') },
+    { id: 'handbrake', label: t('HandBrake') },
+    { id: 'topaz', label: t('Topaz Video AI') },
+    { id: 'transcription', label: t('Transcription') }
   ];
 
   const [mainTabConfig, setMainTabConfig] = useState<{ id: string; label: string; visible: boolean }[]>(() => {
@@ -78,7 +79,7 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [updateOk, setUpdateOk] = useState<boolean | null>(null);
   const [isUpdateReady, setIsUpdateReady] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'fr' | 'es'>(() => (localStorage.getItem('app-lang') as any) || 'en');
+  const language: Lang = getLang();
   const [showSettings, setShowSettings] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('orbit-onboarded'));
@@ -119,32 +120,6 @@ export default function App() {
   const settingsRef = useRef(settings); settingsRef.current = settings;
   const saveSettingsRef = useRef<((s: any) => void) | null>(null);
 
-  const t = {
-    en: {
-      file: "File", downloads: "Downloads", languageMenu: "Language", tools: "Tools",
-      minimize: "Minimize to Tray", newSub: "New Subscription", import: "Importer", openDir: "Open Downloads Folder", quit: "Quit",
-      pauseAll: "Pause All Downloads", resumeAll: "Resume All Downloads", restartFailed: "Restart Failed Downloads", clearCompleted: "Clear Completed Downloads", clearAll: "Clear All Downloads", cancelAll: "Cancel All Downloads",
-      viewLogs: "View Logs", updateYtdlp: "Update yt-dlp", checkUpdates: "Check for Updates",
-      updateChecking: "Checking for updates...", upToDate: "Everything is up to date!", updateError: "Cannot check for updates",
-      ytdlpUpdating: "Updating yt-dlp...", ytdlpSuccess: "yt-dlp updated successfully!", ytdlpError: "Error:"
-    },
-    fr: {
-      file: "Fichier", downloads: "Téléchargements", languageMenu: "Langue", tools: "Outils",
-      minimize: "Réduire dans la zone de notification", newSub: "Nouvel Abonnement", import: "Importer", openDir: "Ouvrir le dossier de téléchargements", quit: "Quitter",
-      pauseAll: "Mettre tous les téléchargements en pause", resumeAll: "Reprendre tous les téléchargements", restartFailed: "Redémarrer les téléchargements échoués", clearCompleted: "Effacer les téléchargements terminés", clearAll: "Effacer tous les téléchargements", cancelAll: "Annuler tous les téléchargements",
-      viewLogs: "Voir les journaux", updateYtdlp: "Mettre à jour yt-dlp", checkUpdates: "Vérifier les mises à jour",
-      updateChecking: "Vérification des mises à jour...", upToDate: "Tout est à jour !", updateError: "Impossible de vérifier les mises à jour",
-      ytdlpUpdating: "Mise à jour de yt-dlp en cours...", ytdlpSuccess: "yt-dlp mis à jour avec succès !", ytdlpError: "Erreur :"
-    },
-    es: {
-      file: "Archivo", downloads: "Descargas", languageMenu: "Idioma", tools: "Herramientas",
-      minimize: "Minimizar a la bandeja", newSub: "Nueva suscripción", import: "Importar", openDir: "Abrir carpeta de descargas", quit: "Salir",
-      pauseAll: "Pausar todas las descargas", resumeAll: "Reanudar todas las descargas", restartFailed: "Reiniciar descargas fallidas", clearCompleted: "Borrar descargas completadas", clearAll: "Borrar todas las descargas", cancelAll: "Cancelar todas las descargas",
-      viewLogs: "Ver registros", updateYtdlp: "Actualizar yt-dlp", checkUpdates: "Buscar actualizaciones",
-      updateChecking: "Buscando actualizaciones...", upToDate: "¡Todo está actualizado!", updateError: "No se pueden buscar actualizaciones",
-      ytdlpUpdating: "Actualizando yt-dlp...", ytdlpSuccess: "¡yt-dlp actualizado con éxito!", ytdlpError: "Error:"
-    }
-  }[language];
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -158,7 +133,7 @@ export default function App() {
     document.addEventListener("mousedown", handleClickOutside);
 
     // Update check on launch
-    setUpdateStatus(t.updateChecking);
+    setUpdateStatus(t("Vérification des mises à jour..."));
     if (typeof window !== "undefined" && (window as any).electronAPI?.checkUpdates) {
       (window as any).electronAPI.checkUpdates().then((res: any) => {
         setUpdateOk(res.upToDate);
@@ -166,24 +141,24 @@ export default function App() {
         setTimeout(() => setUpdateStatus(null), 6000);
       }).catch(() => {
         setUpdateOk(null);
-        setUpdateStatus(t.updateError);
+        setUpdateStatus(t("Impossible de vérifier les mises à jour"));
         setTimeout(() => setUpdateStatus(null), 4000);
       });
     } else {
       setTimeout(() => {
         setUpdateOk(true);
-        setUpdateStatus(t.upToDate);
+        setUpdateStatus(t("Tout est à jour !"));
       }, 1200);
       setTimeout(() => setUpdateStatus(null), 5000);
     }
 
     const onUpdateAvailable = () => {
-      setUpdateStatus("Une nouvelle mise à jour d'Orbit est en cours de téléchargement...");
+      setUpdateStatus(t("Une nouvelle mise à jour d'Orbit est en cours de téléchargement..."));
       setUpdateOk(null);
     };
 
     const onUpdateReady = () => {
-      setUpdateStatus("Mise à jour téléchargée et prête !");
+      setUpdateStatus(t("Mise à jour téléchargée et prête !"));
       setUpdateOk(true);
       setIsUpdateReady(true);
     };
@@ -353,11 +328,11 @@ export default function App() {
   const handleUpdateYtdlp = async () => {
     setActiveMenu(null);
     setUpdateOk(null);
-    setUpdateStatus(t.ytdlpUpdating);
+    setUpdateStatus(t("Mise à jour de yt-dlp en cours..."));
     if (typeof window !== "undefined" && (window as any).electronAPI?.updateYtdlp) {
       const res = await (window as any).electronAPI.updateYtdlp();
       setUpdateOk(res.success);
-      setUpdateStatus(res.success ? t.ytdlpSuccess : `${t.ytdlpError} ${res.message}`);
+      setUpdateStatus(res.success ? t("yt-dlp mis à jour avec succès !") : `${t("Erreur :")} ${res.message}`);
       setTimeout(() => setUpdateStatus(null), 5000);
     }
   };
@@ -407,10 +382,9 @@ export default function App() {
     setShowOnboarding(false);
   };
 
-  const handleLanguageChange = (lang: 'en' | 'fr' | 'es') => {
-    setLanguage(lang);
-    localStorage.setItem('app-lang', lang);
+  const handleLanguageChange = (lang: Lang) => {
     setActiveMenu(null);
+    setLang(lang); // persists + remounts the tree so every t() re-reads
   };
 
   const handleQuit = () => {
@@ -443,67 +417,70 @@ export default function App() {
 
           {/* File Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')} className={`menu-btn transition-colors ${activeMenu === 'file' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t.file}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')} className={`menu-btn transition-colors ${activeMenu === 'file' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Fichier")}</button>
             {activeMenu === 'file' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-52 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
-                <button onClick={() => { setShowSettings(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⚙</span> Settings</button>
-                <button onClick={() => { setShowImportModal(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '15ms' }}><span className="w-4">📥</span> {t.import}</button>
+                <button onClick={() => { setShowSettings(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⚙</span> {t("Réglages")}</button>
+                <button onClick={() => { setShowImportModal(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '15ms' }}><span className="w-4">📥</span> {t("Importer")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={handleOpenDir} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">📁</span> {t.openDir}</button>
+                <button onClick={handleOpenDir} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">📁</span> {t("Ouvrir le dossier de téléchargements")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={handleQuit} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 text-red-400 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">✕</span> {t.quit}</button>
+                <button onClick={handleQuit} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 text-red-400 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">✕</span> {t("Quitter")}</button>
               </div>
             )}
           </div>
 
           {/* Downloads Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'downloads' ? null : 'downloads')} className={`menu-btn transition-colors ${activeMenu === 'downloads' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t.downloads}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'downloads' ? null : 'downloads')} className={`menu-btn transition-colors ${activeMenu === 'downloads' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Téléchargements")}</button>
             {activeMenu === 'downloads' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-72 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
-                <button onClick={() => dispatchAction('pauseAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⏸</span> {t.pauseAll}</button>
-                <button onClick={() => dispatchAction('resumeAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">▶</span> {t.resumeAll}</button>
-                <button onClick={() => dispatchAction('restartFailed')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">↻</span> {t.restartFailed}</button>
+                <button onClick={() => dispatchAction('pauseAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⏸</span> {t("Mettre tous les téléchargements en pause")}</button>
+                <button onClick={() => dispatchAction('resumeAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">▶</span> {t("Reprendre tous les téléchargements")}</button>
+                <button onClick={() => dispatchAction('restartFailed')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">↻</span> {t("Redémarrer les téléchargements échoués")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => dispatchAction('clearCompleted')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '90ms' }}><span className="w-4">☐</span> {t.clearCompleted}</button>
+                <button onClick={() => dispatchAction('clearCompleted')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '90ms' }}><span className="w-4">☐</span> {t("Effacer les téléchargements terminés")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => dispatchAction('clearAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-red-400" style={{ animationDelay: '120ms' }}><span className="w-4">🗑</span> {t.clearAll}</button>
-                <button onClick={() => dispatchAction('cancelAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-red-400" style={{ animationDelay: '150ms' }}><span className="w-4">⊗</span> {t.cancelAll}</button>
+                <button onClick={() => dispatchAction('clearAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-red-400" style={{ animationDelay: '120ms' }}><span className="w-4">🗑</span> {t("Effacer tous les téléchargements")}</button>
+                <button onClick={() => dispatchAction('cancelAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-red-400" style={{ animationDelay: '150ms' }}><span className="w-4">⊗</span> {t("Annuler tous les téléchargements")}</button>
               </div>
             )}
           </div>
 
           {/* Language Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'language' ? null : 'language')} className={`menu-btn transition-colors ${activeMenu === 'language' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t.languageMenu}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'language' ? null : 'language')} className={`menu-btn transition-colors ${activeMenu === 'language' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Langue")}</button>
             {activeMenu === 'language' && (
-              <div className="dropdown-menu absolute top-full left-0 mt-2 w-40 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
-                <button onClick={() => handleLanguageChange('en')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center justify-between" style={{ animationDelay: '0ms' }}>English {language === 'en' && <span className="text-pink-500">✓</span>}</button>
-                <button onClick={() => handleLanguageChange('fr')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center justify-between" style={{ animationDelay: '30ms' }}>Français {language === 'fr' && <span className="text-pink-500">✓</span>}</button>
-                <button onClick={() => handleLanguageChange('es')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center justify-between" style={{ animationDelay: '60ms' }}>Español {language === 'es' && <span className="text-pink-500">✓</span>}</button>
+              <div className="dropdown-menu absolute top-full left-0 mt-2 w-44 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
+                {LANGS.map((l, i) => (
+                  <button key={l.code} onClick={() => handleLanguageChange(l.code)} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center justify-between gap-2" style={{ animationDelay: `${i * 30}ms` }}>
+                    <span className="flex items-center gap-2"><span>{l.flag}</span> {l.label}</span>
+                    {language === l.code && <span className="text-pink-500">✓</span>}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
           {/* Tools Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'tools' ? null : 'tools')} className={`menu-btn transition-colors ${activeMenu === 'tools' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t.tools}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'tools' ? null : 'tools')} className={`menu-btn transition-colors ${activeMenu === 'tools' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Outils")}</button>
             {activeMenu === 'tools' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-72 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
-                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openHomeDir(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">📁</span> Open Orbit Home Directory</button>
-                <button onClick={handleUpdateYtdlp} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">↻</span> Re-install yt-dlp</button>
-                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">↻</span> Re-install Node Dependencies</button>
-                <button onClick={() => { setActiveMenu(null); (window as any).electronAPI?.checkUpdates?.().then((res: any) => { setUpdateOk(res.upToDate); setUpdateStatus(res.message); setTimeout(() => setUpdateStatus(null), 6000); }); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '90ms' }}><span className="w-4">☼</span> Update yt-dlp With Latest Configurations</button>
+                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openHomeDir(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">📁</span> {t("Ouvrir le dossier d'Orbit")}</button>
+                <button onClick={handleUpdateYtdlp} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">↻</span> {t("Réinstaller yt-dlp")}</button>
+                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">↻</span> {t("Réinstaller les dépendances Node")}</button>
+                <button onClick={() => { setActiveMenu(null); (window as any).electronAPI?.checkUpdates?.().then((res: any) => { setUpdateOk(res.upToDate); setUpdateStatus(res.message); setTimeout(() => setUpdateStatus(null), 6000); }); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '90ms' }}><span className="w-4">☼</span> {t("Mettre à jour yt-dlp avec les dernières configurations")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://skeavisuals.com/donate'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '120ms' }}><span className="w-4">☆</span> Donate to Orbit</button>
+                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://skeavisuals.com/donate'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '120ms' }}><span className="w-4">☆</span> {t("Faire un don à Orbit")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openChangelog(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '150ms' }}><span className="w-4">🌐</span> View Change Log (local)</button>
+                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openChangelog(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '150ms' }}><span className="w-4">🌐</span> {t("Voir le journal des modifications (local)")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '180ms' }}><span className="w-4">⎘</span> Export/Backup Subscriptions</button>
-                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '210ms' }}><span className="w-4">⎗</span> Import/Restore Subscriptions</button>
+                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '180ms' }}><span className="w-4">⎘</span> {t("Exporter/Sauvegarder les abonnements")}</button>
+                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '210ms' }}><span className="w-4">⎗</span> {t("Importer/Restaurer les abonnements")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://skeavisuals.com'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '240ms' }}><span className="w-4">🌐</span> Open Orbit Homepage (web)</button>
-                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://ffmpeg.org/download.html'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '270ms' }}><span className="w-4">🌐</span> Manually install ffmpeg (web)</button>
+                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://skeavisuals.com'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '240ms' }}><span className="w-4">🌐</span> {t("Ouvrir le site d'Orbit (web)")}</button>
+                <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://ffmpeg.org/download.html'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '270ms' }}><span className="w-4">🌐</span> {t("Installer ffmpeg manuellement (web)")}</button>
               </div>
             )}
           </div>
@@ -513,8 +490,8 @@ export default function App() {
           <button className="hover:text-gray-200 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
           <button className="hover:text-gray-200 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
           <div className="w-px h-4 bg-gray-700 mx-1"></div>
-          <button onClick={handleMinimize} title="Réduire" className="hover:text-gray-200 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-          <button onClick={() => (window as any).electronAPI?.toggleMaximizeWindow?.()} title="Agrandir / Restaurer" className="hover:text-gray-200 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg></button>
+          <button onClick={handleMinimize} title={t("Réduire")} className="hover:text-gray-200 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+          <button onClick={() => (window as any).electronAPI?.toggleMaximizeWindow?.()} title={t("Agrandir / Restaurer")} className="hover:text-gray-200 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg></button>
           <button onClick={handleQuit} className="hover:text-red-500 transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
       </div>
@@ -544,7 +521,7 @@ export default function App() {
               onClick={() => { if (typeof window !== "undefined") (window as any).electronAPI?.installUpdate?.() || (window as any).require?.('electron').ipcRenderer.invoke('install-update'); }}
               className="ml-2 bg-pink-500 hover:bg-pink-600 text-white text-xs px-3 py-1 rounded transition-colors"
             >
-              Installer et Redémarrer
+              {t("Installer et Redémarrer")}
             </button>
           )}
 
@@ -578,10 +555,10 @@ export default function App() {
             <button
               onClick={() => setShowMainTabSettings(!showMainTabSettings)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:text-gray-300 transition-all hover:bg-white/8 border border-transparent hover:border-white/10"
-              title="Gérer les onglets"
+              title={t("Gérer les onglets")}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
-              <span>Onglets</span>
+              <span>{t("Onglets")}</span>
             </button>
             <AnimatePresence>
               {showMainTabSettings && (
@@ -600,7 +577,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2 mb-2 px-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Onglets — glisser pour réordonner</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("Onglets — glisser pour réordonner")}</span>
                   </div>
                   {mainTabConfig.map((tab) => (
                     <div
@@ -635,7 +612,7 @@ export default function App() {
                       </button>
                     </div>
                   ))}
-                  <p className="text-center text-gray-600 text-[10px] mt-1">Glissez-déposez les onglets pour les réordonner</p>
+                  <p className="text-center text-gray-600 text-[10px] mt-1">{t("Glissez-déposez les onglets pour les réordonner")}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -706,7 +683,7 @@ export default function App() {
       <button
         data-ai-toggle
         onClick={() => setShowAIAssistant(!showAIAssistant)}
-        aria-label="Assistant IA"
+        aria-label={t("Assistant IA")}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-2xl transition-all flex items-center justify-center text-white z-40 group hover:scale-105 active:scale-95"
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent,#ec4899) 88%, white), var(--accent,#ec4899))',
@@ -744,8 +721,8 @@ export default function App() {
             <div className="bg-pink-500/20 p-8 rounded-full mb-6">
               <UploadCloud className="w-20 h-20 text-pink-500" />
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Déposez votre fichier ici</h2>
-            <p className="text-gray-300 text-lg">Orbit IA l'analysera et vous proposera des outils adaptés</p>
+            <h2 className="text-3xl font-bold text-white mb-2">{t("Déposez votre fichier ici")}</h2>
+            <p className="text-gray-300 text-lg">{t("Orbit IA l'analysera et vous proposera des outils adaptés")}</p>
           </motion.div>
         )}
       </AnimatePresence>

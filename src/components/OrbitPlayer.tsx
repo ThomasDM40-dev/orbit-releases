@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, X, Volume2, VolumeX, Maximize, Minimize, Loader2, AlertTriangle, ExternalLink, Folder, Music } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { t } from '@/i18n';
 
 interface OrbitPlayerProps {
   fileUrl: string;
@@ -48,7 +49,7 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
   const preparePlayback = async () => {
     const api = (window as any).electronAPI;
     if (!filePath || !api?.preparePlayback) {
-      setError("Ce fichier ne peut pas être lu ici (codec non pris en charge). Ouvre-le dans ton lecteur système.");
+      setError(t("Ce fichier ne peut pas être lu ici (codec non pris en charge). Ouvre-le dans ton lecteur système."));
       return;
     }
     triedPrepareRef.current = true;
@@ -66,11 +67,11 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
         setTimeout(() => { const v = videoRef.current; if (v) { v.load(); v.play().catch(() => {}); } }, 0);
       } else {
         setPreparing(false);
-        setError("Impossible de préparer ce fichier pour la lecture intégrée. Ouvre-le dans ton lecteur système.");
+        setError(t("Impossible de préparer ce fichier pour la lecture intégrée. Ouvre-le dans ton lecteur système."));
       }
     } catch (e) {
       setPreparing(false);
-      setError("Impossible de préparer ce fichier pour la lecture intégrée. Ouvre-le dans ton lecteur système.");
+      setError(t("Impossible de préparer ce fichier pour la lecture intégrée. Ouvre-le dans ton lecteur système."));
     } finally {
       if (unsub) unsub();
     }
@@ -97,7 +98,7 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
     if (v.paused) {
       const p = v.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(() => setError("Lecture impossible — ce format n'est pas pris en charge par le lecteur intégré."));
+        p.catch(() => setError(t("Lecture impossible — ce format n'est pas pris en charge par le lecteur intégré.")));
       }
     } else {
       v.pause();
@@ -186,7 +187,7 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
             // First failure → auto-transcode to a playable MP4. Only show the
             // hard error if even the prepared file fails.
             if (!triedPrepareRef.current) preparePlayback();
-            else setError("Ce fichier ne peut pas être lu ici (codec non pris en charge, ex. MKV / H.265). Ouvre-le dans ton lecteur système.");
+            else setError(t("Ce fichier ne peut pas être lu ici (codec non pris en charge, ex. MKV / H.265). Ouvre-le dans ton lecteur système."));
           }}
           autoPlay
         />
@@ -205,11 +206,11 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
         {preparing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-10 text-center bg-[#0a0a0a]">
             <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />
-            <p className="text-gray-300 text-sm">Préparation de la lecture…</p>
+            <p className="text-gray-300 text-sm">{t("Préparation de la lecture…")}</p>
             <div className="w-full max-w-xs h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300" style={{ width: `${prepProgress}%` }} />
             </div>
-            <p className="text-[11px] text-gray-500">{prepProgress > 0 ? `${prepProgress}%` : 'Conversion du format pour la lecture intégrée'}</p>
+            <p className="text-[11px] text-gray-500">{prepProgress > 0 ? `${prepProgress}%` : t('Conversion du format pour la lecture intégrée')}</p>
           </div>
         )}
 
@@ -228,7 +229,7 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
             <div className="flex items-center gap-3 mt-1">
               {filePath && (
                 <button onClick={openInSystemPlayer} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.9), rgba(168,85,247,0.9))", boxShadow: "0 4px 15px rgba(236,72,153,0.4)" }}>
-                  <ExternalLink className="w-4 h-4" /> Lecteur système
+                  <ExternalLink className="w-4 h-4" /> {t("Lecteur système")}
                 </button>
               )}
               {filePath && (
@@ -290,7 +291,7 @@ export default function OrbitPlayer({ fileUrl, title, onClose, filePath }: Orbit
 
             <div className="flex items-center gap-4">
               {filePath && (
-                <button onClick={openInSystemPlayer} className="text-white hover:text-pink-500 transition-colors" title="Ouvrir dans le lecteur système">
+                <button onClick={openInSystemPlayer} className="text-white hover:text-pink-500 transition-colors" title={t("Ouvrir dans le lecteur système")}>
                   <ExternalLink className="w-5 h-5" />
                 </button>
               )}

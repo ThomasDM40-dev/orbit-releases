@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, RotateCw, Home, Search, X, Globe, Lock, Download, Loader2 } from "lucide-react";
+import { t } from "@/i18n";
 
 // <webview> is an Electron custom element, unknown to React's JSX types.
 const WebView = "webview" as unknown as React.FC<any>;
@@ -47,7 +48,7 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
   const [canBack, setCanBack] = useState(false);
   const [canFwd, setCanFwd] = useState(false);
   const [secure, setSecure] = useState(true);
-  const [status, setStatus] = useState("Prêt");
+  const [status, setStatus] = useState(t("Prêt"));
   const [toast, setToast] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,7 +80,7 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
   // DownloadInterface, which fires this window event so we can confirm it landed
   // in the app (no extra IPC listener — the preload cleanup uses removeAllListeners).
   useEffect(() => {
-    const onToast = (e: any) => flashToast(`✓ ${e.detail?.title || "Flux détecté"} — ajouté à Téléchargements`);
+    const onToast = (e: any) => flashToast(t("✓ {title} — ajouté à Téléchargements", { title: e.detail?.title || t("Flux détecté") }));
     window.addEventListener("sniffer-toast", onToast);
     return () => window.removeEventListener("sniffer-toast", onToast);
   }, []);
@@ -102,8 +103,8 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
       syncNav(); reportPage();
     };
     const onStart = () => { setIsLoading(true); setStatus("Chargement…"); };
-    const onStop = () => { setIsLoading(false); syncNav(); reportPage(); try { setStatus(wv.getTitle() || "Prêt"); } catch (e) {} };
-    const onTitle = (e: any) => { setStatus(e.title || "Prêt"); reportPage(); };
+    const onStop = () => { setIsLoading(false); syncNav(); reportPage(); try { setStatus(wv.getTitle() || t("Prêt")); } catch (e) {} };
+    const onTitle = (e: any) => { setStatus(e.title || t("Prêt")); reportPage(); };
     const onNewWindow = (e: any) => { if (e.url && !e.url.startsWith("data:")) navigate(e.url); };
 
     wv.addEventListener("did-navigate", onNav);
@@ -125,13 +126,13 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
   const goBack = () => { try { if (wvRef.current?.canGoBack()) wvRef.current.goBack(); } catch (e) {} };
   const goFwd = () => { try { if (wvRef.current?.canGoForward()) wvRef.current.goForward(); } catch (e) {} };
   const refresh = () => { try { isLoading ? wvRef.current?.stop() : wvRef.current?.reload(); } catch (e) {} };
-  const goHome = () => { setShowHome(true); setAddressValue(""); setStatus("Prêt"); };
+  const goHome = () => { setShowHome(true); setAddressValue(""); setStatus(t("Prêt")); };
 
   const analyzePage = async () => {
     const wv = wvRef.current;
     let url = "";
     try { url = wv?.getURL?.() || ""; } catch (e) {}
-    if (!url || url === "about:blank" || url.startsWith("data:")) { flashToast("Navigue d'abord vers une page vidéo"); return; }
+    if (!url || url === "about:blank" || url.startsWith("data:")) { flashToast(t("Navigue d'abord vers une page vidéo")); return; }
     setAnalyzing(true);
     setStatus("Analyse de la page…");
     const info = await (window as any).electronAPI?.analyzeUrl?.(url).catch(() => null);
@@ -145,8 +146,8 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
       // Confirmation toast comes back via the 'sniffer-toast' window event.
       setStatus("✓ " + title);
     } else {
-      flashToast("✗ Aucune vidéo téléchargeable ici (Netflix/Amazon = DRM)");
-      setStatus("✗ Page non supportée");
+      flashToast(t("✗ Aucune vidéo téléchargeable ici (Netflix/Amazon = DRM)"));
+      setStatus(t("✗ Page non supportée"));
     }
   };
 
@@ -187,7 +188,7 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
               onKeyDown={(e) => { if (e.key === "Enter") navigate(addressValue); }}
               onFocus={(e) => e.target.select()}
               spellCheck={false}
-              placeholder="Entrez une adresse ou recherchez…"
+              placeholder={t("Entrez une adresse ou recherchez…")}
               className="flex-1 min-w-0 bg-transparent text-sm text-gray-200 placeholder-gray-700 outline-none"
             />
           </div>
@@ -215,7 +216,7 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
                   <Globe className="w-8 h-8 text-pink-300" />
                 </div>
                 <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Navigateur Orbit</h1>
-                <p className="text-gray-500 text-sm mt-2">Navigue vers une page vidéo — les flux détectés s'ajoutent <strong className="text-pink-400 font-semibold">automatiquement à Téléchargements</strong></p>
+                <p className="text-gray-500 text-sm mt-2">{t("Navigue vers une page vidéo — les flux détectés s'ajoutent")} <strong className="text-pink-400 font-semibold">{t("automatiquement à Téléchargements")}</strong></p>
               </div>
 
               <form
@@ -223,12 +224,12 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
                 className="flex items-center gap-2 w-full max-w-xl rounded-2xl pl-4 pr-1.5 py-1.5 bg-white/5 border border-white/10 focus-within:border-pink-500/50 transition-colors"
               >
                 <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                <input name="q" autoFocus spellCheck={false} placeholder="Rechercher sur Google ou saisir une adresse…" className="flex-1 min-w-0 bg-transparent text-sm text-gray-200 placeholder-gray-700 outline-none py-1.5" />
+                <input name="q" autoFocus spellCheck={false} placeholder={t("Rechercher sur Google ou saisir une adresse…")} className="flex-1 min-w-0 bg-transparent text-sm text-gray-200 placeholder-gray-700 outline-none py-1.5" />
                 <button type="submit" className="flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: "linear-gradient(135deg, #ec4899, #a855f7)" }}>Aller</button>
               </form>
 
               <div className="w-full max-w-2xl">
-                <div className="text-[11px] font-bold tracking-wider uppercase text-gray-700 mb-2.5">Accès rapides</div>
+                <div className="text-[11px] font-bold tracking-wider uppercase text-gray-700 mb-2.5">{t("Accès rapides")}</div>
                 <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}>
                   {QUICK_LINKS.map((l) => (
                     <button key={l.name} onClick={() => navigate(l.url)} className="flex flex-col items-center gap-2 px-3 py-4 rounded-2xl bg-white/[0.035] border border-white/8 text-gray-400 hover:bg-white/7 hover:border-pink-500/35 hover:text-gray-100 hover:-translate-y-0.5 transition-all">

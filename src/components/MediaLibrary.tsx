@@ -6,6 +6,7 @@ import {
   Gauge, CheckCircle2, AlertCircle, Trash2, Filter,
 } from 'lucide-react';
 import GlassSelect from './GlassSelect';
+import { t } from '@/i18n';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -48,19 +49,19 @@ export default function MediaLibrary() {
     })();
   }, []);
   // ── persist ──
-  useEffect(() => { if (!electron?.libSave) return; const t = setTimeout(() => electron.libSave({ items }), 600); return () => clearTimeout(t); }, [items]);
+  useEffect(() => { if (!electron?.libSave) return; const tm = setTimeout(() => electron.libSave({ items }), 600); return () => clearTimeout(tm); }, [items]);
   // ── conversion events ──
   useEffect(() => {
     if (!electron || listenersRef.current) return; listenersRef.current = true;
     electron.onLibConvertProgress?.((d: any) => setConvs(c => ({ ...c, [d.id]: { ...(c[d.id] || { status: 'running', percent: 0 }), status: 'running', percent: d.percent ?? c[d.id]?.percent ?? 0, stage: d.stage } })));
-    electron.onLibConvertComplete?.((d: any) => { setConvs(c => ({ ...c, [d.id]: { status: 'done', percent: 100, outputPath: d.outputPath } })); showToast('info', 'Conversion terminée ✓'); });
-    electron.onLibConvertError?.((d: any) => { setConvs(c => ({ ...c, [d.id]: { status: 'error', percent: 0, error: d.error } })); showToast('error', d.error || 'Échec conversion'); });
+    electron.onLibConvertComplete?.((d: any) => { setConvs(c => ({ ...c, [d.id]: { status: 'done', percent: 100, outputPath: d.outputPath } })); showToast('info', t('Conversion terminée ✓')); });
+    electron.onLibConvertError?.((d: any) => { setConvs(c => ({ ...c, [d.id]: { status: 'error', percent: 0, error: d.error } })); showToast('error', d.error || t('Échec conversion')); });
   }, [electron]);
 
   const enrich = useCallback(async (paths: string[]) => {
     const existing = new Set(itemsRef.current.map(i => i.path));
     const fresh = paths.filter(p => !existing.has(p));
-    if (!fresh.length) { showToast('info', 'Déjà dans la bibliothèque.'); return; }
+    if (!fresh.length) { showToast('info', t('Déjà dans la bibliothèque.')); return; }
     const base: Item[] = [];
     for (const p of fresh) {
       const name = p.split(/[\\/]/).pop() || p;
@@ -75,14 +76,14 @@ export default function MediaLibrary() {
   }, [electron]);
 
   const addFiles = async () => { setBusy(true); const f = await electron.libAddFiles?.().catch(() => []); setBusy(false); if (f?.length) await enrich(f); };
-  const scanFolder = async () => { setBusy(true); const f = await electron.libScanFolder?.().catch(() => []); setBusy(false); if (f?.length) { await enrich(f); showToast('info', `${f.length} fichier(s) trouvé(s).`); } };
+  const scanFolder = async () => { setBusy(true); const f = await electron.libScanFolder?.().catch(() => []); setBusy(false); if (f?.length) { await enrich(f); showToast('info', t('{n} fichier(s) trouvé(s).', { n: f.length })); } };
   const onDrop = (e: React.DragEvent) => { e.preventDefault(); const ps: string[] = []; for (const f of Array.from(e.dataTransfer.files)) { const p = (f as any).path; if (p) ps.push(p); } if (ps.length) enrich(ps); };
   const toggleFav = (id: string) => setItems(prev => prev.map(i => i.id === id ? { ...i, favorite: !i.favorite } : i));
   const removeItem = (id: string) => { setItems(prev => prev.filter(i => i.id !== id)); if (selected?.id === id) setSelected(null); };
 
   const convert = (item: Item, mode: 'preset' | 'prep', value: string) => {
     const jobId = item.id; // one active conversion per item
-    setConvs(c => ({ ...c, [jobId]: { status: 'running', percent: 0, stage: 'Démarrage…' } }));
+    setConvs(c => ({ ...c, [jobId]: { status: 'running', percent: 0, stage: t('Démarrage…') } }));
     electron.libConvert?.({ id: jobId, inputPath: item.path, mode, preset: mode === 'preset' ? value : undefined, prep: mode === 'prep' ? value : undefined });
   };
   const cancelConvert = (id: string) => { electron.libCancel?.(id); setConvs(c => { const n = { ...c }; delete n[id]; return n; }); };
@@ -116,10 +117,10 @@ export default function MediaLibrary() {
   const codecs = useMemo(() => Array.from(new Set(items.map(i => i.meta?.codec).filter(Boolean))) as string[], [items]);
 
   const sections = [
-    { id: 'all', label: 'Toute la bibliothèque', icon: <Library className="w-4 h-4" /> },
-    { id: 'recent', label: 'Récemment ajoutés', icon: <Sparkles className="w-4 h-4" /> },
-    { id: 'favorites', label: 'Favoris', icon: <Star className="w-4 h-4" /> },
-    { id: 'resume', label: 'Reprendre la lecture', icon: <Clock className="w-4 h-4" /> },
+    { id: 'all', label: t('Toute la bibliothèque'), icon: <Library className="w-4 h-4" /> },
+    { id: 'recent', label: t('Récemment ajoutés'), icon: <Sparkles className="w-4 h-4" /> },
+    { id: 'favorites', label: t('Favoris'), icon: <Star className="w-4 h-4" /> },
+    { id: 'resume', label: t('Reprendre la lecture'), icon: <Clock className="w-4 h-4" /> },
   ];
 
   return (
@@ -127,17 +128,17 @@ export default function MediaLibrary() {
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-white/5">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/30 to-violet-500/30 flex items-center justify-center border border-white/10"><Library className="w-5 h-5 text-indigo-400" /></div>
-        <div className="mr-2"><h2 className="text-base font-bold text-white leading-tight">Médiathèque</h2><p className="text-[10px] text-gray-500">{items.length} média{items.length > 1 ? 's' : ''}</p></div>
+        <div className="mr-2"><h2 className="text-base font-bold text-white leading-tight">{t("Médiathèque")}</h2><p className="text-[10px] text-gray-500">{t("{n} médias", { n: items.length })}</p></div>
         <div className="flex-1 relative max-w-md">
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Recherche instantanée…" className={INPUT + ' w-full pl-9'} />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t("Recherche instantanée…")} className={INPUT + ' w-full pl-9'} />
         </div>
         <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-0.5">
           <button onClick={() => setView('grid')} className={`p-1.5 rounded-lg ${view === 'grid' ? 'bg-indigo-500/30 text-indigo-200' : 'text-gray-500 hover:text-gray-300'}`}><LayoutGrid className="w-4 h-4" /></button>
           <button onClick={() => setView('list')} className={`p-1.5 rounded-lg ${view === 'list' ? 'bg-indigo-500/30 text-indigo-200' : 'text-gray-500 hover:text-gray-300'}`}><List className="w-4 h-4" /></button>
         </div>
-        <button onClick={addFiles} disabled={busy} className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.7),rgba(139,92,246,0.7))', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Ajouter</button>
-        <button onClick={scanFolder} disabled={busy} className="px-3 py-2 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-1.5 disabled:opacity-50"><FolderSearch className="w-4 h-4" /> Scanner</button>
+        <button onClick={addFiles} disabled={busy} className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.7),rgba(139,92,246,0.7))', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t("Ajouter")}</button>
+        <button onClick={scanFolder} disabled={busy} className="px-3 py-2 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 flex items-center gap-1.5 disabled:opacity-50"><FolderSearch className="w-4 h-4" /> {t("Scanner")}</button>
       </div>
 
       <AnimatePresence>{toast && (<motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={`mx-5 mt-3 px-4 py-2 rounded-xl text-sm flex items-center gap-2 border ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-200'}`}>{toast.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}<span className="select-text">{toast.msg}</span></motion.div>)}</AnimatePresence>
@@ -148,7 +149,7 @@ export default function MediaLibrary() {
           {sections.map(s => (
             <button key={s.id} onClick={() => setSection(s.id)} className={`w-full text-left px-3 py-2 rounded-xl text-sm flex items-center gap-2.5 transition-all ${section === s.id ? 'bg-indigo-500/20 text-white border border-indigo-500/40' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>{s.icon}{s.label}</button>
           ))}
-          {seriesList.length > 0 && <p className="text-[10px] text-gray-600 uppercase font-bold tracking-wider px-3 mt-3 mb-1">Séries</p>}
+          {seriesList.length > 0 && <p className="text-[10px] text-gray-600 uppercase font-bold tracking-wider px-3 mt-3 mb-1">{t("Séries")}</p>}
           {seriesList.map(([name, count]) => (
             <button key={name} onClick={() => setSection('series:' + name)} className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between gap-2 transition-all ${section === 'series:' + name ? 'bg-indigo-500/20 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}><span className="truncate flex items-center gap-1.5"><Film className="w-3 h-3 shrink-0" />{name}</span><span className="text-[10px] text-gray-600">{count}</span></button>
           ))}
@@ -159,20 +160,20 @@ export default function MediaLibrary() {
           {/* Filters */}
           <div className="flex items-center gap-2 px-5 py-2 border-b border-white/5 text-xs">
             <Filter className="w-3.5 h-3.5 text-gray-500" />
-            <GlassSelect className="w-44 py-1" value={resFilter} onChange={setResFilter} ariaLabel="Résolution"
-              options={[{ value: 'all', label: 'Résolution : toutes' }, ...['4K', '1440p', '1080p', '720p', 'SD'].map(r => ({ value: r, label: r }))]} />
-            <GlassSelect className="w-40 py-1" value={codecFilter} onChange={setCodecFilter} ariaLabel="Codec"
-              options={[{ value: 'all', label: 'Codec : tous' }, ...codecs.map((c: string) => ({ value: c, label: c }))]} />
-            <GlassSelect className="w-48 py-1" value={sort} onChange={setSort} ariaLabel="Tri"
-              options={[{ value: 'added', label: "Tri : date d'ajout" }, { value: 'name', label: 'Nom' }, { value: 'duration', label: 'Durée' }, { value: 'episode', label: 'Saison/Épisode' }]} />
-            <span className="ml-auto text-gray-600">{filtered.length} résultat{filtered.length > 1 ? 's' : ''}</span>
+            <GlassSelect className="w-44 py-1" value={resFilter} onChange={setResFilter} ariaLabel={t("Résolution")}
+              options={[{ value: 'all', label: t('Résolution : toutes') }, ...['4K', '1440p', '1080p', '720p', 'SD'].map(r => ({ value: r, label: r }))]} />
+            <GlassSelect className="w-40 py-1" value={codecFilter} onChange={setCodecFilter} ariaLabel={t("Codec")}
+              options={[{ value: 'all', label: t('Codec : tous') }, ...codecs.map((c: string) => ({ value: c, label: c }))]} />
+            <GlassSelect className="w-48 py-1" value={sort} onChange={setSort} ariaLabel={t("Tri")}
+              options={[{ value: 'added', label: t("Tri : date d'ajout") }, { value: 'name', label: t('Nom') }, { value: 'duration', label: t('Durée') }, { value: 'episode', label: t('Saison/Épisode') }]} />
+            <span className="ml-auto text-gray-600">{t("{n} résultats", { n: filtered.length })}</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5">
             {filtered.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-gray-600">
                 <FolderOpen className="w-12 h-12 opacity-40" />
-                <p className="text-sm">{items.length === 0 ? 'Glissez vos vidéos ici, ou « Ajouter » / « Scanner ».' : 'Aucun média ne correspond.'}</p>
+                <p className="text-sm">{items.length === 0 ? t('Glissez vos vidéos ici, ou « Ajouter » / « Scanner ».') : t('Aucun média ne correspond.')}</p>
               </div>
             ) : view === 'grid' ? (
               <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))' }}>
@@ -196,9 +197,9 @@ export default function MediaLibrary() {
 
 function ConvBadge({ conv }: { conv?: Conv }) {
   if (!conv) return null;
-  if (conv.status === 'running') return <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1"><div className="flex justify-between text-[9px] text-indigo-300 mb-0.5"><span>{conv.stage || 'Conversion'}</span><span>{conv.percent}%</span></div><div className="h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-indigo-500" style={{ width: `${conv.percent}%` }} /></div></div>;
-  if (conv.status === 'done') return <span className="absolute bottom-1 right-1 text-[9px] bg-green-500/80 text-white px-1.5 py-0.5 rounded">✓ converti</span>;
-  if (conv.status === 'error') return <span className="absolute bottom-1 right-1 text-[9px] bg-red-500/80 text-white px-1.5 py-0.5 rounded">erreur</span>;
+  if (conv.status === 'running') return <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1"><div className="flex justify-between text-[9px] text-indigo-300 mb-0.5"><span>{conv.stage || t('Conversion')}</span><span>{conv.percent}%</span></div><div className="h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-indigo-500" style={{ width: `${conv.percent}%` }} /></div></div>;
+  if (conv.status === 'done') return <span className="absolute bottom-1 right-1 text-[9px] bg-green-500/80 text-white px-1.5 py-0.5 rounded">{t("✓ converti")}</span>;
+  if (conv.status === 'error') return <span className="absolute bottom-1 right-1 text-[9px] bg-red-500/80 text-white px-1.5 py-0.5 rounded">{t("erreur")}</span>;
   return null;
 }
 
@@ -218,7 +219,7 @@ function Card({ it, conv, onOpen, onFav }: any) {
           <p className="text-xs text-gray-200 font-medium truncate flex-1" title={it.name}>{it.name}</p>
           <button onClick={onFav} className={it.favorite ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}><Star className="w-3.5 h-3.5" fill={it.favorite ? 'currentColor' : 'none'} /></button>
         </div>
-        <p className="text-[10px] text-gray-500 truncate mt-0.5">{it.meta ? `${it.meta.width}×${it.meta.height} · ${it.meta.codec} · ${fmtSize(it.meta.size)}` : 'Analyse…'}</p>
+        <p className="text-[10px] text-gray-500 truncate mt-0.5">{it.meta ? `${it.meta.width}×${it.meta.height} · ${it.meta.codec} · ${fmtSize(it.meta.size)}` : t('Analyse…')}</p>
       </div>
     </div>
   );
@@ -244,7 +245,7 @@ function Detail({ item, presets, conv, onClose, onConvert, onCancel, onReveal }:
   const m: Meta | undefined = item.meta;
   const fps = m?.fps || 24;
 
-  useEffect(() => { const v = vref.current; if (v && item.resumeTime > 5) { const t = setTimeout(() => { try { v.currentTime = item.resumeTime; } catch (e) {} }, 200); return () => clearTimeout(t); } }, []);
+  useEffect(() => { const v = vref.current; if (v && item.resumeTime > 5) { const tm = setTimeout(() => { try { v.currentTime = item.resumeTime; } catch (e) {} }, 200); return () => clearTimeout(tm); } }, []);
   useEffect(() => { if (vref.current) vref.current.playbackRate = speed; }, [speed]);
   const step = (frames: number) => { const v = vref.current; if (v) { v.pause(); setPlaying(false); v.currentTime = Math.max(0, v.currentTime + frames / fps); } };
   const close = () => onClose(vref.current ? vref.current.currentTime : null);
@@ -262,13 +263,13 @@ function Detail({ item, presets, conv, onClose, onConvert, onCancel, onReveal }:
             <video ref={vref} src={mediaUrl(item.path)} className="max-h-full max-w-full" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
           </div>
           <div className="flex items-center gap-2 px-4 py-3 bg-black/60 border-t border-white/5">
-            <button onClick={() => step(-1)} title="Image précédente" className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></button>
+            <button onClick={() => step(-1)} title={t("Image précédente")} className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></button>
             <button onClick={() => { const v = vref.current; if (!v) return; v.paused ? v.play() : v.pause(); }} className="p-2 rounded-lg bg-indigo-500/30 text-indigo-100">{playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}</button>
-            <button onClick={() => step(1)} title="Image suivante" className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><ChevronRight className="w-4 h-4" /></button>
-            <div className="flex items-center gap-1.5 ml-3"><Gauge className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs text-gray-400">Vitesse</span>
+            <button onClick={() => step(1)} title={t("Image suivante")} className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><ChevronRight className="w-4 h-4" /></button>
+            <div className="flex items-center gap-1.5 ml-3"><Gauge className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs text-gray-400">{t("Vitesse")}</span>
               {[0.25, 0.5, 1, 1.5, 2].map(s => <button key={s} onClick={() => setSpeed(s)} className={`text-[11px] px-1.5 py-0.5 rounded ${speed === s ? 'bg-indigo-500/40 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{s}×</button>)}
             </div>
-            <span className="ml-auto text-[10px] text-gray-500">1 image = {(1 / fps).toFixed(3)}s</span>
+            <span className="ml-auto text-[10px] text-gray-500">{t("1 image = {s}s", { s: (1 / fps).toFixed(3) })}</span>
           </div>
         </div>
 
@@ -277,33 +278,33 @@ function Detail({ item, presets, conv, onClose, onConvert, onCancel, onReveal }:
           <div className="flex items-start justify-between p-4 border-b border-white/8"><div className="min-w-0"><h3 className="text-sm font-bold text-white truncate">{item.name}</h3><p className="text-[11px] text-gray-500 truncate">{item.series}{item.season ? ` · S${item.season}` : ''}{item.episode ? `E${item.episode}` : ''}</p></div><button onClick={close} className="text-gray-500 hover:text-white shrink-0"><X className="w-5 h-5" /></button></div>
 
           <div className="p-4 space-y-2 border-b border-white/8">
-            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Informations</p>
-            {[['Résolution', m ? `${m.width}×${m.height} (${resLabel(m.height)})` : '—'], ['FPS', m ? Math.round(m.fps) + ' fps' : '—'], ['Codec vidéo', m?.codec || '—'], ['Codec audio', m?.audioCodec || (m?.hasAudio ? '—' : 'aucun')], ['Durée', fmtDur(m?.duration)], ['Taille', fmtSize(m?.size)]].map(([k, v]) => (
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{t("Informations")}</p>
+            {[[t('Résolution'), m ? `${m.width}×${m.height} (${resLabel(m.height)})` : '—'], ['FPS', m ? Math.round(m.fps) + ' fps' : '—'], [t('Codec vidéo'), m?.codec || '—'], [t('Codec audio'), m?.audioCodec || (m?.hasAudio ? '—' : t('aucun'))], [t('Durée'), fmtDur(m?.duration)], [t('Taille'), fmtSize(m?.size)]].map(([k, v]) => (
               <div key={k} className="flex justify-between text-xs"><span className="text-gray-500">{k}</span><span className="text-gray-200 text-right">{v}</span></div>
             ))}
           </div>
 
           <div className="p-4 space-y-3">
-            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider flex items-center gap-1.5"><Wand2 className="w-3 h-3" /> Export créatif</p>
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider flex items-center gap-1.5"><Wand2 className="w-3 h-3" /> {t("Export créatif")}</p>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(PREP).map(([k, v]: any) => (
-                <button key={k} disabled={conv?.status === 'running'} onClick={() => onConvert(item, 'prep', k)} className="px-2 py-2 rounded-xl text-xs bg-white/5 border border-white/10 hover:bg-indigo-500/15 hover:border-indigo-500/30 transition-all disabled:opacity-40">Préparer pour<br /><strong>{v.label}</strong></button>
+                <button key={k} disabled={conv?.status === 'running'} onClick={() => onConvert(item, 'prep', k)} className="px-2 py-2 rounded-xl text-xs bg-white/5 border border-white/10 hover:bg-indigo-500/15 hover:border-indigo-500/30 transition-all disabled:opacity-40">{t("Préparer pour")}<br /><strong>{v.label}</strong></button>
               ))}
             </div>
             <div className="pt-1">
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1.5">Conversion</p>
+              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1.5">{t("Conversion")}</p>
               <div className="flex gap-2">
-                <GlassSelect className="flex-1 py-1.5" value={preset} onChange={setPreset} ariaLabel="Préréglage"
+                <GlassSelect className="flex-1 py-1.5" value={preset} onChange={setPreset} ariaLabel={t("Préréglage")}
                   options={Object.entries(presetGroups).flatMap(([g, keys]: any) => (keys as string[]).map((k: string) => ({ value: k, label: PRESETS[k].label, group: g })))} />
-                <button disabled={conv?.status === 'running'} onClick={() => onConvert(item, 'preset', preset)} className="px-3 py-1.5 rounded-xl text-sm font-semibold disabled:opacity-40" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.75),rgba(139,92,246,0.75))', color: 'white' }}>Convertir</button>
+                <button disabled={conv?.status === 'running'} onClick={() => onConvert(item, 'preset', preset)} className="px-3 py-1.5 rounded-xl text-sm font-semibold disabled:opacity-40" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.75),rgba(139,92,246,0.75))', color: 'white' }}>{t("Convertir")}</button>
               </div>
             </div>
 
-            {conv?.status === 'running' && <div className="pt-1"><div className="flex justify-between text-[11px] text-indigo-300 mb-1"><span>{conv.stage || 'Conversion'}</span><span>{conv.percent}%</span></div><div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${conv.percent}%` }} /></div><button onClick={() => onCancel(item.id)} className="mt-2 w-full text-xs py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300">Annuler</button></div>}
-            {conv?.status === 'done' && conv.outputPath && <button onClick={() => onReveal(conv.outputPath)} className="w-full text-xs py-2 rounded-lg bg-green-500/15 border border-green-500/30 text-green-300 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> Terminé — Ouvrir le dossier</button>}
+            {conv?.status === 'running' && <div className="pt-1"><div className="flex justify-between text-[11px] text-indigo-300 mb-1"><span>{conv.stage || t('Conversion')}</span><span>{conv.percent}%</span></div><div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${conv.percent}%` }} /></div><button onClick={() => onCancel(item.id)} className="mt-2 w-full text-xs py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300">{t("Annuler")}</button></div>}
+            {conv?.status === 'done' && conv.outputPath && <button onClick={() => onReveal(conv.outputPath)} className="w-full text-xs py-2 rounded-lg bg-green-500/15 border border-green-500/30 text-green-300 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {t("Terminé — Ouvrir le dossier")}</button>}
             {conv?.status === 'error' && <p className="text-[11px] text-red-300 bg-red-500/5 border border-red-500/20 rounded-lg p-2">{conv.error}</p>}
 
-            <button onClick={() => onReveal(item.path)} className="w-full text-xs py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center gap-1.5 mt-1"><FolderOpen className="w-4 h-4" /> Voir le fichier source</button>
+            <button onClick={() => onReveal(item.path)} className="w-full text-xs py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center gap-1.5 mt-1"><FolderOpen className="w-4 h-4" /> {t("Voir le fichier source")}</button>
           </div>
         </div>
       </motion.div>

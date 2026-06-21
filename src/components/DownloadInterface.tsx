@@ -7,6 +7,7 @@ import OrbitPlayer from "./OrbitPlayer";
 import LogPanel from "./LogPanel";
 import SnifferBrowser from "./SnifferBrowser";
 import GlassSelect, { GlassOption } from "./GlassSelect";
+import { t as tr, type Lang } from "@/i18n";
 
 // Build a safe media:// URL. The path goes in the URL *path* component
 // (media:///C%3A/Users/...), never the host — otherwise Chromium normalizes the
@@ -38,68 +39,31 @@ type DownloadItem = {
 };
 
 type DownloadInterfaceProps = {
-  language?: 'en' | 'fr' | 'es';
+  language?: Lang;
   globalSettings?: any;
   setGlobalSettings?: any;
 };
 
-export default function DownloadInterface({ language = 'en', globalSettings, setGlobalSettings }: DownloadInterfaceProps) {
+export default function DownloadInterface({ globalSettings, setGlobalSettings }: DownloadInterfaceProps) {
+  // Labels resolved through the global i18n (French source strings as keys).
   const t = {
-    en: {
-      placeholder: "Paste a URL and press Enter to stash it!",
-      analyzing: "Analyzing...",
-      untitled: "Untitled Video",
-      demo: "Demo Video",
-      unknown: "Unknown",
-      audioOnlyTitle: "Download Audio Only?",
-      audioOnlyDesc: "If enabled, your format selections will be audio based and audio will be extracted",
-      formatTitle: "Download Format",
-      formatDesc: "The format to download the video in",
-      audioFormats: { MP3: "MP3 (Audio)", FLAC: "FLAC (Lossless Audio)", WAV: "WAV (Lossless Audio)", M4A: "M4A (Apple Audio)", OGG: "OGG (Vorbis Audio)", ALAC: "ALAC (Apple Lossless)" },
-      videoFormats: { BEST: "Highest Quality Video and Audio", "8K": "8K (4320p) Video", "4K": "4K (2160p) Video", "2K": "2K (1440p) Video", "1080p": "HD (1080p) Video", "720p": "HD (720p) Video", "480p": "SD (480p) Video", "360p": "SD (360p) Video", "144p": "Low (144p) Video", MP4: "MP4 (Standard Video)", WEBM: "WEBM (VP9/AV1)" },
-      donate: "Click to donate!",
-      version: "Orbit Version 1.0.0",
-      changelog: "Open changelog",
-      done: "Done",
-      error: "Error"
-    },
-    fr: {
-      placeholder: "Collez une URL et appuyez sur Entrée pour la mettre en réserve !",
-      analyzing: "Analyse en cours...",
-      untitled: "Vidéo sans titre",
-      demo: "Vidéo Démo",
-      unknown: "Inconnu",
-      audioOnlyTitle: "Télécharger l'audio uniquement ?",
-      audioOnlyDesc: "Si cette option est activée, vos sélections de format seront basées sur l'audio et l'audio sera extrait",
-      formatTitle: "Format de téléchargement",
-      formatDesc: "Le format dans lequel télécharger la vidéo",
-      audioFormats: { MP3: "MP3 (Audio)", FLAC: "FLAC (Audio sans perte)", WAV: "WAV (Audio sans perte)", M4A: "M4A (Audio Apple)", OGG: "OGG (Audio Vorbis)", ALAC: "ALAC (Apple Lossless)" },
-      videoFormats: { BEST: "Vidéo et Audio de la plus haute qualité", "8K": "Vidéo 8K (4320p)", "4K": "Vidéo 4K (2160p)", "2K": "Vidéo 2K (1440p)", "1080p": "Vidéo HD (1080p)", "720p": "Vidéo HD (720p)", "480p": "Vidéo SD (480p)", "360p": "Vidéo SD (360p)", "144p": "Vidéo Basse (144p)", MP4: "MP4 (Vidéo Standard)", WEBM: "WEBM (VP9/AV1)" },
-      donate: "Cliquez pour faire un don !",
-      version: "Version de Orbit 1.0.0",
-      changelog: "Ouvrir le journal des modifications",
-      done: "Terminé",
-      error: "Erreur"
-    },
-    es: {
-      placeholder: "¡Pega una URL y presiona Enter para guardarla!",
-      analyzing: "Analizando...",
-      untitled: "Video sin título",
-      demo: "Video de demostración",
-      unknown: "Desconocido",
-      audioOnlyTitle: "¿Descargar solo audio?",
-      audioOnlyDesc: "Si está habilitado, sus selecciones de formato se basarán en el audio y se extraerá el audio",
-      formatTitle: "Formato de descarga",
-      formatDesc: "El formato para descargar el video",
-      audioFormats: { MP3: "MP3 (Audio)", FLAC: "FLAC (Audio sin pérdida)", WAV: "WAV (Audio sin pérdida)", M4A: "M4A (Audio de Apple)", OGG: "OGG (Audio Vorbis)", ALAC: "ALAC (Apple Lossless)" },
-      videoFormats: { BEST: "Video y audio de la más alta calidad", "8K": "Video 8K (4320p)", "4K": "Video 4K (2160p)", "2K": "Video 2K (1440p)", "1080p": "Video HD (1080p)", "720p": "Video HD (720p)", "480p": "Video SD (480p)", "360p": "Video SD (360p)", "144p": "Video Baja (144p)", MP4: "MP4 (Video estándar)", WEBM: "WEBM (VP9/AV1)" },
-      donate: "¡Haga clic para donar!",
-      version: "Versión de Orbit 1.0.0",
-      changelog: "Abrir registro de cambios",
-      done: "Completado",
-      error: "Error"
-    }
-  }[language];
+    placeholder: tr("Collez une URL et appuyez sur Entrée pour la mettre en réserve !"),
+    analyzing: tr("Analyse en cours..."),
+    untitled: tr("Vidéo sans titre"),
+    demo: tr("Vidéo Démo"),
+    unknown: tr("Inconnu"),
+    audioOnlyTitle: tr("Télécharger l'audio uniquement ?"),
+    audioOnlyDesc: tr("Si cette option est activée, vos sélections de format seront basées sur l'audio et l'audio sera extrait"),
+    formatTitle: tr("Format de téléchargement"),
+    formatDesc: tr("Le format dans lequel télécharger la vidéo"),
+    audioFormats: { MP3: "MP3 (Audio)", FLAC: tr("FLAC (Audio sans perte)"), WAV: tr("WAV (Audio sans perte)"), M4A: tr("M4A (Audio Apple)"), OGG: tr("OGG (Audio Vorbis)"), ALAC: "ALAC (Apple Lossless)" },
+    videoFormats: { BEST: tr("Vidéo et Audio de la plus haute qualité"), "8K": tr("Vidéo 8K (4320p)"), "4K": tr("Vidéo 4K (2160p)"), "2K": tr("Vidéo 2K (1440p)"), "1080p": tr("Vidéo HD (1080p)"), "720p": tr("Vidéo HD (720p)"), "480p": tr("Vidéo SD (480p)"), "360p": tr("Vidéo SD (360p)"), "144p": tr("Vidéo Basse (144p)"), MP4: tr("MP4 (Vidéo Standard)"), WEBM: "WEBM (VP9/AV1)" },
+    donate: tr("Cliquez pour faire un don !"),
+    version: "Version de Orbit 1.0.0",
+    changelog: tr("Ouvrir le journal des modifications"),
+    done: tr("Terminé"),
+    error: tr("Erreur"),
+  };
 
   const [url, setUrl] = useState("");
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
@@ -118,25 +82,25 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
 
   // Build dropdown options from the localized format labels.
   const videoFmtOpts: GlassOption[] = [
-    { value: 'BEST', label: t.videoFormats.BEST, group: 'Vidéo' },
-    { value: '8K', label: t.videoFormats["8K"], group: 'Vidéo' },
-    { value: '4K', label: t.videoFormats["4K"], group: 'Vidéo' },
-    { value: '2K', label: t.videoFormats["2K"], group: 'Vidéo' },
-    { value: '1080p', label: t.videoFormats["1080p"], group: 'Vidéo' },
-    { value: '720p', label: t.videoFormats["720p"], group: 'Vidéo' },
-    { value: '480p', label: t.videoFormats["480p"], group: 'Vidéo' },
-    { value: '360p', label: t.videoFormats["360p"], group: 'Vidéo' },
-    { value: '144p', label: t.videoFormats["144p"], group: 'Vidéo' },
-    { value: 'MP4', label: t.videoFormats.MP4, group: 'Vidéo' },
-    { value: 'WEBM', label: t.videoFormats.WEBM, group: 'Vidéo' },
+    { value: 'BEST', label: t.videoFormats.BEST, group: tr('Vidéo') },
+    { value: '8K', label: t.videoFormats["8K"], group: tr('Vidéo') },
+    { value: '4K', label: t.videoFormats["4K"], group: tr('Vidéo') },
+    { value: '2K', label: t.videoFormats["2K"], group: tr('Vidéo') },
+    { value: '1080p', label: t.videoFormats["1080p"], group: tr('Vidéo') },
+    { value: '720p', label: t.videoFormats["720p"], group: tr('Vidéo') },
+    { value: '480p', label: t.videoFormats["480p"], group: tr('Vidéo') },
+    { value: '360p', label: t.videoFormats["360p"], group: tr('Vidéo') },
+    { value: '144p', label: t.videoFormats["144p"], group: tr('Vidéo') },
+    { value: 'MP4', label: t.videoFormats.MP4, group: tr('Vidéo') },
+    { value: 'WEBM', label: t.videoFormats.WEBM, group: tr('Vidéo') },
   ];
   const audioFmtOpts: GlassOption[] = [
-    { value: 'MP3', label: t.audioFormats.MP3, group: 'Audio' },
-    { value: 'FLAC', label: t.audioFormats.FLAC, group: 'Audio' },
-    { value: 'WAV', label: t.audioFormats.WAV, group: 'Audio' },
-    { value: 'M4A', label: t.audioFormats.M4A, group: 'Audio' },
-    { value: 'OGG', label: t.audioFormats.OGG, group: 'Audio' },
-    { value: 'ALAC', label: t.audioFormats.ALAC, group: 'Audio' },
+    { value: 'MP3', label: t.audioFormats.MP3, group: tr('Audio') },
+    { value: 'FLAC', label: t.audioFormats.FLAC, group: tr('Audio') },
+    { value: 'WAV', label: t.audioFormats.WAV, group: tr('Audio') },
+    { value: 'M4A', label: t.audioFormats.M4A, group: tr('Audio') },
+    { value: 'OGG', label: t.audioFormats.OGG, group: tr('Audio') },
+    { value: 'ALAC', label: t.audioFormats.ALAC, group: tr('Audio') },
   ];
   const allFmtOpts: GlassOption[] = [...videoFmtOpts, ...audioFmtOpts];
   const [logPanel, setLogPanel] = useState<{id: string, title: string} | null>(null);
@@ -272,14 +236,14 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
         // Let the in-app browser (if open) confirm with a toast — via a window
         // event so we don't add a second IPC listener (the preload cleanup uses
         // removeAllListeners and would nuke this one).
-        window.dispatchEvent(new CustomEvent('sniffer-toast', { detail: { title: data.videoTitle || data.title || 'Flux détecté' } }));
+        window.dispatchEvent(new CustomEvent('sniffer-toast', { detail: { title: data.videoTitle || data.title || tr('Flux détecté') } }));
         setDownloads(prev => {
           // Avoid duplicating a stream we already captured.
           if (prev.some(d => d.url === data.url)) return prev;
           return [{
             id: newId,
             url: data.url,         // raw m3u8/mpd URL for yt-dlp
-            title: data.videoTitle || data.title || ('Flux intercepté : ' + data.type),
+            title: data.videoTitle || data.title || tr('Flux intercepté : {type}', { type: data.type }),
             thumbnail: "",
             platform: "Patreon/Web",
             format: globalFormat,
@@ -452,15 +416,15 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
             className="flex-1 bg-transparent border-none px-2 py-1.5 text-white placeholder-gray-500 focus:outline-none text-sm relative z-10"
           />
           <div className="flex items-center gap-4 text-gray-400 px-3 border-r border-white/10 relative z-10">
-            <button type="button" onClick={() => setSnifferOpen('https://www.patreon.com')} className="transition-colors hover:text-white flex items-center gap-1 group/sniffer" title="Ouvrir le navigateur intégré pour intercepter les flux cachés (Patreon, etc.)">
+            <button type="button" onClick={() => setSnifferOpen('https://www.patreon.com')} className="transition-colors hover:text-white flex items-center gap-1 group/sniffer" title={tr("Ouvrir le navigateur intégré pour intercepter les flux cachés (Patreon, etc.)")}>
               <Globe className="w-4 h-4 text-pink-400 group-hover/sniffer:drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" />
               <span className="text-[10px] uppercase font-bold text-pink-400 opacity-80 group-hover/sniffer:opacity-100">Sniffer</span>
             </button>
             <div className="w-px h-4 bg-white/10 mx-1"></div>
-            <button type="button" onClick={() => setEmbedThumbnail(!embedThumbnail)} className={`transition-colors ${embedThumbnail ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title="Embed Thumbnail"><Crop className="w-4 h-4" /></button>
-            <button type="button" onClick={() => setIsPlaylist(!isPlaylist)} className={`transition-colors ${isPlaylist ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title="Download Playlist"><List className="w-4 h-4" /></button>
-            <button type="button" onClick={() => setEmbedSubtitles(!embedSubtitles)} className={`transition-colors ${embedSubtitles ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title="Embed Subtitles"><Subtitles className="w-4 h-4" /></button>
-            <button type="button" onClick={() => setUseBrowserCookies(!useBrowserCookies)} className={`transition-colors ${useBrowserCookies ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title="Utiliser les cookies du navigateur (Chrome) pour contourner les blocages (Patreon, etc.)"><Cookie className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setEmbedThumbnail(!embedThumbnail)} className={`transition-colors ${embedThumbnail ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title={tr("Intégrer la miniature")}><Crop className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setIsPlaylist(!isPlaylist)} className={`transition-colors ${isPlaylist ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title={tr("Télécharger la playlist")}><List className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setEmbedSubtitles(!embedSubtitles)} className={`transition-colors ${embedSubtitles ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title={tr("Intégrer les sous-titres")}><Subtitles className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setUseBrowserCookies(!useBrowserCookies)} className={`transition-colors ${useBrowserCookies ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'hover:text-white'}`} title={tr("Utiliser les cookies du navigateur (Chrome) pour contourner les blocages (Patreon, etc.)")}><Cookie className="w-4 h-4" /></button>
           </div>
           <div className="relative z-10" ref={formatPopoverRef}>
             <button 
@@ -468,7 +432,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
               onClick={() => setShowFormatPopover(!showFormatPopover)}
               className="px-3 text-pink-500 font-semibold text-sm hover:text-pink-400 transition-colors whitespace-nowrap"
             >
-              {audioOnly ? globalFormat : (globalFormat === 'BEST' ? 'Highest Quality' : globalFormat)}
+              {audioOnly ? globalFormat : (globalFormat === 'BEST' ? tr('Qualité maximale') : globalFormat)}
             </button>
             {showFormatPopover && (
               <div className="absolute top-full right-0 mt-3 w-96 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl p-5 z-50 text-gray-200 cursor-default">
@@ -501,7 +465,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                     onChange={(v) => setGlobalFormat(v as any)}
                     options={(audioOnly ? audioFmtOpts : videoFmtOpts).map(o => ({ ...o, group: undefined }))}
                     className="w-full py-2.5"
-                    ariaLabel="Format de téléchargement"
+                    ariaLabel={tr("Format de téléchargement")}
                   />
                   <span className="inline-block mt-3 bg-pink-500/20 text-pink-500 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border border-pink-500/30">--FORMAT</span>
                 </div>
@@ -521,19 +485,19 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
           <button onClick={() => setViewLayout('list')} className={`p-1 rounded transition-colors ${viewLayout === 'list' ? 'bg-pink-500 text-white' : 'hover:text-white'}`}><List className="w-4 h-4" /></button>
           <button onClick={() => setViewLayout('terminal')} className={`p-1 rounded transition-colors ${viewLayout === 'terminal' ? 'bg-pink-500 text-white' : 'hover:text-white'}`}><TerminalSquare className="w-4 h-4" /></button>
           <div className="w-px h-4 bg-white/10 mx-1"></div>
-          <button onClick={clearCompleted} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors" title="Clear completed"><Trash className="w-4 h-4" /> Clear</button>
+          <button onClick={clearCompleted} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors" title={tr("Effacer les terminés")}><Trash className="w-4 h-4" /> {tr("Effacer")}</button>
         </div>
         <div className="flex items-center gap-3">
           <GlassSelect
             value={sortOrder}
             onChange={(v) => setSortOrder(v as any)}
             options={[
-              { value: 'newest', label: 'Date (récent)' },
-              { value: 'name', label: 'Nom (A-Z)' },
-              { value: 'size', label: 'Taille (grand)' },
+              { value: 'newest', label: tr('Date (récent)') },
+              { value: 'name', label: tr('Nom (A-Z)') },
+              { value: 'size', label: tr('Taille (grand)') },
             ]}
             className="w-40 py-1.5 text-xs"
-            ariaLabel="Trier"
+            ariaLabel={tr("Trier")}
           />
           <button onClick={handleSelectDir} className="flex items-center gap-2 border border-pink-500 text-pink-500 rounded-full px-3 py-1 text-xs font-medium hover:bg-pink-500/10 transition-colors truncate max-w-[200px]">
             <Folder className="w-3 h-3 flex-shrink-0" />
@@ -549,8 +513,8 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
             <div className="w-56 h-56 mb-8 relative drop-shadow-[0_0_35px_rgba(236,72,153,0.4)] hover:scale-105 transition-transform duration-700">
               <img src="/orbit.png" alt="Orbit Space" className="w-full h-full object-contain mix-blend-screen animate-[spin_60s_linear_infinite]" />
             </div>
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-2">Welcome to Orbit</h2>
-            <p className="text-gray-400 max-w-md">Enter a video or playlist URL above to begin your orbital download trajectory.</p>
+            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-2">{tr("Bienvenue dans Orbit")}</h2>
+            <p className="text-gray-400 max-w-md">{tr("Saisissez l'URL d'une vidéo ou d'une playlist ci-dessus pour lancer votre trajectoire de téléchargement orbital.")}</p>
           </div>
         ) : (
           <div className={`w-full h-full overflow-y-auto pb-10 ${
@@ -604,14 +568,14 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                         <span
                           className={`${viewLayout === 'terminal' ? 'text-red-500' : 'text-red-400'} font-medium flex items-center gap-1 cursor-pointer hover:text-red-300 transition-colors`}
                           onClick={() => setLogPanel({ id: item.id, title: item.title })}
-                          title="Voir les logs d'erreur"
+                          title={tr("Voir les logs d'erreur")}
                         >
-                          <TerminalSquare className="w-3 h-3" /> Erreur — Voir logs
+                          <TerminalSquare className="w-3 h-3" /> {tr("Erreur — Voir logs")}
                         </span>
                       )}
                       {item.status === "analyzing" && <span className={`flex items-center gap-1 ${viewLayout === 'terminal' ? 'text-blue-500' : 'text-blue-400'} font-medium`}><Loader2 className="w-3 h-3 animate-spin"/> {t.analyzing}</span>}
-                      {item.status === "queued" && <span className={`flex items-center gap-1 ${viewLayout === 'terminal' ? 'text-yellow-500' : 'text-yellow-500'} font-medium`}><Clock className="w-3 h-3"/> En attente</span>}
-                      {item.status === "scheduled" && <span className={`flex items-center gap-1 ${viewLayout === 'terminal' ? 'text-purple-500' : 'text-purple-500'} font-medium`}><Clock className="w-3 h-3"/> Planifié à {item.scheduledTime}</span>}
+                      {item.status === "queued" && <span className={`flex items-center gap-1 ${viewLayout === 'terminal' ? 'text-yellow-500' : 'text-yellow-500'} font-medium`}><Clock className="w-3 h-3"/> {tr("En attente")}</span>}
+                      {item.status === "scheduled" && <span className={`flex items-center gap-1 ${viewLayout === 'terminal' ? 'text-purple-500' : 'text-purple-500'} font-medium`}><Clock className="w-3 h-3"/> {tr("Planifié à {h}", { h: item.scheduledTime || '' })}</span>}
                     </div>
                   </div>
                   <div className={`relative z-10 flex items-center gap-2 ${viewLayout === 'grid' ? 'w-full justify-center mt-2' : ''}`}>
@@ -642,7 +606,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                           <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
                           <Download className="w-4 h-4 relative z-10" />
                         </button>
-                        <button onClick={() => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, showAdvanced: !d.showAdvanced } : d))} className={`p-1.5 rounded transition-colors ml-1 border border-white/10 hover:bg-white/10 text-gray-400`} title="Options avancées (Trimmer / Planificateur)">
+                        <button onClick={() => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, showAdvanced: !d.showAdvanced } : d))} className={`p-1.5 rounded transition-colors ml-1 border border-white/10 hover:bg-white/10 text-gray-400`} title={tr("Options avancées (Trimmer / Planificateur)")}>
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleDelete(item.id)} className={`p-1.5 rounded transition-colors ml-1 border border-white/10 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/50 text-gray-400`}>
@@ -652,10 +616,10 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                     )}
                     {(item.status === "queued" || item.status === "scheduled") && (
                       <>
-                        <button onClick={() => handleStart(item.id, item.url, item.format, item.outputDir, item.trimStart, item.trimEnd, item.cookies, item.referer, item.videoTitle)} className={`p-1.5 border border-white/10 rounded hover:bg-green-500/20 hover:text-green-500 hover:border-green-500/50 transition-colors flex items-center justify-center text-gray-400`} title="Démarrer maintenant">
+                        <button onClick={() => handleStart(item.id, item.url, item.format, item.outputDir, item.trimStart, item.trimEnd, item.cookies, item.referer, item.videoTitle)} className={`p-1.5 border border-white/10 rounded hover:bg-green-500/20 hover:text-green-500 hover:border-green-500/50 transition-colors flex items-center justify-center text-gray-400`} title={tr("Démarrer maintenant")}>
                           <Play className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, status: 'ready' } : d))} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center justify-center text-gray-400`} title="Annuler la planification">
+                        <button onClick={() => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, status: 'ready' } : d))} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center justify-center text-gray-400`} title={tr("Annuler la planification")}>
                           <X className="w-4 h-4" />
                         </button>
                       </>
@@ -684,20 +648,20 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                               }
                             }}
                             className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center justify-center ${viewLayout === 'terminal' ? 'text-green-500 border-green-500/30' : 'text-pink-500 border-pink-500/30 hover:bg-pink-500/10'}`} 
-                            title="Play in Orbit"
+                            title={tr("Lire dans Orbit")}
                           >
                             <Play className="w-4 h-4 fill-current" />
                           </button>
                         )}
                         {item.status === "error" && (
-                          <button onClick={() => handleStart(item.id, item.url, item.format, item.outputDir)} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center justify-center text-gray-400 hover:text-white`} title="Retry">
+                          <button onClick={() => handleStart(item.id, item.url, item.format, item.outputDir)} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center justify-center text-gray-400 hover:text-white`} title={tr("Réessayer")}>
                             <Download className="w-4 h-4" />
                           </button>
                         )}
-                        <button onClick={() => { if (typeof window !== "undefined" && (window as any).electronAPI) (window as any).electronAPI.showItemInFolder(item.filePath || item.outputDir); }} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors ${viewLayout === 'terminal' ? 'text-green-500 border-green-500/30' : 'text-gray-400 hover:text-white'}`} title="Open Folder">
+                        <button onClick={() => { if (typeof window !== "undefined" && (window as any).electronAPI) (window as any).electronAPI.showItemInFolder(item.filePath || item.outputDir); }} className={`p-1.5 border border-white/10 rounded hover:bg-white/5 transition-colors ${viewLayout === 'terminal' ? 'text-green-500 border-green-500/30' : 'text-gray-400 hover:text-white'}`} title={tr("Ouvrir le dossier")}>
                           <Folder className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(item.id, item.filePath)} className={`p-1.5 border border-white/10 rounded hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/50 transition-colors flex items-center justify-center text-gray-400`} title="Delete">
+                        <button onClick={() => handleDelete(item.id, item.filePath)} className={`p-1.5 border border-white/10 rounded hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/50 transition-colors flex items-center justify-center text-gray-400`} title={tr("Supprimer")}>
                           <Trash className="w-4 h-4" />
                         </button>
                       </div>
@@ -707,10 +671,10 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                   {/* Trimmer Settings */}
                   {item.status === "ready" && item.showAdvanced && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="w-full mt-1 pt-2 border-t border-white/5 flex flex-wrap gap-2 items-center text-xs relative z-10">
-                      <span className="text-gray-400 flex items-center gap-1"><Crop className="w-3 h-3"/> Trimmer :</span>
-                      <input 
-                        type="text" 
-                        placeholder="Début (ex: 01:20)" 
+                      <span className="text-gray-400 flex items-center gap-1"><Crop className="w-3 h-3"/> {tr("Trimmer :")}</span>
+                      <input
+                        type="text"
+                        placeholder={tr("Début (ex: 01:20)")}
                         className="bg-black/50 border border-white/10 rounded px-2 py-1 w-28 text-gray-300 focus:border-pink-500 outline-none transition-colors"
                         value={item.trimStart || ''}
                         onChange={(e) => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, trimStart: e.target.value } : d))}
@@ -718,13 +682,13 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                       <span className="text-gray-500">-</span>
                       <input 
                         type="text" 
-                        placeholder="Fin (ex: 02:45)" 
+                        placeholder={tr("Fin (ex: 02:45)")}
                         className="bg-black/50 border border-white/10 rounded px-2 py-1 w-28 text-gray-300 focus:border-pink-500 outline-none transition-colors"
                         value={item.trimEnd || ''}
                         onChange={(e) => setDownloads(prev => prev.map(d => d.id === item.id ? { ...d, trimEnd: e.target.value } : d))}
                       />
                       <div className="w-px h-4 bg-white/10 mx-2"></div>
-                      <span className="text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3"/> Planifier :</span>
+                      <span className="text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3"/> {tr("Planifier :")}</span>
                       <input 
                         type="time" 
                         className="bg-black/50 border border-white/10 rounded px-2 py-1 w-24 text-gray-300 focus:border-purple-500 outline-none transition-colors"
@@ -741,7 +705,7 @@ export default function DownloadInterface({ language = 'en', globalSettings, set
                         }}
                         className="bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/40 px-3 py-1 rounded transition-colors ml-2"
                       >
-                        {item.scheduledTime ? "Valider l'heure" : "Mettre en attente"}
+                        {item.scheduledTime ? tr("Valider l'heure") : tr("Mettre en attente")}
                       </button>
                     </motion.div>
                   )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, FileVideo, FileAudio, Settings, Music, Play, X, Image as ImageIcon, Loader2, CheckCircle2, FolderOpen, FolderInput } from "lucide-react";
 import GlassSelect from "./GlassSelect";
+import { t } from "@/i18n";
 
 type ConvertItem = {
   id: string;
@@ -29,7 +30,7 @@ const FORMAT_EXT: Record<string, string> = {
 
 const METADATA_FORMATS = ['MP3', 'MP4', 'WAV', 'FLAC'];
 
-export default function Converter({ language, globalSettings }: { language: string, globalSettings: any }) {
+export default function Converter({ globalSettings }: { language?: string, globalSettings: any }) {
   const [items, setItems] = useState<ConvertItem[]>([]);
   const [outputDir, setOutputDir] = useState(globalSettings?.outputDir || "");
   const [isDragging, setIsDragging] = useState(false);
@@ -148,9 +149,9 @@ export default function Converter({ language, globalSettings }: { language: stri
     <div className="p-6 h-full flex flex-col gap-6 bg-transparent">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-200 flex items-center gap-2">
-          <Settings className="w-5 h-5 text-pink-500" /> Convertisseur & Orbit AI Studio
+          <Settings className="w-5 h-5 text-pink-500" /> {t("Convertisseur & Orbit AI Studio")}
         </h2>
-        <button onClick={() => setItems([])} className="text-xs text-red-400 hover:text-red-300 transition-colors">Tout effacer</button>
+        <button onClick={() => setItems([])} className="text-xs text-red-400 hover:text-red-300 transition-colors">{t("Tout effacer")}</button>
       </div>
 
       {/* Output Directory Selector */}
@@ -165,7 +166,7 @@ export default function Converter({ language, globalSettings }: { language: stri
           }}
         >
           <FolderInput className="w-4 h-4 text-pink-400" />
-          Dossier de sortie
+          {t("Dossier de sortie")}
         </button>
         <div
           className="flex-1 px-3 py-2 rounded-xl text-xs text-gray-400 truncate"
@@ -173,15 +174,15 @@ export default function Converter({ language, globalSettings }: { language: stri
             background: "rgba(255,255,255,0.03)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
-          title={outputDir || "Même dossier que le fichier source"}
+          title={outputDir || t("Même dossier que le fichier source")}
         >
-          {outputDir || <span className="italic text-gray-600">Même dossier que le fichier source</span>}
+          {outputDir || <span className="italic text-gray-600">{t("Même dossier que le fichier source")}</span>}
         </div>
         {outputDir && (
           <button
             onClick={() => setOutputDir("")}
             className="p-1.5 text-gray-500 hover:text-red-400 transition-colors shrink-0"
-            title="Réinitialiser"
+            title={t("Réinitialiser")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -203,8 +204,8 @@ export default function Converter({ language, globalSettings }: { language: stri
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${isDragging ? 'text-pink-400' : 'text-gray-400 group-hover:text-gray-300'}`} />
-        <p className="text-base text-gray-200 font-semibold relative z-10">Glissez-déposez vos fichiers multimédias ici</p>
-        <p className="text-sm text-gray-500 mt-2 relative z-10">Vidéos (MP4, MKV, AVI) ou Musiques (MP3, FLAC, WAV)</p>
+        <p className="text-base text-gray-200 font-semibold relative z-10">{t("Glissez-déposez vos fichiers multimédias ici")}</p>
+        <p className="text-sm text-gray-500 mt-2 relative z-10">{t("Vidéos (MP4, MKV, AVI) ou Musiques (MP3, FLAC, WAV)")}</p>
         <button
           onClick={handleBrowse}
           className="mt-4 relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 hover:text-white transition-all hover:scale-105 active:scale-95"
@@ -215,7 +216,7 @@ export default function Converter({ language, globalSettings }: { language: stri
           }}
         >
           <FolderOpen className="w-4 h-4" />
-          Parcourir les fichiers
+          {t("Parcourir les fichiers")}
         </button>
       </div>
 
@@ -239,11 +240,11 @@ export default function Converter({ language, globalSettings }: { language: stri
                     <p className="font-medium text-gray-200 text-sm truncate">{item.file.name}</p>
                     <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
                       {item.file.size > 0 && <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>}
-                      {item.status === 'converting' && <span className="text-pink-400 font-medium">Traitement: {item.progress}</span>}
-                      {item.status === 'completed' && <span className="text-green-500 font-medium flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Terminé</span>}
+                      {item.status === 'converting' && <span className="text-pink-400 font-medium">{t("Traitement :")} {item.progress}</span>}
+                      {item.status === 'completed' && <span className="text-green-500 font-medium flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> {t("Terminé")}</span>}
                       {item.status === 'error' && (
                         <span className="text-red-400 font-medium" title={item.errorMessage}>
-                          Erreur{item.errorMessage ? ` — ${item.errorMessage.substring(0, 80)}` : ''}
+                          {t("Erreur")}{item.errorMessage ? ` — ${item.errorMessage.substring(0, 80)}` : ''}
                         </span>
                       )}
                     </p>
@@ -256,17 +257,17 @@ export default function Converter({ language, globalSettings }: { language: stri
                     onChange={(v) => updateItem(item.id, { targetFormat: v as any })}
                     disabled={item.status === 'converting'}
                     className="w-56 py-1.5 text-xs"
-                    ariaLabel="Format de conversion"
+                    ariaLabel={t("Format de conversion")}
                     options={[
-                      { value: 'MP4', label: 'Convertir en MP4', group: 'Conversion' },
-                      { value: 'MP3', label: 'Convertir en MP3', group: 'Conversion' },
-                      { value: 'WAV', label: 'Convertir en WAV', group: 'Conversion' },
-                      { value: 'FLAC', label: 'Convertir en FLAC', group: 'Conversion' },
-                      { value: 'COMPRESS_DISCORD', label: 'Smart Compressor (Discord 25MB)', group: 'Orbit AI Studio' },
-                      { value: 'COMPRESS_WHATSAPP', label: 'Smart Compressor (WhatsApp 16MB)', group: 'Orbit AI Studio' },
-                      { value: 'AI_WHISPER', label: 'AI Whisper (Générer Sous-titres FR)', group: 'Orbit AI Studio' },
-                      { value: 'AI_VOCAL_REMOVER', label: 'AI Vocal Remover (Isoler Voix)', group: 'Orbit AI Studio' },
-                      { value: 'AI_UPSCALER', label: 'AI Upscaler & 60FPS (RIFE)', group: 'Orbit AI Studio' },
+                      { value: 'MP4', label: t('Convertir en MP4'), group: 'Conversion' },
+                      { value: 'MP3', label: t('Convertir en MP3'), group: 'Conversion' },
+                      { value: 'WAV', label: t('Convertir en WAV'), group: 'Conversion' },
+                      { value: 'FLAC', label: t('Convertir en FLAC'), group: 'Conversion' },
+                      { value: 'COMPRESS_DISCORD', label: t('Smart Compressor (Discord 25MB)'), group: 'Orbit AI Studio' },
+                      { value: 'COMPRESS_WHATSAPP', label: t('Smart Compressor (WhatsApp 16MB)'), group: 'Orbit AI Studio' },
+                      { value: 'AI_WHISPER', label: t('AI Whisper (Générer Sous-titres FR)'), group: 'Orbit AI Studio' },
+                      { value: 'AI_VOCAL_REMOVER', label: t('AI Vocal Remover (Isoler Voix)'), group: 'Orbit AI Studio' },
+                      { value: 'AI_UPSCALER', label: t('AI Upscaler & 60FPS (RIFE)'), group: 'Orbit AI Studio' },
                     ]}
                   />
 
@@ -309,7 +310,7 @@ export default function Converter({ language, globalSettings }: { language: stri
                     ) : (
                       <>
                         <ImageIcon className="w-6 h-6 text-gray-500 mb-1 group-hover:text-pink-400 transition-colors" />
-                        <span className="text-[9px] text-gray-500 font-medium">Image</span>
+                        <span className="text-[9px] text-gray-500 font-medium">{t("Image")}</span>
                       </>
                     )}
                   </div>
@@ -317,7 +318,7 @@ export default function Converter({ language, globalSettings }: { language: stri
                   {/* Text Inputs */}
                   <div className="flex-1 grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-gray-500 uppercase font-semibold">Titre</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Titre")}</label>
                       <input
                         type="text"
                         value={item.metadata.title}
@@ -326,27 +327,27 @@ export default function Converter({ language, globalSettings }: { language: stri
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-gray-500 uppercase font-semibold">Artiste</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Artiste")}</label>
                       <input
                         type="text"
                         value={item.metadata.artist}
                         onChange={(e) => updateMetadata(item.id, 'artist', e.target.value)}
-                        placeholder="Inconnu"
+                        placeholder={t("Inconnu")}
                         className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-gray-300 focus:border-pink-500 outline-none w-full transition-colors"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-gray-500 uppercase font-semibold">Album</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Album")}</label>
                       <input
                         type="text"
                         value={item.metadata.album}
                         onChange={(e) => updateMetadata(item.id, 'album', e.target.value)}
-                        placeholder="Inconnu"
+                        placeholder={t("Inconnu")}
                         className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-gray-300 focus:border-pink-500 outline-none w-full transition-colors"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-gray-500 uppercase font-semibold">Année</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Année")}</label>
                       <input
                         type="text"
                         value={item.metadata.year}

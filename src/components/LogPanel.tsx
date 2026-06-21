@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Terminal, AlertCircle, Info, AlertTriangle, Copy, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { t } from "@/i18n";
 
 type LogLine = {
   id: string;
@@ -110,14 +111,14 @@ export default function LogPanel({ downloadId, title, initialLogs = [], onClose 
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 shrink-0">
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-pink-400" />
-          <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">Console yt-dlp</span>
+          <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">{t("Console yt-dlp")}</span>
           {title && <span className="text-xs text-gray-500 truncate max-w-[300px]">— {title}</span>}
           <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-mono ${
             logs.some(l => l.level === 'error')
               ? 'bg-red-500/20 text-red-400'
               : 'bg-emerald-500/20 text-emerald-400'
           }`}>
-            {logs.length} lignes
+            {t("{n} lignes", { n: logs.length })}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -126,22 +127,22 @@ export default function LogPanel({ downloadId, title, initialLogs = [], onClose 
             className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${
               autoScroll ? 'bg-pink-500/20 text-pink-400' : 'bg-white/5 text-gray-500 hover:text-gray-300'
             }`}
-            title="Auto-scroll"
+            title={t("Défilement auto")}
           >
             {autoScroll ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-            Auto
+            {t("Auto")}
           </button>
           <button
             onClick={copyLogs}
             className="text-[10px] px-2 py-1 rounded bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1"
           >
             <Copy className="w-3 h-3" />
-            {copied ? 'Copié !' : 'Copier'}
+            {copied ? t('Copié !') : t('Copier')}
           </button>
           <button
             onClick={openLogFile}
             className="text-[10px] px-2 py-1 rounded bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1"
-            title="Ouvrir le fichier log complet"
+            title={t("Ouvrir le fichier log complet")}
           >
             <ExternalLink className="w-3 h-3" />
             orbit.log

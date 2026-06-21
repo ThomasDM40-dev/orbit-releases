@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Rss, Plus, Trash2, RefreshCw, AlertCircle, Link } from "lucide-react";
+import { t } from "@/i18n";
 
 type Subscription = {
   id: string;
@@ -40,7 +41,7 @@ export default function Subscriptions() {
         setUrlInput("");
       }
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'ajout.");
+      setError(err.message || t("Erreur lors de l'ajout."));
     } finally {
       setIsLoading(false);
     }
@@ -65,11 +66,11 @@ export default function Subscriptions() {
     <div className="p-6 h-full flex flex-col gap-6 bg-transparent">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-200 flex items-center gap-2">
-          <Rss className="w-5 h-5 text-pink-500" /> Abonnements
+          <Rss className="w-5 h-5 text-pink-500" /> {t("Abonnements")}
         </h2>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-500 flex items-center gap-1">
-            <RefreshCw className="w-3 h-3" /> Auto-check toutes les 6h
+            <RefreshCw className="w-3 h-3" /> {t("Auto-check toutes les 6h")}
           </span>
           <button 
             onClick={handleCheckNow}
@@ -77,7 +78,7 @@ export default function Subscriptions() {
             className="flex items-center gap-2 text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded border border-white/10 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${isChecking ? 'animate-spin text-pink-500' : ''}`} />
-            Vérifier maintenant
+            {t("Vérifier maintenant")}
           </button>
         </div>
       </div>
@@ -87,7 +88,7 @@ export default function Subscriptions() {
           <Link className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input 
             type="text" 
-            placeholder="Collez l'URL d'une chaîne ou d'une playlist (ex: youtube.com/@createur)..."
+            placeholder={t("Collez l'URL d'une chaîne ou d'une playlist (ex: youtube.com/@createur)...")}
             value={urlInput}
             onChange={e => setUrlInput(e.target.value)}
             disabled={isLoading}
@@ -100,7 +101,7 @@ export default function Subscriptions() {
           className="bg-pink-500 hover:bg-pink-600 text-white px-5 rounded-lg font-medium text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
         >
           {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          S'abonner
+          {t("S'abonner")}
         </button>
       </form>
 
@@ -114,7 +115,7 @@ export default function Subscriptions() {
         {subs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-4 opacity-50">
             <Rss className="w-12 h-12" />
-            <p className="text-sm">Vous n'êtes abonné à aucune chaîne.</p>
+            <p className="text-sm">{t("Vous n'êtes abonné à aucune chaîne.")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-10">
@@ -130,7 +131,7 @@ export default function Subscriptions() {
                   <div className="min-w-0 pr-4">
                     <h3 className="font-semibold text-gray-200 text-sm truncate" title={sub.title}>{sub.title}</h3>
                     <p className="text-xs text-gray-500 truncate mt-1">{sub.url}</p>
-                    <p className="text-[10px] text-gray-600 mt-2">Ajouté le {new Date(sub.dateAdded).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-gray-600 mt-2">{t("Ajouté le {date}", { date: new Date(sub.dateAdded).toLocaleDateString() })}</p>
                   </div>
                   <button 
                     onClick={() => handleDelete(sub.id)}
