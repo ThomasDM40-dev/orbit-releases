@@ -186,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.23.0** — Drive Discord **bien plus rapide** : transferts parallèles (jusqu'à 6 blocs simultanés) à l'envoi comme au téléchargement
 - **v0.22.2** — Correctif : l'envoi de fichiers du Drive Discord échouait (HTTP 413) — taille des blocs réduite à 8 Mio
 - **v0.22.1** — Correctif : le Drive Discord plantait au démarrage (module manquant dans l'installeur 0.22.0)
 - **v0.22.0** — **Drive Discord** : stockage de fichiers gratuit sur un salon Discord (webhook), chiffré de bout en bout (AES-256), avec dossiers, découpage en blocs et régénération des liens expirés

@@ -4209,6 +4209,9 @@ const DISCLOUD_DIR = path.join(ORBIT_DIR, 'discloud');
 // de la session uniquement (jamais écrite sur le disque).
 let discloudKey = null;
 const discloudCancelled = new Set();
+// Nombre de blocs envoyés/téléchargés en parallèle. Plus = plus rapide, mais
+// Discord limite le débit par webhook (429) — 6 est un bon compromis vitesse/stabilité.
+const DISCLOUD_CONCURRENCY = 6;
 
 function discloudEmit(payload) { uiWin()?.webContents.send('discloud-progress', payload); }
 function discloudCtx() {
@@ -4297,22 +4300,23 @@ ipcMain.handle('discloud-upload', async (e, { paths, parent, jobId } = {}) => {
       const name = path.basename(filePath);
       const total = stat.size;
       const numChunks = Math.max(1, Math.ceil(total / discloud.CHUNK_SIZE));
-      const fd = fs.openSync(filePath, 'r');
-      const chunks = [];
-      let uploaded = 0;
+      const fh = await fs.promises.open(filePath, 'r');
+      const chunks = new Array(numChunks);   // gardé dans l'ordre malgré le parallélisme
+      let uploaded = 0, doneCount = 0;
       try {
-        for (let i = 0; i < numChunks; i++) {
+        // Plusieurs blocs envoyés en parallèle : c'est ce qui accélère le transfert.
+        await discloud.runPool(numChunks, DISCLOUD_CONCURRENCY, async (i) => {
           if (discloudCancelled.has(jobId)) throw new Error('Annulé');
           const len = Math.min(discloud.CHUNK_SIZE, total - i * discloud.CHUNK_SIZE);
           const buf = Buffer.allocUnsafe(len);
-          if (len > 0) fs.readSync(fd, buf, 0, len, i * discloud.CHUNK_SIZE);
+          if (len > 0) await fh.read(buf, 0, len, i * discloud.CHUNK_SIZE);
           const payload = discloud.encryptBuffer(discloudKey, buf);
           const r = await discloud.webhookUpload(webhook, `${name}.part${i}.orb`, payload);
-          chunks.push({ messageId: r.messageId, size: len });
-          uploaded += len;
-          discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: i + 1, chunks: numChunks });
-        }
-      } finally { fs.closeSync(fd); }
+          chunks[i] = { messageId: r.messageId, size: len };
+          uploaded += len; doneCount++;
+          discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
+        });
+      } finally { await fh.close(); }
       const idx = discloud.loadIndex(DISCLOUD_DIR);
       idx.nodes.push({ id: discloud.uuid(), type: 'file', name, parent: parent || null, size: total, encrypted: true, chunkSize: discloud.CHUNK_SIZE, chunks, createdAt: Date.now() });
       discloud.saveIndex(DISCLOUD_DIR, idx);
@@ -4335,25 +4339,30 @@ ipcMain.handle('discloud-download', async (e, { id, jobId } = {}) => {
   if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
   jobId = jobId || discloud.uuid();
   const webhook = cfg.webhook;
-  const ws = fs.createWriteStream(save.filePath);
-  let done = 0;
+  const chunkSize = node.chunkSize || discloud.CHUNK_SIZE;
+  // Fichier préalloué : chaque bloc est déchiffré puis écrit directement à son
+  // offset, ce qui permet de télécharger plusieurs blocs en parallèle.
+  const fh = await fs.promises.open(save.filePath, 'w');
+  let done = 0, doneCount = 0;
   try {
-    for (let i = 0; i < node.chunks.length; i++) {
+    try { await fh.truncate(node.size || 0); } catch (x) {}
+    await discloud.runPool(node.chunks.length, DISCLOUD_CONCURRENCY, async (i) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = node.chunks[i];
       const url = await discloud.webhookGetUrl(webhook, ch.messageId);
       const blob = await discloud.fetchBytes(url);
       const plain = node.encrypted ? discloud.decryptBuffer(discloudKey, blob) : blob;
-      await new Promise((res, rej) => ws.write(plain, err => err ? rej(err) : res()));
-      done += ch.size;
-      discloudEmit({ id: jobId, phase: 'download', name: node.name, percent: node.size ? Math.round((done / node.size) * 100) : 100, chunk: i + 1, chunks: node.chunks.length });
-    }
-    await new Promise(res => ws.end(res));
+      await fh.write(plain, 0, plain.length, i * chunkSize);
+      done += ch.size; doneCount++;
+      discloudEmit({ id: jobId, phase: 'download', name: node.name, percent: node.size ? Math.round((done / node.size) * 100) : 100, chunk: doneCount, chunks: node.chunks.length });
+    });
+    await fh.close();
     discloudCancelled.delete(jobId);
     return { ok: true, path: save.filePath };
   } catch (er) {
     discloudCancelled.delete(jobId);
-    try { ws.destroy(); fs.unlinkSync(save.filePath); } catch (x) {}
+    try { await fh.close(); } catch (x) {}
+    try { fs.unlinkSync(save.filePath); } catch (x) {}
     return { ok: false, error: er.message };
   }
 });

@@ -137,6 +137,25 @@ async function fetchBytes(url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// Exécute `worker(i)` pour i dans [0, count) avec au plus `concurrency` tâches
+// en parallèle. S'arrête dès qu'un worker échoue (les autres ne prennent plus de
+// nouveau travail). C'est ce qui accélère les transferts : plusieurs blocs à la fois.
+async function runPool(count, concurrency, worker) {
+  let next = 0, failed = null;
+  async function runner() {
+    while (failed === null) {
+      const i = next++;
+      if (i >= count) return;
+      await worker(i);
+    }
+  }
+  const n = Math.max(1, Math.min(concurrency, count));
+  const runners = [];
+  for (let k = 0; k < n; k++) runners.push(runner().catch(e => { if (failed === null) failed = e; }));
+  await Promise.all(runners);
+  if (failed) throw failed;
+}
+
 // Vérifie qu'une URL ressemble à un webhook Discord valide.
 function isValidWebhook(url) {
   return /^https:\/\/(?:[a-z]+\.)?discord(?:app)?\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/[\w-]+$/.test(String(url || '').trim());
@@ -146,5 +165,5 @@ module.exports = {
   CHUNK_SIZE,
   indexPath, configPath, loadIndex, saveIndex, loadConfig, saveConfig, uuid,
   deriveKey, encryptBuffer, decryptBuffer, makeVerifier, checkVerifier,
-  webhookUpload, webhookGetUrl, webhookDelete, fetchBytes, isValidWebhook,
+  webhookUpload, webhookGetUrl, webhookDelete, fetchBytes, isValidWebhook, runPool,
 };
