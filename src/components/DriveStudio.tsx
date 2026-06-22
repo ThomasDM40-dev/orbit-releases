@@ -12,7 +12,7 @@ const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm 
 
 type Node = {
   id: string; type: 'folder' | 'file'; name: string; parent: string | null;
-  size?: number; chunks?: { messageId: string; size: number }[]; createdAt?: number;
+  size?: number; chunks?: { messageId: string; size: number }[]; icon?: string | null; createdAt?: number;
 };
 type Status = { configured: boolean; encrypted: boolean; unlocked: boolean; webhookMasked: string };
 type Prog = { id: string; phase: 'upload' | 'download'; name: string; percent: number; chunk?: number; chunks?: number; fileIndex?: number; fileCount?: number };
@@ -258,7 +258,9 @@ export default function DriveStudio() {
                   </button>
                 ) : (
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileIcon className="w-5 h-5 text-gray-400 shrink-0" />
+                    {n.icon
+                      ? <img src={n.icon} alt="" className="w-5 h-5 shrink-0 object-contain" draggable={false} />
+                      : <FileIcon className="w-5 h-5 text-gray-400 shrink-0" />}
                     <span className="text-sm text-gray-200 truncate">{n.name}</span>
                     <span className="text-xs text-gray-500 shrink-0">{fmtSize(n.size)}</span>
                   </div>

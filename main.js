@@ -4299,6 +4299,10 @@ ipcMain.handle('discloud-upload', async (e, { paths, parent, jobId } = {}) => {
       const stat = fs.statSync(filePath);
       const name = path.basename(filePath);
       const total = stat.size;
+      // Récupère l'icône native du fichier (Blender, Word, Excel…) telle que
+      // Windows l'affiche, pour la montrer dans le Drive après l'envoi.
+      let icon = null;
+      try { const img = await app.getFileIcon(filePath, { size: 'normal' }); if (img && !img.isEmpty()) icon = img.toDataURL(); } catch (x) {}
       const numChunks = Math.max(1, Math.ceil(total / discloud.CHUNK_SIZE));
       const fh = await fs.promises.open(filePath, 'r');
       const chunks = new Array(numChunks);   // gardé dans l'ordre malgré le parallélisme
@@ -4318,7 +4322,7 @@ ipcMain.handle('discloud-upload', async (e, { paths, parent, jobId } = {}) => {
         });
       } finally { await fh.close(); }
       const idx = discloud.loadIndex(DISCLOUD_DIR);
-      idx.nodes.push({ id: discloud.uuid(), type: 'file', name, parent: parent || null, size: total, encrypted: true, chunkSize: discloud.CHUNK_SIZE, chunks, createdAt: Date.now() });
+      idx.nodes.push({ id: discloud.uuid(), type: 'file', name, parent: parent || null, size: total, encrypted: true, chunkSize: discloud.CHUNK_SIZE, chunks, icon, createdAt: Date.now() });
       discloud.saveIndex(DISCLOUD_DIR, idx);
     }
     discloudCancelled.delete(jobId);
