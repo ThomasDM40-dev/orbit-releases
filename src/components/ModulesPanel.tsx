@@ -50,7 +50,8 @@ const MODULES: Mod[] = [
     detect: async (api) => {
       const d = await api.enhanceDetect?.();
       if (!d) return {};
-      return { installed: !!(d.esrganInstalled && d.rifeInstalled), partial: !!(d.esrganInstalled || d.rifeInstalled) };
+      // enhance-install fetches Real-ESRGAN; RIFE auto-installs on first interpolation.
+      return { installed: !!d.esrganInstalled };
     },
     install: (api) => api.enhanceInstall?.(),
     subscribe: (api, cb) => api.onEnhanceProgress?.((d: any) => { if (d.id === 'install') cb({ label: d.log }); }),
@@ -123,7 +124,9 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
     refreshAll();
     const offs = MODULES.map(m => m.subscribe?.(electronAPI, (p) => setProg(prev => {
       const cur = { ...prev[m.id], ...p };
-      if (cur.percent == null) { const pc = pctFromText(cur.label); if (pc != null) cur.percent = pc; }
+      // Recompute % from each new log line (curl installers stream "… 45.2%").
+      // Only when the event itself didn't carry an explicit percent (llm does).
+      if (p.percent == null && p.label != null) { const pc = pctFromText(p.label); if (pc != null) cur.percent = pc; }
       return { ...prev, [m.id]: cur };
     }))).filter(Boolean) as (() => void)[];
     return () => offs.forEach(off => { try { off(); } catch {} });
@@ -205,7 +208,9 @@ export default function ModulesPanel({ electronAPI }: { electronAPI?: any }) {
                       <button disabled className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm flex items-center gap-1.5 disabled:opacity-70 min-w-[120px] justify-center">
                         <Loader2 className="w-4 h-4 animate-spin" /> {t("En cours…")}
                       </button>
-                      <button onClick={cancel} title={t("Annuler")} aria-label={t("Annuler")} className="p-2 rounded-lg bg-red-500/10 border border-red-500/25 text-red-300 hover:bg-red-500/20"><X className="w-4 h-4" /></button>
+                      {m.id !== 'ytdlp' && (
+                        <button onClick={cancel} title={t("Annuler")} aria-label={t("Annuler")} className="p-2 rounded-lg bg-red-500/10 border border-red-500/25 text-red-300 hover:bg-red-500/20"><X className="w-4 h-4" /></button>
+                      )}
                     </>
                   ) : s.outdated ? (
                     <button onClick={() => handleInstall(m)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-white text-sm flex items-center gap-1.5 disabled:opacity-50 min-w-[120px] justify-center" style={{ background: 'var(--accent,#ec4899)' }}>
