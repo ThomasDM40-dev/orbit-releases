@@ -186,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.24.0** — Drive Discord **mode Cloud** : comptes utilisateurs + serveur auto-hébergé (pool de webhooks, PostgreSQL), contenu chiffré côté client (zéro-knowledge)
 - **v0.23.1** — Drive Discord : chaque fichier affiche son **icône native** (Blender, Word, Excel, PDF…)
 - **v0.23.0** — Drive Discord **bien plus rapide** : transferts parallèles (jusqu'à 6 blocs simultanés) à l'envoi comme au téléchargement
 - **v0.22.2** — Correctif : l'envoi de fichiers du Drive Discord échouait (HTTP 413) — taille des blocs réduite à 8 Mio

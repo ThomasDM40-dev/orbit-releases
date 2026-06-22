@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   HardDrive, Lock, Unlock, KeyRound, Link2, FolderPlus, Folder, File as FileIcon,
   UploadCloud, Download, Trash2, Loader2, ChevronRight, AlertCircle, ShieldCheck, X, RefreshCw,
+  Cloud, Monitor, LogOut, Server, Mail, User as UserIcon,
 } from 'lucide-react';
 import { t } from '@/i18n';
 
@@ -12,15 +13,19 @@ const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm 
 
 type Node = {
   id: string; type: 'folder' | 'file'; name: string; parent: string | null;
-  size?: number; chunks?: { messageId: string; size: number }[]; icon?: string | null; createdAt?: number;
+  size?: number; icon?: string | null; createdAt?: number;
 };
-type Status = { configured: boolean; encrypted: boolean; unlocked: boolean; webhookMasked: string };
 type Prog = { id: string; phase: 'upload' | 'download'; name: string; percent: number; chunk?: number; chunks?: number; fileIndex?: number; fileCount?: number };
 
 const fmtSize = (b?: number) => !b ? '0 o' : b > 1e9 ? (b / 1e9).toFixed(2) + ' Go' : b > 1e6 ? (b / 1e6).toFixed(1) + ' Mo' : Math.round(b / 1e3) + ' Ko';
 
+type Mode = 'local' | 'cloud';
+
 export default function DriveStudio() {
-  const [status, setStatus] = useState<Status | null>(null);
+  const [mode, setMode] = useState<Mode>(() => (localStorage.getItem('orbit_drive_mode') as Mode) || 'local');
+  useEffect(() => { localStorage.setItem('orbit_drive_mode', mode); }, [mode]);
+
+  // Shared drive state
   const [nodes, setNodes] = useState<Node[]>([]);
   const [folder, setFolder] = useState<string | null>(null);
   const [prog, setProg] = useState<Prog | null>(null);
@@ -28,102 +33,168 @@ export default function DriveStudio() {
   const [error, setError] = useState<string | null>(null);
   const jobRef = useRef<string | null>(null);
 
-  // Setup / unlock form fields
+  // Local mode
+  const [localStatus, setLocalStatus] = useState<{ configured: boolean; unlocked: boolean; webhookMasked: string } | null>(null);
   const [webhook, setWebhook] = useState('');
-  const [pass, setPass] = useState('');
   const [showHelp, setShowHelp] = useState(false);
 
-  const refreshIndex = useCallback(async () => {
-    try { setNodes((await api()?.discloudIndex?.()) || []); } catch (e) { /* locked */ }
+  // Cloud mode
+  const [cloud, setCloud] = useState<{ server: string; email: string; loggedIn: boolean; unlocked: boolean } | null>(null);
+  const [cloudCrypto, setCloudCrypto] = useState<{ hasParams: boolean } | null>(null);
+  const [serverUrl, setServerUrl] = useState('');
+  const [email, setEmail] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+
+  // Shared passphrase / password field
+  const [pass, setPass] = useState('');
+
+  const unlocked = mode === 'local' ? !!localStatus?.unlocked : !!cloud?.unlocked;
+
+  const backend = mode === 'local'
+    ? { nodes: () => api().discloudIndex(), mkdir: (d: any) => api().discloudMkdir(d), del: (d: any) => api().discloudDelete(d), upload: (d: any) => api().discloudUpload(d), download: (d: any) => api().discloudDownload(d) }
+    : { nodes: () => api().cloudNodes(), mkdir: (d: any) => api().cloudMkdir(d), del: (d: any) => api().cloudDelete(d), upload: (d: any) => api().cloudUpload(d), download: (d: any) => api().cloudDownload(d) };
+
+  const refreshNodes = useCallback(async () => {
+    try { setNodes((await backend.nodes()) || []); } catch (e) { /* locked */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
+  const refreshLocal = useCallback(async () => {
+    const s = await api()?.discloudStatus?.();
+    setLocalStatus(s || null);
+    if (s?.unlocked) { setNodes((await api().discloudIndex()) || []); }
   }, []);
 
-  const refreshStatus = useCallback(async () => {
-    const s = await api()?.discloudStatus?.();
-    setStatus(s || null);
-    if (s?.unlocked) refreshIndex();
-  }, [refreshIndex]);
+  const refreshCloud = useCallback(async () => {
+    const s = await api()?.cloudStatus?.();
+    setCloud(s || null);
+    if (s?.loggedIn && !s.unlocked) {
+      const c = await api().cloudCryptoStatus().catch(() => null);
+      setCloudCrypto(c?.ok ? { hasParams: c.hasParams } : { hasParams: false });
+    }
+    if (s?.unlocked) { setNodes((await api().cloudNodes()) || []); }
+  }, []);
 
-  useEffect(() => { refreshStatus(); }, [refreshStatus]);
+  useEffect(() => { setFolder(null); setError(null); setPass(''); if (mode === 'local') refreshLocal(); else refreshCloud(); }, [mode, refreshLocal, refreshCloud]);
 
   useEffect(() => {
     const off = api()?.onDiscloudProgress?.((p: Prog) => setProg(p));
     return () => { if (typeof off === 'function') off(); };
   }, []);
 
-  const handleSetup = async () => {
+  // ── Local handlers ──────────────────────────────────────────────────────────
+  const handleLocalSetup = async () => {
     setError(null); setBusy(true);
     try {
       const r = await api().discloudSetup({ webhook: webhook.trim(), passphrase: pass });
       if (!r?.ok) { setError(r?.error || t('Échec de la configuration')); return; }
-      setPass(''); setWebhook('');
-      await refreshStatus();
+      setPass(''); setWebhook(''); await refreshLocal();
     } finally { setBusy(false); }
   };
-
-  const handleUnlock = async () => {
+  const handleLocalUnlock = async () => {
     setError(null); setBusy(true);
     try {
       const r = await api().discloudUnlock({ passphrase: pass });
       if (!r?.ok) { setError(r?.error || t('Phrase secrète incorrecte.')); return; }
-      setPass('');
-      await refreshStatus();
+      setPass(''); await refreshLocal();
+    } finally { setBusy(false); }
+  };
+  const handleLocalLock = async () => { await api().discloudLock(); await refreshLocal(); };
+
+  // ── Cloud handlers ──────────────────────────────────────────────────────────
+  const handleSetServer = async () => {
+    setError(null); setBusy(true);
+    try {
+      const r = await api().cloudSetServer({ server: serverUrl.trim() });
+      if (!r?.ok) { setError(r?.error || t('Serveur injoignable')); return; }
+      await refreshCloud();
+    } finally { setBusy(false); }
+  };
+  const handleAuth = async () => {
+    setError(null); setBusy(true);
+    try {
+      const r = isRegister ? await api().cloudRegister({ email: email.trim(), password: pass }) : await api().cloudLogin({ email: email.trim(), password: pass });
+      if (!r?.ok) { setError(r?.error || t('Échec de la connexion')); return; }
+      setPass(''); await refreshCloud();
+    } finally { setBusy(false); }
+  };
+  const handleLogout = async () => { await api().cloudLogout(); setCloudCrypto(null); await refreshCloud(); };
+  const handleCloudSetupCrypto = async () => {
+    setError(null); setBusy(true);
+    try {
+      const r = await api().cloudSetupCrypto({ passphrase: pass });
+      if (!r?.ok) { setError(r?.error || t('Échec de la configuration')); return; }
+      setPass(''); await refreshCloud();
+    } finally { setBusy(false); }
+  };
+  const handleCloudUnlock = async () => {
+    setError(null); setBusy(true);
+    try {
+      const r = await api().cloudUnlock({ passphrase: pass });
+      if (r?.needSetup) { setCloudCrypto({ hasParams: false }); setError(null); return; }
+      if (!r?.ok) { setError(r?.error || t('Phrase secrète incorrecte.')); return; }
+      setPass(''); await refreshCloud();
     } finally { setBusy(false); }
   };
 
-  const handleLock = async () => { await api().discloudLock(); await refreshStatus(); };
-
+  // ── Shared drive actions ────────────────────────────────────────────────────
   const handleNewFolder = async () => {
     const name = window.prompt(t('Nom du dossier'));
     if (!name) return;
-    setNodes((await api().discloudMkdir({ name, parent: folder })) || []);
+    setNodes((await backend.mkdir({ name, parent: folder })) || []);
   };
-
   const handleUpload = async () => {
     const paths = await api().discloudPickFiles();
     if (!paths?.length) return;
     const jobId = uid(); jobRef.current = jobId;
     setBusy(true); setError(null); setProg({ id: jobId, phase: 'upload', name: '', percent: 0 });
     try {
-      const r = await api().discloudUpload({ paths, parent: folder, jobId });
+      const r = await backend.upload({ paths, parent: folder, jobId });
       if (!r?.ok && !/annul/i.test(r?.error || '')) setError(r?.error || t('Échec de l\'envoi'));
-      await refreshIndex();
+      await refreshNodes();
     } finally { setBusy(false); setProg(null); jobRef.current = null; }
   };
-
   const handleDownload = async (n: Node) => {
     const jobId = uid(); jobRef.current = jobId;
     setBusy(true); setError(null); setProg({ id: jobId, phase: 'download', name: n.name, percent: 0 });
     try {
-      const r = await api().discloudDownload({ id: n.id, jobId });
+      const r = await backend.download({ id: n.id, jobId });
       if (!r?.ok && !r?.cancelled && !/annul/i.test(r?.error || '')) setError(r?.error || t('Échec du téléchargement'));
     } finally { setBusy(false); setProg(null); jobRef.current = null; }
   };
-
   const handleDelete = async (n: Node) => {
     const msg = n.type === 'folder' ? t('Supprimer ce dossier et tout son contenu de Discord ?') : t('Supprimer ce fichier de Discord ?');
     if (!window.confirm(msg)) return;
     setBusy(true);
-    try { const r = await api().discloudDelete({ id: n.id }); if (r?.nodes) setNodes(r.nodes); }
+    try { const r = await backend.del({ id: n.id }); if (r?.nodes) setNodes(r.nodes); else await refreshNodes(); }
     finally { setBusy(false); }
   };
-
   const handleCancel = () => { if (jobRef.current) api().discloudCancel(jobRef.current); };
 
-  // Breadcrumb path from root to current folder.
-  const crumbs: Node[] = [];
-  { let c = folder; while (c) { const n = nodes.find(x => x.id === c); if (!n) break; crumbs.unshift(n); c = n.parent; } }
-  const children = nodes.filter(n => n.parent === folder).sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'folder' ? -1 : 1));
+  // ── Header + mode switch ────────────────────────────────────────────────────
+  const ModeSwitch = (
+    <div className="inline-flex rounded-xl bg-white/5 border border-white/10 p-0.5 text-sm">
+      {(['local', 'cloud'] as Mode[]).map(m => (
+        <button key={m} onClick={() => setMode(m)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${mode === m ? 'bg-pink-500/20 text-pink-300' : 'text-gray-400 hover:text-gray-200'}`}>
+          {m === 'local' ? <Monitor className="w-3.5 h-3.5" /> : <Cloud className="w-3.5 h-3.5" />}
+          {m === 'local' ? t('Local') : t('Cloud (compte)')}
+        </button>
+      ))}
+    </div>
+  );
 
-  // ── Header ────────────────────────────────────────────────────────────────
   const Header = (
-    <div className="flex items-center gap-3 mb-6">
-      <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)', boxShadow: '0 8px 24px rgba(168,85,247,0.35)' }}>
-        <HardDrive className="w-6 h-6 text-white" />
+    <div className="flex items-center justify-between gap-3 mb-6">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)', boxShadow: '0 8px 24px rgba(168,85,247,0.35)' }}>
+          <HardDrive className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">{t('Drive Discord')} <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20">{t('Chiffré AES-256')}</span></h1>
+          <p className="text-xs text-gray-500">{t('Stockez vos fichiers gratuitement sur un salon Discord, chiffrés de bout en bout.')}</p>
+        </div>
       </div>
-      <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">{t('Drive Discord')} <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20">{t('Chiffré AES-256')}</span></h1>
-        <p className="text-xs text-gray-500">{t('Stockez vos fichiers gratuitement sur un salon Discord, chiffrés de bout en bout.')}</p>
-      </div>
+      {ModeSwitch}
     </div>
   );
 
@@ -134,84 +205,118 @@ export default function DriveStudio() {
     </div>
   );
 
-  // ── Not configured: setup screen ────────────────────────────────────────────
-  if (status && !status.configured) {
-    return (
-      <div className="h-full overflow-y-auto p-6 max-w-2xl mx-auto">
-        {Header}
-        {errorBar}
-        <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-5">
-          <div>
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><Link2 className="w-3.5 h-3.5" /> {t('URL du webhook Discord')}</label>
-            <input className={INPUT} placeholder="https://discord.com/api/webhooks/…" value={webhook} onChange={e => setWebhook(e.target.value)} />
-            <button onClick={() => setShowHelp(!showHelp)} className="text-xs text-pink-400 hover:text-pink-300 mt-1.5">{showHelp ? t('Masquer l\'aide') : t('Comment créer un webhook ?')}</button>
-            <AnimatePresence>
-              {showHelp && (
-                <motion.ol initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-xs text-gray-400 mt-2 space-y-1 list-decimal list-inside bg-white/5 rounded-xl p-3 overflow-hidden">
-                  <li>{t('Sur Discord, choisissez (ou créez) un salon privé.')}</li>
-                  <li>{t('Paramètres du salon → Intégrations → Webhooks → Nouveau webhook.')}</li>
-                  <li>{t('Cliquez sur « Copier l\'URL du webhook » et collez-la ci-dessus.')}</li>
-                </motion.ol>
-              )}
-            </AnimatePresence>
-          </div>
-          <div>
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><KeyRound className="w-3.5 h-3.5" /> {t('Phrase secrète de chiffrement')}</label>
-            <input className={INPUT} type="password" placeholder={t('Choisissez une phrase forte')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSetup()} />
-            <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-green-400" /> {t('Vos fichiers sont chiffrés avant l\'envoi. Sans cette phrase, ils sont irrécupérables — gardez-la précieusement.')}</p>
-          </div>
-          <button onClick={handleSetup} disabled={busy || !webhook || !pass} className="w-full py-2.5 rounded-xl font-semibold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)' }}>
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t('Configurer le Drive')}
-          </button>
-          <p className="text-[11px] text-gray-600 text-center">{t('Note : utiliser Discord comme stockage va à l\'encontre de ses conditions — à réserver à un usage d\'appoint, pas comme sauvegarde unique.')}</p>
-        </div>
+  const card = (children: any, max = 'max-w-2xl') => (
+    <div className={`h-full overflow-y-auto p-6 ${max} mx-auto`}>{Header}{errorBar}<div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-5">{children}</div></div>
+  );
+  const primaryBtn = "w-full py-2.5 rounded-xl font-semibold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2";
+  const grad = { background: 'linear-gradient(135deg, #e879f9, #a855f7)' };
+
+  // ── LOCAL: gating screens ───────────────────────────────────────────────────
+  if (mode === 'local' && localStatus && !localStatus.configured) {
+    return card(<>
+      <div>
+        <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><Link2 className="w-3.5 h-3.5" /> {t('URL du webhook Discord')}</label>
+        <input className={INPUT} placeholder="https://discord.com/api/webhooks/…" value={webhook} onChange={e => setWebhook(e.target.value)} />
+        <button onClick={() => setShowHelp(!showHelp)} className="text-xs text-pink-400 hover:text-pink-300 mt-1.5">{showHelp ? t('Masquer l\'aide') : t('Comment créer un webhook ?')}</button>
+        <AnimatePresence>
+          {showHelp && (
+            <motion.ol initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-xs text-gray-400 mt-2 space-y-1 list-decimal list-inside bg-white/5 rounded-xl p-3 overflow-hidden">
+              <li>{t('Sur Discord, choisissez (ou créez) un salon privé.')}</li>
+              <li>{t('Paramètres du salon → Intégrations → Webhooks → Nouveau webhook.')}</li>
+              <li>{t('Cliquez sur « Copier l\'URL du webhook » et collez-la ci-dessus.')}</li>
+            </motion.ol>
+          )}
+        </AnimatePresence>
       </div>
-    );
+      <div>
+        <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><KeyRound className="w-3.5 h-3.5" /> {t('Phrase secrète de chiffrement')}</label>
+        <input className={INPUT} type="password" placeholder={t('Choisissez une phrase forte')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLocalSetup()} />
+        <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-green-400" /> {t('Vos fichiers sont chiffrés avant l\'envoi. Sans cette phrase, ils sont irrécupérables — gardez-la précieusement.')}</p>
+      </div>
+      <button onClick={handleLocalSetup} disabled={busy || !webhook || !pass} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t('Configurer le Drive')}</button>
+      <p className="text-[11px] text-gray-600 text-center">{t('Note : utiliser Discord comme stockage va à l\'encontre de ses conditions — à réserver à un usage d\'appoint, pas comme sauvegarde unique.')}</p>
+    </>);
+  }
+  if (mode === 'local' && localStatus && !localStatus.unlocked) {
+    return card(<div className="text-center space-y-4">
+      <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mx-auto"><Lock className="w-7 h-7 text-pink-400" /></div>
+      <p className="text-sm text-gray-400">{t('Saisissez votre phrase secrète pour déverrouiller le Drive.')}</p>
+      <input className={INPUT} type="password" autoFocus placeholder={t('Phrase secrète')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLocalUnlock()} />
+      <button onClick={handleLocalUnlock} disabled={busy || !pass} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />} {t('Déverrouiller')}</button>
+    </div>, 'max-w-md');
   }
 
-  // ── Configured but locked: unlock screen ────────────────────────────────────
-  if (status && !status.unlocked) {
-    return (
-      <div className="h-full overflow-y-auto p-6 max-w-md mx-auto">
-        {Header}
-        {errorBar}
-        <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-4 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mx-auto"><Lock className="w-7 h-7 text-pink-400" /></div>
-          <p className="text-sm text-gray-400">{t('Saisissez votre phrase secrète pour déverrouiller le Drive.')}</p>
-          <input className={INPUT} type="password" autoFocus placeholder={t('Phrase secrète')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleUnlock()} />
-          <button onClick={handleUnlock} disabled={busy || !pass} className="w-full py-2.5 rounded-xl font-semibold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)' }}>
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />} {t('Déverrouiller')}
-          </button>
-          {status.webhookMasked && <p className="text-[11px] text-gray-600">{t('Webhook')} : {status.webhookMasked}</p>}
-        </div>
+  // ── CLOUD: gating screens ───────────────────────────────────────────────────
+  if (mode === 'cloud' && cloud && !cloud.server) {
+    return card(<>
+      <div>
+        <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><Server className="w-3.5 h-3.5" /> {t('Adresse du serveur')}</label>
+        <input className={INPUT} placeholder="https://drive.mondomaine.com" value={serverUrl} onChange={e => setServerUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSetServer()} />
+        <p className="text-[11px] text-gray-500 mt-1.5">{t('Adresse de votre serveur Orbit Drive (auto-hébergé). Le contenu reste chiffré côté client.')}</p>
       </div>
-    );
+      <button onClick={handleSetServer} disabled={busy || !serverUrl} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />} {t('Se connecter au serveur')}</button>
+    </>, 'max-w-md');
+  }
+  if (mode === 'cloud' && cloud && !cloud.loggedIn) {
+    return card(<>
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-white">{isRegister ? t('Créer un compte') : t('Connexion')}</h2>
+        <button onClick={() => { api().cloudSetServer({ server: '' }); refreshCloud(); }} className="text-[11px] text-gray-500 hover:text-gray-300">{t('Changer de serveur')}</button>
+      </div>
+      <div>
+        <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><Mail className="w-3.5 h-3.5" /> {t('E-mail')}</label>
+        <input className={INPUT} type="email" placeholder="vous@exemple.com" value={email} onChange={e => setEmail(e.target.value)} />
+      </div>
+      <div>
+        <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><KeyRound className="w-3.5 h-3.5" /> {t('Mot de passe')}</label>
+        <input className={INPUT} type="password" placeholder={t('Mot de passe')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
+      </div>
+      <button onClick={handleAuth} disabled={busy || !email || !pass} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserIcon className="w-4 h-4" />} {isRegister ? t('Créer le compte') : t('Se connecter')}</button>
+      <button onClick={() => { setIsRegister(!isRegister); setError(null); }} className="text-xs text-pink-400 hover:text-pink-300 w-full text-center">{isRegister ? t('J\'ai déjà un compte') : t('Créer un compte')}</button>
+    </>, 'max-w-md');
+  }
+  if (mode === 'cloud' && cloud && cloud.loggedIn && !cloud.unlocked) {
+    const needSetup = cloudCrypto && !cloudCrypto.hasParams;
+    return card(<div className="text-center space-y-4">
+      <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mx-auto">{needSetup ? <ShieldCheck className="w-7 h-7 text-pink-400" /> : <Lock className="w-7 h-7 text-pink-400" />}</div>
+      <p className="text-sm text-gray-400">{needSetup ? t('Choisissez une phrase secrète de chiffrement. Elle protège vos fichiers et fonctionne sur tous vos appareils.') : t('Saisissez votre phrase secrète pour déverrouiller le Drive.')}</p>
+      <input className={INPUT} type="password" autoFocus placeholder={t('Phrase secrète')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && (needSetup ? handleCloudSetupCrypto() : handleCloudUnlock())} />
+      <button onClick={needSetup ? handleCloudSetupCrypto : handleCloudUnlock} disabled={busy || !pass} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : needSetup ? <ShieldCheck className="w-4 h-4" /> : <Unlock className="w-4 h-4" />} {needSetup ? t('Activer le chiffrement') : t('Déverrouiller')}</button>
+      <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 w-full flex items-center justify-center gap-1"><LogOut className="w-3.5 h-3.5" /> {cloud.email} · {t('Se déconnecter')}</button>
+    </div>, 'max-w-md');
   }
 
-  // ── Unlocked: the drive ─────────────────────────────────────────────────────
+  // While the relevant status is still loading
+  if ((mode === 'local' && !localStatus) || (mode === 'cloud' && !cloud)) {
+    return <div className="h-full w-full flex items-center justify-center text-gray-600"><Loader2 className="w-7 h-7 animate-spin" /></div>;
+  }
+
+  // ── Unlocked: the drive (shared for both modes) ─────────────────────────────
+  const crumbs: Node[] = [];
+  { let c = folder; while (c) { const n = nodes.find(x => x.id === c); if (!n) break; crumbs.unshift(n); c = n.parent; } }
+  const children = nodes.filter(n => n.parent === folder).sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'folder' ? -1 : 1));
+
   return (
     <div className="h-full flex flex-col p-6">
       {Header}
       {errorBar}
 
-      {/* Toolbar */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <button onClick={handleUpload} disabled={busy} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)' }}>
+        <button onClick={handleUpload} disabled={busy} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40" style={grad}>
           <UploadCloud className="w-4 h-4" /> {t('Envoyer des fichiers')}
         </button>
         <button onClick={handleNewFolder} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-all disabled:opacity-40">
           <FolderPlus className="w-4 h-4" /> {t('Nouveau dossier')}
         </button>
-        <button onClick={refreshIndex} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all disabled:opacity-40" title={t('Actualiser')}>
+        <button onClick={refreshNodes} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all disabled:opacity-40" title={t('Actualiser')}>
           <RefreshCw className="w-4 h-4" />
         </button>
         <div className="flex-1" />
-        <button onClick={handleLock} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all" title={t('Verrouiller')}>
-          <Lock className="w-4 h-4" /> {t('Verrouiller')}
-        </button>
+        {mode === 'cloud'
+          ? <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"><LogOut className="w-4 h-4" /> {cloud?.email}</button>
+          : <button onClick={handleLocalLock} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"><Lock className="w-4 h-4" /> {t('Verrouiller')}</button>}
       </div>
 
-      {/* Breadcrumb */}
       <div className="flex items-center gap-1 mb-3 text-sm flex-wrap">
         <button onClick={() => setFolder(null)} className={`px-2 py-1 rounded-lg hover:bg-white/5 transition-colors ${folder === null ? 'text-pink-400 font-semibold' : 'text-gray-400'}`}>{t('Racine')}</button>
         {crumbs.map(c => (
@@ -222,7 +327,6 @@ export default function DriveStudio() {
         ))}
       </div>
 
-      {/* Progress */}
       <AnimatePresence>
         {prog && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mb-4 bg-white/5 border border-white/10 rounded-xl p-3">
@@ -240,7 +344,6 @@ export default function DriveStudio() {
         )}
       </AnimatePresence>
 
-      {/* File list */}
       <div className="flex-1 overflow-y-auto -mx-1 px-1">
         {children.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-600 gap-3">

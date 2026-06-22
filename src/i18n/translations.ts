@@ -928,6 +928,26 @@ const entries: Record<string, Row> = {
   "Échec de l'envoi": { en: "Upload failed", es: "Error al enviar", de: "Upload fehlgeschlagen", it: "Invio non riuscito", pt: "Falha no envio" },
   "Échec de la configuration": { en: "Setup failed", es: "Error de configuración", de: "Einrichtung fehlgeschlagen", it: "Configurazione non riuscita", pt: "Falha na configuração" },
   "Échec du téléchargement": { en: "Download failed", es: "Error de descarga", de: "Download fehlgeschlagen", it: "Download non riuscito", pt: "Falha no download" },
+
+  // ── Drive Discord — mode Cloud (serveur + comptes) ──────────────────
+  "Local": { en: "Local", es: "Local", de: "Lokal", it: "Locale", pt: "Local" },
+  "Cloud (compte)": { en: "Cloud (account)", es: "Nube (cuenta)", de: "Cloud (Konto)", it: "Cloud (account)", pt: "Nuvem (conta)" },
+  "Adresse du serveur": { en: "Server address", es: "Dirección del servidor", de: "Serveradresse", it: "Indirizzo del server", pt: "Endereço do servidor" },
+  "Adresse de votre serveur Orbit Drive (auto-hébergé). Le contenu reste chiffré côté client.": { en: "Address of your (self-hosted) Orbit Drive server. Content stays encrypted client-side.", es: "Dirección de tu servidor Orbit Drive (autoalojado). El contenido permanece cifrado en el cliente.", de: "Adresse deines (selbstgehosteten) Orbit-Drive-Servers. Inhalte bleiben clientseitig verschlüsselt.", it: "Indirizzo del tuo server Orbit Drive (self-hosted). Il contenuto resta crittografato lato client.", pt: "Endereço do seu servidor Orbit Drive (auto-hospedado). O conteúdo permanece criptografado no cliente." },
+  "Se connecter au serveur": { en: "Connect to server", es: "Conectar al servidor", de: "Mit Server verbinden", it: "Connetti al server", pt: "Conectar ao servidor" },
+  "Serveur injoignable": { en: "Server unreachable", es: "Servidor inaccesible", de: "Server nicht erreichbar", it: "Server irraggiungibile", pt: "Servidor inacessível" },
+  "Changer de serveur": { en: "Change server", es: "Cambiar de servidor", de: "Server wechseln", it: "Cambia server", pt: "Mudar de servidor" },
+  "Connexion": { en: "Sign in", es: "Iniciar sesión", de: "Anmelden", it: "Accedi", pt: "Entrar" },
+  "Créer un compte": { en: "Create account", es: "Crear cuenta", de: "Konto erstellen", it: "Crea un account", pt: "Criar conta" },
+  "Créer le compte": { en: "Create account", es: "Crear la cuenta", de: "Konto erstellen", it: "Crea l'account", pt: "Criar a conta" },
+  "E-mail": { en: "Email", es: "Correo electrónico", de: "E-Mail", it: "E-mail", pt: "E-mail" },
+  "Mot de passe": { en: "Password", es: "Contraseña", de: "Passwort", it: "Password", pt: "Senha" },
+  "Se connecter": { en: "Sign in", es: "Iniciar sesión", de: "Anmelden", it: "Accedi", pt: "Entrar" },
+  "J'ai déjà un compte": { en: "I already have an account", es: "Ya tengo una cuenta", de: "Ich habe bereits ein Konto", it: "Ho già un account", pt: "Já tenho uma conta" },
+  "Échec de la connexion": { en: "Sign-in failed", es: "Error al iniciar sesión", de: "Anmeldung fehlgeschlagen", it: "Accesso non riuscito", pt: "Falha ao entrar" },
+  "Se déconnecter": { en: "Sign out", es: "Cerrar sesión", de: "Abmelden", it: "Esci", pt: "Sair" },
+  "Choisissez une phrase secrète de chiffrement. Elle protège vos fichiers et fonctionne sur tous vos appareils.": { en: "Choose an encryption passphrase. It protects your files and works across all your devices.", es: "Elige una frase secreta de cifrado. Protege tus archivos y funciona en todos tus dispositivos.", de: "Wähle eine Verschlüsselungs-Passphrase. Sie schützt deine Dateien und funktioniert auf all deinen Geräten.", it: "Scegli una frase segreta di crittografia. Protegge i tuoi file e funziona su tutti i tuoi dispositivi.", pt: "Escolha uma frase secreta de criptografia. Protege seus arquivos e funciona em todos os seus dispositivos." },
+  "Activer le chiffrement": { en: "Enable encryption", es: "Activar el cifrado", de: "Verschlüsselung aktivieren", it: "Attiva la crittografia", pt: "Ativar a criptografia" },
 };
 
 export const dict: Record<Target, Record<string, string>> = {

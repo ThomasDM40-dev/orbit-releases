@@ -4387,3 +4387,174 @@ ipcMain.handle('discloud-delete', async (e, { id } = {}) => {
   discloud.saveIndex(DISCLOUD_DIR, idx);
   return { ok: true, nodes: idx.nodes };
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Discloud CLOUD — Drive via serveur (comptes + pool de webhooks côté serveur)
+//  Le contenu reste chiffré côté client : on chiffre/déchiffre ici, le serveur ne
+//  voit que du chiffré. Le sel + verifier vivent sur le serveur (multi-appareils).
+// ─────────────────────────────────────────────────────────────────────────────
+const CLOUD_CFG = path.join(DISCLOUD_DIR, 'cloud.json');
+let cloud = { server: '', token: '', email: '' };
+try { cloud = { ...cloud, ...JSON.parse(fs.readFileSync(CLOUD_CFG, 'utf8')) }; } catch (e) {}
+let cloudKey = null;
+function saveCloud() { try { fs.mkdirSync(DISCLOUD_DIR, { recursive: true }); fs.writeFileSync(CLOUD_CFG, JSON.stringify(cloud)); } catch (e) {} }
+
+function cloudBase() { if (!cloud.server) throw new Error('Serveur non configuré.'); return cloud.server.replace(/\/+$/, ''); }
+async function cloudFetch(p, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (cloud.token) headers['Authorization'] = 'Bearer ' + cloud.token;
+  return fetch(cloudBase() + p, { ...opts, headers });
+}
+async function cloudJson(p, opts = {}) {
+  const res = await cloudFetch(p, opts);
+  let body = null; try { body = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((body && body.error) || ('Erreur serveur (HTTP ' + res.status + ')'));
+  return body;
+}
+function cloudPost(p, obj) { return cloudJson(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }); }
+
+ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
+
+ipcMain.handle('discloud-cloud-set-server', async (e, { server } = {}) => {
+  server = String(server || '').trim().replace(/\/+$/, '');
+  if (!/^https?:\/\/.+/.test(server)) return { ok: false, error: 'URL de serveur invalide (http(s)://…).' };
+  try {
+    const res = await fetch(server + '/health');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const h = await res.json();
+    cloud.server = server; saveCloud();
+    return { ok: true, webhooks: h.webhooks, registration: h.registration };
+  } catch (er) { return { ok: false, error: 'Serveur injoignable : ' + er.message }; }
+});
+
+ipcMain.handle('discloud-cloud-register', async (e, { email, password } = {}) => {
+  try { const r = await cloudPost('/api/auth/register', { email, password }); cloud.token = r.token; cloud.email = r.email; saveCloud(); return { ok: true }; }
+  catch (er) { return { ok: false, error: er.message }; }
+});
+ipcMain.handle('discloud-cloud-login', async (e, { email, password } = {}) => {
+  try { const r = await cloudPost('/api/auth/login', { email, password }); cloud.token = r.token; cloud.email = r.email; saveCloud(); return { ok: true }; }
+  catch (er) { return { ok: false, error: er.message }; }
+});
+ipcMain.handle('discloud-cloud-logout', () => { cloud.token = ''; cloud.email = ''; cloudKey = null; saveCloud(); return { ok: true }; });
+
+ipcMain.handle('discloud-cloud-crypto-status', async () => {
+  try { const c = await cloudJson('/api/drive/crypto'); return { ok: true, hasParams: !!(c && c.salt) }; }
+  catch (er) { return { ok: false, error: er.message }; }
+});
+ipcMain.handle('discloud-cloud-setup-crypto', async (e, { passphrase } = {}) => {
+  if (!passphrase || String(passphrase).length < 4) return { ok: false, error: 'Phrase secrète trop courte (4 caractères minimum).' };
+  try {
+    const salt = require('crypto').randomBytes(16).toString('hex');
+    const key = discloud.deriveKey(passphrase, salt);
+    await cloudPost('/api/drive/crypto', { salt, verifier: discloud.makeVerifier(key) });
+    cloudKey = key;
+    return { ok: true };
+  } catch (er) { return { ok: false, error: er.message }; }
+});
+ipcMain.handle('discloud-cloud-unlock', async (e, { passphrase } = {}) => {
+  try {
+    const c = await cloudJson('/api/drive/crypto');
+    if (!c || !c.salt) return { ok: false, needSetup: true };
+    const key = discloud.deriveKey(passphrase, c.salt);
+    if (!discloud.checkVerifier(key, c.verifier)) return { ok: false, error: 'Phrase secrète incorrecte.' };
+    cloudKey = key;
+    return { ok: true };
+  } catch (er) { return { ok: false, error: er.message }; }
+});
+
+ipcMain.handle('discloud-cloud-nodes', async () => { try { return await cloudJson('/api/drive/nodes'); } catch (e) { return []; } });
+ipcMain.handle('discloud-cloud-mkdir', async (e, { name, parent } = {}) => {
+  try { await cloudPost('/api/drive/folder', { name, parent: parent || null }); return await cloudJson('/api/drive/nodes'); }
+  catch (er) { return []; }
+});
+ipcMain.handle('discloud-cloud-rename', async (e, { id, name } = {}) => {
+  try { await cloudPost('/api/drive/rename', { id, name }); } catch (er) {}
+  try { return await cloudJson('/api/drive/nodes'); } catch (er) { return []; }
+});
+ipcMain.handle('discloud-cloud-delete', async (e, { id } = {}) => {
+  try { await cloudJson('/api/drive/node/' + id, { method: 'DELETE' }); return { ok: true, nodes: await cloudJson('/api/drive/nodes') }; }
+  catch (er) { return { ok: false, error: er.message }; }
+});
+
+// Envoie un bloc chiffré au serveur, qui le pousse sur un webhook du pool.
+async function cloudUploadChunk(payload) {
+  const form = new FormData();
+  form.append('file', new Blob([payload]), 'blk.orb');
+  const res = await cloudFetch('/api/drive/upload/chunk', { method: 'POST', body: form });
+  if (!res.ok) { let b = null; try { b = await res.json(); } catch (x) {} throw new Error((b && b.error) || ('Envoi refusé (HTTP ' + res.status + ')')); }
+  return res.json(); // { webhookId, messageId }
+}
+
+ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {}) => {
+  if (!cloud.token) return { ok: false, error: 'Non connecté.' };
+  if (!cloudKey) return { ok: false, error: 'verrouillé', code: 'locked' };
+  paths = (paths || []).filter(Boolean);
+  if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
+  jobId = jobId || discloud.uuid();
+  try {
+    for (let fi = 0; fi < paths.length; fi++) {
+      const filePath = paths[fi];
+      const stat = fs.statSync(filePath);
+      const name = path.basename(filePath);
+      const total = stat.size;
+      let icon = null;
+      try { const img = await app.getFileIcon(filePath, { size: 'normal' }); if (img && !img.isEmpty()) icon = img.toDataURL(); } catch (x) {}
+      const numChunks = Math.max(1, Math.ceil(total / discloud.CHUNK_SIZE));
+      const fh = await fs.promises.open(filePath, 'r');
+      const chunks = new Array(numChunks);
+      let uploaded = 0, doneCount = 0;
+      try {
+        await discloud.runPool(numChunks, DISCLOUD_CONCURRENCY, async (i) => {
+          if (discloudCancelled.has(jobId)) throw new Error('Annulé');
+          const len = Math.min(discloud.CHUNK_SIZE, total - i * discloud.CHUNK_SIZE);
+          const buf = Buffer.allocUnsafe(len);
+          if (len > 0) await fh.read(buf, 0, len, i * discloud.CHUNK_SIZE);
+          const payload = discloud.encryptBuffer(cloudKey, buf);
+          const r = await cloudUploadChunk(payload);
+          chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
+          uploaded += len; doneCount++;
+          discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
+        });
+      } finally { await fh.close(); }
+      await cloudPost('/api/drive/upload/commit', { name, parent: parent || null, size: total, chunkSize: discloud.CHUNK_SIZE, icon, chunks });
+    }
+    discloudCancelled.delete(jobId);
+    return { ok: true };
+  } catch (er) { discloudCancelled.delete(jobId); return { ok: false, error: er.message }; }
+});
+
+ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
+  if (!cloud.token) return { ok: false, error: 'Non connecté.' };
+  if (!cloudKey) return { ok: false, error: 'verrouillé', code: 'locked' };
+  let meta;
+  try { meta = await cloudJson('/api/drive/file/' + id); } catch (er) { return { ok: false, error: er.message }; }
+  const node = meta.node, list = meta.chunks || [];
+  const save = await dialog.showSaveDialog(uiWin(), { defaultPath: node.name, title: 'Enregistrer sous' });
+  if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
+  jobId = jobId || discloud.uuid();
+  const chunkSize = node.chunkSize || discloud.CHUNK_SIZE;
+  const fh = await fs.promises.open(save.filePath, 'w');
+  let done = 0, doneCount = 0;
+  try {
+    try { await fh.truncate(node.size || 0); } catch (x) {}
+    await discloud.runPool(list.length, DISCLOUD_CONCURRENCY, async (k) => {
+      if (discloudCancelled.has(jobId)) throw new Error('Annulé');
+      const ch = list[k];
+      const res = await cloudFetch('/api/drive/chunk/' + ch.id);
+      if (!res.ok) throw new Error('Bloc indisponible (HTTP ' + res.status + ')');
+      const blob = Buffer.from(await res.arrayBuffer());
+      const plain = node.encrypted ? discloud.decryptBuffer(cloudKey, blob) : blob;
+      await fh.write(plain, 0, plain.length, ch.idx * chunkSize);
+      done += ch.size; doneCount++;
+      discloudEmit({ id: jobId, phase: 'download', name: node.name, percent: node.size ? Math.round((done / node.size) * 100) : 100, chunk: doneCount, chunks: list.length });
+    });
+    await fh.close();
+    discloudCancelled.delete(jobId);
+    return { ok: true, path: save.filePath };
+  } catch (er) {
+    discloudCancelled.delete(jobId);
+    try { await fh.close(); } catch (x) {}
+    try { fs.unlinkSync(save.filePath); } catch (x) {}
+    return { ok: false, error: er.message };
+  }
+});

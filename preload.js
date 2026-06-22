@@ -190,6 +190,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   discloudCancel: (jobId) => ipcRenderer.send('discloud-cancel', jobId),
   onDiscloudProgress: (cb) => { ipcRenderer.on('discloud-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('discloud-progress'); },
 
+  // ── Discloud Cloud (Drive via serveur + comptes) ──
+  cloudStatus: () => ipcRenderer.invoke('discloud-cloud-status'),
+  cloudSetServer: (data) => ipcRenderer.invoke('discloud-cloud-set-server', data),
+  cloudRegister: (data) => ipcRenderer.invoke('discloud-cloud-register', data),
+  cloudLogin: (data) => ipcRenderer.invoke('discloud-cloud-login', data),
+  cloudLogout: () => ipcRenderer.invoke('discloud-cloud-logout'),
+  cloudCryptoStatus: () => ipcRenderer.invoke('discloud-cloud-crypto-status'),
+  cloudSetupCrypto: (data) => ipcRenderer.invoke('discloud-cloud-setup-crypto', data),
+  cloudUnlock: (data) => ipcRenderer.invoke('discloud-cloud-unlock', data),
+  cloudNodes: () => ipcRenderer.invoke('discloud-cloud-nodes'),
+  cloudMkdir: (data) => ipcRenderer.invoke('discloud-cloud-mkdir', data),
+  cloudRename: (data) => ipcRenderer.invoke('discloud-cloud-rename', data),
+  cloudDelete: (data) => ipcRenderer.invoke('discloud-cloud-delete', data),
+  cloudUpload: (data) => ipcRenderer.invoke('discloud-cloud-upload', data),
+  cloudDownload: (data) => ipcRenderer.invoke('discloud-cloud-download', data),
+
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),
   llmStatus: () => ipcRenderer.invoke('llm-status'),
