@@ -13,9 +13,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// Limite gratuite Discord = 25 Mo/pièce jointe. On reste sous les deux
-// interprétations possibles (25 000 000 et 25 MiB) avec une marge confortable.
-const CHUNK_SIZE = 23 * 1024 * 1024; // 23 Mo de clair par chunk
+// Taille de bloc : 8 Mio, la limite de pièce jointe historiquement acceptée par
+// TOUS les serveurs Discord (même non boostés). Les serveurs gratuits récents
+// tolèrent parfois plus, mais 8 Mio garantit qu'on ne prend jamais de HTTP 413.
+const CHUNK_SIZE = 8 * 1024 * 1024; // 8 Mio de clair par chunk
 const PBKDF2_ITERS = 200000;
 const VERIFIER_PLAINTEXT = 'orbit-discloud-v1';
 
