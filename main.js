@@ -4199,3 +4199,178 @@ ipcMain.handle('yolo-detect', async (e, params = {}) => {
     return { ok: true, detections: dets, width: W, height: H };
   } catch (err) { return { error: 'Détection : ' + ((err && err.message) || String(err)) }; }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Discloud — stockage de fichiers sur Discord (webhook + AES-256)
+// ─────────────────────────────────────────────────────────────────────────────
+const discloud = require('./discloud.js');
+const DISCLOUD_DIR = path.join(ORBIT_DIR, 'discloud');
+// Clé de chiffrement dérivée de la phrase secrète, gardée en mémoire le temps
+// de la session uniquement (jamais écrite sur le disque).
+let discloudKey = null;
+const discloudCancelled = new Set();
+
+function discloudEmit(payload) { uiWin()?.webContents.send('discloud-progress', payload); }
+function discloudCtx() {
+  const cfg = discloud.loadConfig(DISCLOUD_DIR);
+  if (!cfg.webhook) { const e = new Error('Discloud non configuré.'); e.code = 'unconfigured'; throw e; }
+  if (!discloudKey) { const e = new Error('verrouillé'); e.code = 'locked'; throw e; }
+  return cfg;
+}
+// Tous les descendants (dossier inclus) d'un nœud, le nœud lui-même en premier.
+function discloudDescendants(nodes, id) {
+  const out = [];
+  const walk = (nid) => { const n = nodes.find(x => x.id === nid); if (!n) return; out.push(n); nodes.filter(x => x.parent === nid).forEach(c => walk(c.id)); };
+  walk(id);
+  return out;
+}
+
+ipcMain.handle('discloud-status', () => {
+  const cfg = discloud.loadConfig(DISCLOUD_DIR);
+  const wh = cfg.webhook || '';
+  return {
+    configured: !!cfg.webhook,
+    encrypted: !!cfg.verifier,
+    unlocked: !!discloudKey,
+    webhookMasked: wh ? wh.replace(/\/[\w-]+$/, '/••••••' + wh.slice(-4)) : '',
+  };
+});
+
+ipcMain.handle('discloud-setup', (e, { webhook, passphrase } = {}) => {
+  webhook = String(webhook || '').trim();
+  if (!discloud.isValidWebhook(webhook)) return { ok: false, error: 'URL de webhook Discord invalide.' };
+  if (!passphrase || String(passphrase).length < 4) return { ok: false, error: 'Phrase secrète trop courte (4 caractères minimum).' };
+  const salt = require('crypto').randomBytes(16).toString('hex');
+  const key = discloud.deriveKey(passphrase, salt);
+  const cfg = { webhook, salt, verifier: discloud.makeVerifier(key), encrypted: true, createdAt: Date.now() };
+  discloud.saveConfig(DISCLOUD_DIR, cfg);
+  discloudKey = key;
+  return { ok: true };
+});
+
+ipcMain.handle('discloud-unlock', (e, { passphrase } = {}) => {
+  const cfg = discloud.loadConfig(DISCLOUD_DIR);
+  if (!cfg.salt || !cfg.verifier) return { ok: false, error: 'Discloud non configuré.' };
+  const key = discloud.deriveKey(passphrase, cfg.salt);
+  if (!discloud.checkVerifier(key, cfg.verifier)) return { ok: false, error: 'Phrase secrète incorrecte.' };
+  discloudKey = key;
+  return { ok: true };
+});
+
+ipcMain.handle('discloud-lock', () => { discloudKey = null; return { ok: true }; });
+
+ipcMain.handle('discloud-index', () => discloud.loadIndex(DISCLOUD_DIR).nodes || []);
+
+ipcMain.handle('discloud-mkdir', (e, { name, parent } = {}) => {
+  const idx = discloud.loadIndex(DISCLOUD_DIR);
+  const node = { id: discloud.uuid(), type: 'folder', name: String(name || 'Dossier').trim() || 'Dossier', parent: parent || null, createdAt: Date.now() };
+  idx.nodes.push(node);
+  discloud.saveIndex(DISCLOUD_DIR, idx);
+  return idx.nodes;
+});
+
+ipcMain.handle('discloud-rename', (e, { id, name } = {}) => {
+  const idx = discloud.loadIndex(DISCLOUD_DIR);
+  const n = idx.nodes.find(x => x.id === id);
+  if (n) { n.name = String(name || n.name).trim() || n.name; discloud.saveIndex(DISCLOUD_DIR, idx); }
+  return idx.nodes;
+});
+
+ipcMain.handle('discloud-pick-files', async () => {
+  const r = await dialog.showOpenDialog(uiWin(), { properties: ['openFile', 'multiSelections'], title: 'Fichiers à envoyer sur Discord' });
+  return r.canceled ? [] : r.filePaths;
+});
+
+ipcMain.on('discloud-cancel', (e, jobId) => { if (jobId) discloudCancelled.add(jobId); });
+
+ipcMain.handle('discloud-upload', async (e, { paths, parent, jobId } = {}) => {
+  let cfg;
+  try { cfg = discloudCtx(); } catch (er) { return { ok: false, error: er.message, code: er.code }; }
+  paths = (paths || []).filter(Boolean);
+  if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
+  jobId = jobId || discloud.uuid();
+  const webhook = cfg.webhook;
+  try {
+    for (let fi = 0; fi < paths.length; fi++) {
+      const filePath = paths[fi];
+      const stat = fs.statSync(filePath);
+      const name = path.basename(filePath);
+      const total = stat.size;
+      const numChunks = Math.max(1, Math.ceil(total / discloud.CHUNK_SIZE));
+      const fd = fs.openSync(filePath, 'r');
+      const chunks = [];
+      let uploaded = 0;
+      try {
+        for (let i = 0; i < numChunks; i++) {
+          if (discloudCancelled.has(jobId)) throw new Error('Annulé');
+          const len = Math.min(discloud.CHUNK_SIZE, total - i * discloud.CHUNK_SIZE);
+          const buf = Buffer.allocUnsafe(len);
+          if (len > 0) fs.readSync(fd, buf, 0, len, i * discloud.CHUNK_SIZE);
+          const payload = discloud.encryptBuffer(discloudKey, buf);
+          const r = await discloud.webhookUpload(webhook, `${name}.part${i}.orb`, payload);
+          chunks.push({ messageId: r.messageId, size: len });
+          uploaded += len;
+          discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: i + 1, chunks: numChunks });
+        }
+      } finally { fs.closeSync(fd); }
+      const idx = discloud.loadIndex(DISCLOUD_DIR);
+      idx.nodes.push({ id: discloud.uuid(), type: 'file', name, parent: parent || null, size: total, encrypted: true, chunkSize: discloud.CHUNK_SIZE, chunks, createdAt: Date.now() });
+      discloud.saveIndex(DISCLOUD_DIR, idx);
+    }
+    discloudCancelled.delete(jobId);
+    return { ok: true };
+  } catch (er) {
+    discloudCancelled.delete(jobId);
+    return { ok: false, error: er.message };
+  }
+});
+
+ipcMain.handle('discloud-download', async (e, { id, jobId } = {}) => {
+  let cfg;
+  try { cfg = discloudCtx(); } catch (er) { return { ok: false, error: er.message, code: er.code }; }
+  const idx = discloud.loadIndex(DISCLOUD_DIR);
+  const node = idx.nodes.find(x => x.id === id);
+  if (!node || node.type !== 'file') return { ok: false, error: 'Fichier introuvable.' };
+  const save = await dialog.showSaveDialog(uiWin(), { defaultPath: node.name, title: 'Enregistrer sous' });
+  if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
+  jobId = jobId || discloud.uuid();
+  const webhook = cfg.webhook;
+  const ws = fs.createWriteStream(save.filePath);
+  let done = 0;
+  try {
+    for (let i = 0; i < node.chunks.length; i++) {
+      if (discloudCancelled.has(jobId)) throw new Error('Annulé');
+      const ch = node.chunks[i];
+      const url = await discloud.webhookGetUrl(webhook, ch.messageId);
+      const blob = await discloud.fetchBytes(url);
+      const plain = node.encrypted ? discloud.decryptBuffer(discloudKey, blob) : blob;
+      await new Promise((res, rej) => ws.write(plain, err => err ? rej(err) : res()));
+      done += ch.size;
+      discloudEmit({ id: jobId, phase: 'download', name: node.name, percent: node.size ? Math.round((done / node.size) * 100) : 100, chunk: i + 1, chunks: node.chunks.length });
+    }
+    await new Promise(res => ws.end(res));
+    discloudCancelled.delete(jobId);
+    return { ok: true, path: save.filePath };
+  } catch (er) {
+    discloudCancelled.delete(jobId);
+    try { ws.destroy(); fs.unlinkSync(save.filePath); } catch (x) {}
+    return { ok: false, error: er.message };
+  }
+});
+
+ipcMain.handle('discloud-delete', async (e, { id } = {}) => {
+  let cfg;
+  try { cfg = discloudCtx(); } catch (er) { return { ok: false, error: er.message, code: er.code }; }
+  const idx = discloud.loadIndex(DISCLOUD_DIR);
+  const toDelete = discloudDescendants(idx.nodes, id);
+  const webhook = cfg.webhook;
+  // Supprime les chunks côté Discord (best effort), puis purge l'index.
+  for (const n of toDelete) {
+    if (n.type !== 'file' || !n.chunks) continue;
+    for (const ch of n.chunks) { try { await discloud.webhookDelete(webhook, ch.messageId); } catch (x) {} }
+  }
+  const ids = new Set(toDelete.map(n => n.id));
+  idx.nodes = idx.nodes.filter(n => !ids.has(n.id));
+  discloud.saveIndex(DISCLOUD_DIR, idx);
+  return { ok: true, nodes: idx.nodes };
+});

@@ -82,6 +82,12 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - Pilote une installation **Topaz Video AI** licenciée : Proteus, Iris, Artemis, Gaia, Nyx, Dione…
 - Upscale, interpolation (Chronos/Apollo/Aion), stabilisation 2-passes — sans ouvrir Topaz
 
+### ☁️ Drive Discord (stockage chiffré, façon Disbox)
+- Stockage de fichiers **gratuit** qui s'appuie sur un salon Discord : collez l'URL d'un **webhook** et envoyez vos projets/fichiers dessus
+- **Chiffrement de bout en bout AES-256** : chaque fichier est chiffré localement avec votre phrase secrète avant l'envoi
+- Gros fichiers **découpés en blocs**, organisation en **dossiers**, téléchargement/suppression en un clic ; liens Discord expirés **régénérés automatiquement**
+- ⚠️ Va à l'encontre des conditions de Discord — usage d'appoint, pas une sauvegarde unique
+
 ### 📝 Transcription IA
 - Transcription **Whisper** locale → export SRT / VTT / TXT, et vers **Premiere Pro, After Effects, CapCut, DaVinci, Final Cut**…
 
@@ -180,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.22.0** — **Drive Discord** : stockage de fichiers gratuit sur un salon Discord (webhook), chiffré de bout en bout (AES-256), avec dossiers, découpage en blocs et régénération des liens expirés
 - **v0.21.1** — Correctifs Modules & IA : barre de progression qui ne se fige plus, Amélioration IA passe bien en « À jour », bouton Annuler retiré pour yt-dlp
 - **v0.21.0** — **Modules & IA** plus complet (vraie détection des MAJ yt-dlp, versions/tailles, bouton Annuler, progression en %) + **démarrage plus rapide** (studios chargés à la demande, ~855→636 Ko) + vérificateur de traductions
 - **v0.20.3** — **Modules & IA** : un module déjà installé affiche « À jour » au lieu de « Mettre à jour » (icône ↻ pour forcer une réinstallation)

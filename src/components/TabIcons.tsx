@@ -31,4 +31,6 @@ export const TAB_ICONS: Record<string, React.ReactNode> = {
   topaz: ic(<><path d="M12 3 4 9l8 12 8-12z" /><path d="M4 9h16" /><path d="m9 3-2 6 5 12" /><path d="m15 3 2 6-5 12" /></>),
   // caption bubble (transcription)
   transcription: ic(<><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" /><path d="M7 9h10" /><path d="M7 12.5h6" /></>),
+  // ☁ cloud + lock (Discord drive storage)
+  drive: ic(<><path d="M7 18a4 4 0 0 1-.5-7.97A5 5 0 0 1 16 9.5a3.5 3.5 0 0 1 1 6.86" /><rect x="9" y="13" width="6" height="5" rx="1" /><path d="M10.5 13v-1.2a1.5 1.5 0 0 1 3 0V13" /></>),
 };

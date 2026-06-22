@@ -175,6 +175,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMattingComplete: (cb) => { ipcRenderer.on('matting-complete', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-complete'); },
   onMattingError: (cb) => { ipcRenderer.on('matting-error', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('matting-error'); },
 
+  // ── Discloud (stockage de fichiers sur Discord · webhook + AES) ──
+  discloudStatus: () => ipcRenderer.invoke('discloud-status'),
+  discloudSetup: (data) => ipcRenderer.invoke('discloud-setup', data),
+  discloudUnlock: (data) => ipcRenderer.invoke('discloud-unlock', data),
+  discloudLock: () => ipcRenderer.invoke('discloud-lock'),
+  discloudIndex: () => ipcRenderer.invoke('discloud-index'),
+  discloudMkdir: (data) => ipcRenderer.invoke('discloud-mkdir', data),
+  discloudRename: (data) => ipcRenderer.invoke('discloud-rename', data),
+  discloudPickFiles: () => ipcRenderer.invoke('discloud-pick-files'),
+  discloudUpload: (data) => ipcRenderer.invoke('discloud-upload', data),
+  discloudDownload: (data) => ipcRenderer.invoke('discloud-download', data),
+  discloudDelete: (data) => ipcRenderer.invoke('discloud-delete', data),
+  discloudCancel: (jobId) => ipcRenderer.send('discloud-cancel', jobId),
+  onDiscloudProgress: (cb) => { ipcRenderer.on('discloud-progress', (_e, v) => cb(v)); return () => ipcRenderer.removeAllListeners('discloud-progress'); },
+
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),
   llmStatus: () => ipcRenderer.invoke('llm-status'),

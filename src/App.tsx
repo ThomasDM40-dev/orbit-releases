@@ -25,6 +25,7 @@ const InpaintStudio = lazy(() => import("@/components/InpaintStudio"));
 const HandBrake = lazy(() => import("@/components/HandBrake"));
 const MediaLibrary = lazy(() => import("@/components/MediaLibrary"));
 const MattingStudio = lazy(() => import("@/components/MattingStudio"));
+const DriveStudio = lazy(() => import("@/components/DriveStudio"));
 
 // Fires only once per real process launch. The whole tree is remounted when the
 // language changes (<App key={lang}/>), so without this guard the launch update
@@ -45,7 +46,8 @@ export default function App() {
     { id: 'matting', label: t('Détourage IA') },
     { id: 'handbrake', label: t('HandBrake') },
     { id: 'topaz', label: t('Topaz Video AI') },
-    { id: 'transcription', label: t('Transcription') }
+    { id: 'transcription', label: t('Transcription') },
+    { id: 'drive', label: t('Drive Discord') }
   ];
 
   const [mainTabConfig, setMainTabConfig] = useState<{ id: string; label: string; visible: boolean }[]>(() => {
@@ -661,6 +663,7 @@ export default function App() {
           {renderLazyTab('handbrake', <HandBrake />)}
           {renderLazyTab('topaz', <TopazVideoAI />)}
           {renderLazyTab('transcription', <Transcription />)}
+          {renderLazyTab('drive', <DriveStudio />)}
         </div>
       </div>
 
