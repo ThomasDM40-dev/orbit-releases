@@ -1,6 +1,6 @@
 {
     "name": "frontend",
-    "version": "0.22.0",
+    "version": "0.22.1",
     "private": true,
     "main": "main.js",
     "scripts": {
@@ -34,6 +34,7 @@
             "sam.js",
             "yolo.js",
             "sdinpaint.js",
+            "discloud.js",
             "package.json",
             "changelog.html"
         ],
