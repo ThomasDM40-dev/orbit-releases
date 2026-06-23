@@ -186,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.25.2** — Correctif : erreurs HTTP 502 à l'envoi Cloud (cadence des transferts désormais fixée par le serveur, évite de saturer les petits serveurs)
 - **v0.25.1** — Drive Cloud : concurrence des transferts **adaptée au nombre de webhooks** (~3 par webhook) → plus de webhooks = plus rapide
 - **v0.25.0** — Drive Cloud : gestion des **webhooks & profils** depuis l'app (ajout/activation/suppression, profils nommés basculables) ; pool piloté par PostgreSQL
 - **v0.24.0** — Drive Discord **mode Cloud** : comptes utilisateurs + serveur auto-hébergé (pool de webhooks, PostgreSQL), contenu chiffré côté client (zéro-knowledge)

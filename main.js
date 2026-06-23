@@ -4412,11 +4412,17 @@ async function cloudJson(p, opts = {}) {
   return body;
 }
 function cloudPost(p, obj) { return cloudJson(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }); }
-// Concurrence adaptée au nombre de webhooks du serveur : ~3 blocs par webhook
-// (plafonné), pour exploiter tout le pool sans marteler Discord. Repli sur la valeur fixe.
+// Concurrence des transferts en mode Cloud. C'est le SERVEUR qui la fixe
+// (maxConcurrency dans /health), car en mode relais c'est sa RAM/CPU qui limite,
+// pas le nombre de webhooks. Repli prudent si le serveur ne l'indique pas.
 async function cloudConcurrency() {
-  try { const r = await cloudFetch('/health'); const h = await r.json(); if (h && h.webhooks > 0) return Math.min(32, Math.max(DISCLOUD_CONCURRENCY, h.webhooks * 3)); } catch (e) {}
-  return DISCLOUD_CONCURRENCY;
+  try {
+    const r = await cloudFetch('/health'); const h = await r.json();
+    const m = h && (h.maxConcurrency | 0);
+    if (m > 0) return Math.max(2, Math.min(16, m));
+    if (h && h.webhooks > 0) return Math.min(6, Math.max(3, h.webhooks)); // ancien serveur sans maxConcurrency
+  } catch (e) {}
+  return 4;
 }
 
 ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, admin: !!cloud.admin, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
