@@ -4412,6 +4412,12 @@ async function cloudJson(p, opts = {}) {
   return body;
 }
 function cloudPost(p, obj) { return cloudJson(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }); }
+// Concurrence adaptée au nombre de webhooks du serveur : ~3 blocs par webhook
+// (plafonné), pour exploiter tout le pool sans marteler Discord. Repli sur la valeur fixe.
+async function cloudConcurrency() {
+  try { const r = await cloudFetch('/health'); const h = await r.json(); if (h && h.webhooks > 0) return Math.min(32, Math.max(DISCLOUD_CONCURRENCY, h.webhooks * 3)); } catch (e) {}
+  return DISCLOUD_CONCURRENCY;
+}
 
 ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, admin: !!cloud.admin, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
 
@@ -4501,6 +4507,7 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
   paths = (paths || []).filter(Boolean);
   if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
   jobId = jobId || discloud.uuid();
+  const conc = await cloudConcurrency();
   try {
     for (let fi = 0; fi < paths.length; fi++) {
       const filePath = paths[fi];
@@ -4514,7 +4521,7 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
       const chunks = new Array(numChunks);
       let uploaded = 0, doneCount = 0;
       try {
-        await discloud.runPool(numChunks, DISCLOUD_CONCURRENCY, async (i) => {
+        await discloud.runPool(numChunks, conc, async (i) => {
           if (discloudCancelled.has(jobId)) throw new Error('Annulé');
           const len = Math.min(discloud.CHUNK_SIZE, total - i * discloud.CHUNK_SIZE);
           const buf = Buffer.allocUnsafe(len);
@@ -4543,11 +4550,12 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
   if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
   jobId = jobId || discloud.uuid();
   const chunkSize = node.chunkSize || discloud.CHUNK_SIZE;
+  const conc = await cloudConcurrency();
   const fh = await fs.promises.open(save.filePath, 'w');
   let done = 0, doneCount = 0;
   try {
     try { await fh.truncate(node.size || 0); } catch (x) {}
-    await discloud.runPool(list.length, DISCLOUD_CONCURRENCY, async (k) => {
+    await discloud.runPool(list.length, conc, async (k) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = list[k];
       const res = await cloudFetch('/api/drive/chunk/' + ch.id);
