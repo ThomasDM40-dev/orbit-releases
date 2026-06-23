@@ -948,6 +948,23 @@ const entries: Record<string, Row> = {
   "Se déconnecter": { en: "Sign out", es: "Cerrar sesión", de: "Abmelden", it: "Esci", pt: "Sair" },
   "Choisissez une phrase secrète de chiffrement. Elle protège vos fichiers et fonctionne sur tous vos appareils.": { en: "Choose an encryption passphrase. It protects your files and works across all your devices.", es: "Elige una frase secreta de cifrado. Protege tus archivos y funciona en todos tus dispositivos.", de: "Wähle eine Verschlüsselungs-Passphrase. Sie schützt deine Dateien und funktioniert auf all deinen Geräten.", it: "Scegli una frase segreta di crittografia. Protegge i tuoi file e funziona su tutti i tuoi dispositivi.", pt: "Escolha uma frase secreta de criptografia. Protege seus arquivos e funciona em todos os seus dispositivos." },
   "Activer le chiffrement": { en: "Enable encryption", es: "Activar el cifrado", de: "Verschlüsselung aktivieren", it: "Attiva la crittografia", pt: "Ativar a criptografia" },
+
+  // ── Drive Discord — admin webhooks & profils ────────────────────────
+  "Webhooks": { en: "Webhooks", es: "Webhooks", de: "Webhooks", it: "Webhook", pt: "Webhooks" },
+  "Webhooks & profils": { en: "Webhooks & profiles", es: "Webhooks y perfiles", de: "Webhooks & Profile", it: "Webhook e profili", pt: "Webhooks e perfis" },
+  "Profils": { en: "Profiles", es: "Perfiles", de: "Profile", it: "Profili", pt: "Perfis" },
+  "Webhooks du profil": { en: "Profile webhooks", es: "Webhooks del perfil", de: "Profil-Webhooks", it: "Webhook del profilo", pt: "Webhooks do perfil" },
+  "ACTIF": { en: "ACTIVE", es: "ACTIVO", de: "AKTIV", it: "ATTIVO", pt: "ATIVO" },
+  "actifs": { en: "active", es: "activos", de: "aktiv", it: "attivi", pt: "ativos" },
+  "Activer": { en: "Activate", es: "Activar", de: "Aktivieren", it: "Attiva", pt: "Ativar" },
+  "Désactiver": { en: "Disable", es: "Desactivar", de: "Deaktivieren", it: "Disattiva", pt: "Desativar" },
+  "Nouveau profil": { en: "New profile", es: "Nuevo perfil", de: "Neues Profil", it: "Nuovo profilo", pt: "Novo perfil" },
+  "Supprimer le profil": { en: "Delete profile", es: "Eliminar perfil", de: "Profil löschen", it: "Elimina profilo", pt: "Excluir perfil" },
+  "Supprimer ce profil ?": { en: "Delete this profile?", es: "¿Eliminar este perfil?", de: "Dieses Profil löschen?", it: "Eliminare questo profilo?", pt: "Excluir este perfil?" },
+  "Supprimer ce webhook ?": { en: "Delete this webhook?", es: "¿Eliminar este webhook?", de: "Diesen Webhook löschen?", it: "Eliminare questo webhook?", pt: "Excluir este webhook?" },
+  "Ajouter un webhook": { en: "Add a webhook", es: "Añadir un webhook", de: "Webhook hinzufügen", it: "Aggiungi un webhook", pt: "Adicionar um webhook" },
+  "Aucun webhook dans ce profil.": { en: "No webhook in this profile.", es: "Ningún webhook en este perfil.", de: "Kein Webhook in diesem Profil.", it: "Nessun webhook in questo profilo.", pt: "Nenhum webhook neste perfil." },
+  "Libellé (ex. Salon 1)": { en: "Label (e.g. Channel 1)", es: "Etiqueta (ej. Canal 1)", de: "Bezeichnung (z. B. Kanal 1)", it: "Etichetta (es. Canale 1)", pt: "Rótulo (ex. Canal 1)" },
 };
 
 export const dict: Record<Target, Record<string, string>> = {

@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   HardDrive, Lock, Unlock, KeyRound, Link2, FolderPlus, Folder, File as FileIcon,
   UploadCloud, Download, Trash2, Loader2, ChevronRight, AlertCircle, ShieldCheck, X, RefreshCw,
-  Cloud, Monitor, LogOut, Server, Mail, User as UserIcon,
+  Cloud, Monitor, LogOut, Server, Mail, User as UserIcon, FolderCog,
 } from 'lucide-react';
 import { t } from '@/i18n';
+import DriveAdmin from './DriveAdmin';
 
 const api = () => (window as any).electronAPI;
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -39,7 +40,8 @@ export default function DriveStudio() {
   const [showHelp, setShowHelp] = useState(false);
 
   // Cloud mode
-  const [cloud, setCloud] = useState<{ server: string; email: string; loggedIn: boolean; unlocked: boolean } | null>(null);
+  const [cloud, setCloud] = useState<{ server: string; email: string; admin?: boolean; loggedIn: boolean; unlocked: boolean } | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [cloudCrypto, setCloudCrypto] = useState<{ hasParams: boolean } | null>(null);
   const [serverUrl, setServerUrl] = useState('');
   const [email, setEmail] = useState('');
@@ -312,10 +314,15 @@ export default function DriveStudio() {
           <RefreshCw className="w-4 h-4" />
         </button>
         <div className="flex-1" />
+        {mode === 'cloud' && cloud?.admin && (
+          <button onClick={() => setShowAdmin(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all" title={t('Webhooks & profils')}><FolderCog className="w-4 h-4" /> {t('Webhooks')}</button>
+        )}
         {mode === 'cloud'
           ? <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"><LogOut className="w-4 h-4" /> {cloud?.email}</button>
           : <button onClick={handleLocalLock} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"><Lock className="w-4 h-4" /> {t('Verrouiller')}</button>}
       </div>
+
+      {showAdmin && <DriveAdmin onClose={() => setShowAdmin(false)} />}
 
       <div className="flex items-center gap-1 mb-3 text-sm flex-wrap">
         <button onClick={() => setFolder(null)} className={`px-2 py-1 rounded-lg hover:bg-white/5 transition-colors ${folder === null ? 'text-pink-400 font-semibold' : 'text-gray-400'}`}>{t('Racine')}</button>

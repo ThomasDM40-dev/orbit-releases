@@ -205,6 +205,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cloudDelete: (data) => ipcRenderer.invoke('discloud-cloud-delete', data),
   cloudUpload: (data) => ipcRenderer.invoke('discloud-cloud-upload', data),
   cloudDownload: (data) => ipcRenderer.invoke('discloud-cloud-download', data),
+  // Admin (profils + webhooks)
+  cloudAdminProfiles: () => ipcRenderer.invoke('discloud-cloud-admin-profiles'),
+  cloudAdminCreateProfile: (data) => ipcRenderer.invoke('discloud-cloud-admin-create-profile', data),
+  cloudAdminActivateProfile: (data) => ipcRenderer.invoke('discloud-cloud-admin-activate-profile', data),
+  cloudAdminDeleteProfile: (data) => ipcRenderer.invoke('discloud-cloud-admin-delete-profile', data),
+  cloudAdminWebhooks: (data) => ipcRenderer.invoke('discloud-cloud-admin-webhooks', data),
+  cloudAdminAddWebhook: (data) => ipcRenderer.invoke('discloud-cloud-admin-add-webhook', data),
+  cloudAdminToggleWebhook: (data) => ipcRenderer.invoke('discloud-cloud-admin-toggle-webhook', data),
+  cloudAdminDeleteWebhook: (data) => ipcRenderer.invoke('discloud-cloud-admin-delete-webhook', data),
 
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),

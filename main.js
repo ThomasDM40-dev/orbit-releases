@@ -4394,7 +4394,7 @@ ipcMain.handle('discloud-delete', async (e, { id } = {}) => {
 //  voit que du chiffré. Le sel + verifier vivent sur le serveur (multi-appareils).
 // ─────────────────────────────────────────────────────────────────────────────
 const CLOUD_CFG = path.join(DISCLOUD_DIR, 'cloud.json');
-let cloud = { server: '', token: '', email: '' };
+let cloud = { server: '', token: '', email: '', admin: false };
 try { cloud = { ...cloud, ...JSON.parse(fs.readFileSync(CLOUD_CFG, 'utf8')) }; } catch (e) {}
 let cloudKey = null;
 function saveCloud() { try { fs.mkdirSync(DISCLOUD_DIR, { recursive: true }); fs.writeFileSync(CLOUD_CFG, JSON.stringify(cloud)); } catch (e) {} }
@@ -4413,7 +4413,7 @@ async function cloudJson(p, opts = {}) {
 }
 function cloudPost(p, obj) { return cloudJson(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }); }
 
-ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
+ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, admin: !!cloud.admin, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
 
 ipcMain.handle('discloud-cloud-set-server', async (e, { server } = {}) => {
   server = String(server || '').trim().replace(/\/+$/, '');
@@ -4428,14 +4428,24 @@ ipcMain.handle('discloud-cloud-set-server', async (e, { server } = {}) => {
 });
 
 ipcMain.handle('discloud-cloud-register', async (e, { email, password } = {}) => {
-  try { const r = await cloudPost('/api/auth/register', { email, password }); cloud.token = r.token; cloud.email = r.email; saveCloud(); return { ok: true }; }
+  try { const r = await cloudPost('/api/auth/register', { email, password }); cloud.token = r.token; cloud.email = r.email; cloud.admin = !!r.admin; saveCloud(); return { ok: true }; }
   catch (er) { return { ok: false, error: er.message }; }
 });
 ipcMain.handle('discloud-cloud-login', async (e, { email, password } = {}) => {
-  try { const r = await cloudPost('/api/auth/login', { email, password }); cloud.token = r.token; cloud.email = r.email; saveCloud(); return { ok: true }; }
+  try { const r = await cloudPost('/api/auth/login', { email, password }); cloud.token = r.token; cloud.email = r.email; cloud.admin = !!r.admin; saveCloud(); return { ok: true }; }
   catch (er) { return { ok: false, error: er.message }; }
 });
-ipcMain.handle('discloud-cloud-logout', () => { cloud.token = ''; cloud.email = ''; cloudKey = null; saveCloud(); return { ok: true }; });
+ipcMain.handle('discloud-cloud-logout', () => { cloud.token = ''; cloud.email = ''; cloud.admin = false; cloudKey = null; saveCloud(); return { ok: true }; });
+
+// ── Administration du pool (profils + webhooks) — comptes admin ──────────────
+ipcMain.handle('discloud-cloud-admin-profiles', async () => { try { return { ok: true, profiles: await cloudJson('/api/admin/profiles') }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-create-profile', async (e, { label } = {}) => { try { await cloudPost('/api/admin/profiles', { label }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-activate-profile', async (e, { id } = {}) => { try { await cloudPost('/api/admin/profiles/' + id + '/activate', {}); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-delete-profile', async (e, { id } = {}) => { try { await cloudJson('/api/admin/profiles/' + id, { method: 'DELETE' }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-webhooks', async (e, { profileId } = {}) => { try { return { ok: true, webhooks: await cloudJson('/api/admin/webhooks?profileId=' + encodeURIComponent(profileId || '')) }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-add-webhook', async (e, { profileId, label, url } = {}) => { try { await cloudPost('/api/admin/webhooks', { profileId, label, url }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-toggle-webhook', async (e, { id, enabled } = {}) => { try { await cloudJson('/api/admin/webhooks/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-admin-delete-webhook', async (e, { id } = {}) => { try { await cloudJson('/api/admin/webhooks/' + id, { method: 'DELETE' }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
 
 ipcMain.handle('discloud-cloud-crypto-status', async () => {
   try { const c = await cloudJson('/api/drive/crypto'); return { ok: true, hasParams: !!(c && c.salt) }; }

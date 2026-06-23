@@ -186,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.25.0** — Drive Cloud : gestion des **webhooks & profils** depuis l'app (ajout/activation/suppression, profils nommés basculables) ; pool piloté par PostgreSQL
 - **v0.24.0** — Drive Discord **mode Cloud** : comptes utilisateurs + serveur auto-hébergé (pool de webhooks, PostgreSQL), contenu chiffré côté client (zéro-knowledge)
 - **v0.23.1** — Drive Discord : chaque fichier affiche son **icône native** (Blender, Word, Excel, PDF…)
 - **v0.23.0** — Drive Discord **bien plus rapide** : transferts parallèles (jusqu'à 6 blocs simultanés) à l'envoi comme au téléchargement
