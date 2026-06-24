@@ -965,6 +965,21 @@ const entries: Record<string, Row> = {
   "Ajouter un webhook": { en: "Add a webhook", es: "Añadir un webhook", de: "Webhook hinzufügen", it: "Aggiungi un webhook", pt: "Adicionar um webhook" },
   "Aucun webhook dans ce profil.": { en: "No webhook in this profile.", es: "Ningún webhook en este perfil.", de: "Kein Webhook in diesem Profil.", it: "Nessun webhook in questo profilo.", pt: "Nenhum webhook neste perfil." },
   "Libellé (ex. Salon 1)": { en: "Label (e.g. Channel 1)", es: "Etiqueta (ej. Canal 1)", de: "Bezeichnung (z. B. Kanal 1)", it: "Etichetta (es. Canale 1)", pt: "Rótulo (ex. Canal 1)" },
+
+  // ── Drive Cloud — mot de passe oublié ───────────────────────────────
+  "Mot de passe oublié ?": { en: "Forgot password?", es: "¿Olvidaste tu contraseña?", de: "Passwort vergessen?", it: "Password dimenticata?", pt: "Esqueceu a senha?" },
+  "Mot de passe oublié": { en: "Forgot password", es: "Contraseña olvidada", de: "Passwort vergessen", it: "Password dimenticata", pt: "Senha esquecida" },
+  "Entre ton e-mail : on t'envoie un code à 6 chiffres pour choisir un nouveau mot de passe.": { en: "Enter your email: we'll send a 6-digit code to set a new password.", es: "Introduce tu correo: te enviaremos un código de 6 dígitos para una nueva contraseña.", de: "Gib deine E-Mail ein: Wir senden einen 6-stelligen Code für ein neues Passwort.", it: "Inserisci la tua e-mail: ti inviamo un codice a 6 cifre per una nuova password.", pt: "Digite seu e-mail: enviaremos um código de 6 dígitos para definir uma nova senha." },
+  "Envoyer le code": { en: "Send the code", es: "Enviar el código", de: "Code senden", it: "Invia il codice", pt: "Enviar o código" },
+  "Si un compte existe pour cet e-mail, un code vient d'être envoyé.": { en: "If an account exists for this email, a code has just been sent.", es: "Si existe una cuenta para este correo, se acaba de enviar un código.", de: "Falls ein Konto für diese E-Mail existiert, wurde gerade ein Code gesendet.", it: "Se esiste un account per questa e-mail, è stato appena inviato un codice.", pt: "Se existir uma conta para este e-mail, um código acaba de ser enviado." },
+  "Nouveau mot de passe": { en: "New password", es: "Nueva contraseña", de: "Neues Passwort", it: "Nuova password", pt: "Nova senha" },
+  "Saisis le code reçu par e-mail et ton nouveau mot de passe.": { en: "Enter the code received by email and your new password.", es: "Introduce el código recibido por correo y tu nueva contraseña.", de: "Gib den per E-Mail erhaltenen Code und dein neues Passwort ein.", it: "Inserisci il codice ricevuto via e-mail e la tua nuova password.", pt: "Digite o código recebido por e-mail e sua nova senha." },
+  "Code reçu par e-mail": { en: "Code received by email", es: "Código recibido por correo", de: "Per E-Mail erhaltener Code", it: "Codice ricevuto via e-mail", pt: "Código recebido por e-mail" },
+  "Réinitialiser": { en: "Reset", es: "Restablecer", de: "Zurücksetzen", it: "Reimposta", pt: "Redefinir" },
+  "Renvoyer un code": { en: "Resend a code", es: "Reenviar un código", de: "Code erneut senden", it: "Invia di nuovo un codice", pt: "Reenviar um código" },
+  "Retour à la connexion": { en: "Back to sign in", es: "Volver a iniciar sesión", de: "Zurück zur Anmeldung", it: "Torna all'accesso", pt: "Voltar ao login" },
+  "Code invalide ou expiré.": { en: "Invalid or expired code.", es: "Código no válido o caducado.", de: "Ungültiger oder abgelaufener Code.", it: "Codice non valido o scaduto.", pt: "Código inválido ou expirado." },
+  "Mot de passe réinitialisé. Connecte-toi avec ton nouveau mot de passe.": { en: "Password reset. Sign in with your new password.", es: "Contraseña restablecida. Inicia sesión con tu nueva contraseña.", de: "Passwort zurückgesetzt. Melde dich mit deinem neuen Passwort an.", it: "Password reimpostata. Accedi con la tua nuova password.", pt: "Senha redefinida. Entre com sua nova senha." },
 };
 
 export const dict: Record<Target, Record<string, string>> = {

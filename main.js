@@ -4449,6 +4449,12 @@ ipcMain.handle('discloud-cloud-login', async (e, { email, password } = {}) => {
 });
 ipcMain.handle('discloud-cloud-logout', () => { cloud.token = ''; cloud.email = ''; cloud.admin = false; cloudKey = null; saveCloud(); return { ok: true }; });
 
+// Infos publiques du serveur (webhooks, mail dispo, etc.) — pour adapter l'UI.
+ipcMain.handle('discloud-cloud-server-info', async () => { try { const r = await cloudFetch('/health'); return await r.json(); } catch (e) { return {}; } });
+// Mot de passe oublié : demande d'un code par e-mail, puis réinitialisation.
+ipcMain.handle('discloud-cloud-forgot', async (e, { email } = {}) => { try { return await cloudPost('/api/auth/forgot', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('discloud-cloud-reset', async (e, { email, code, password } = {}) => { try { await cloudPost('/api/auth/reset', { email, code, password }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });
+
 // ── Administration du pool (profils + webhooks) — comptes admin ──────────────
 ipcMain.handle('discloud-cloud-admin-profiles', async () => { try { return { ok: true, profiles: await cloudJson('/api/admin/profiles') }; } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('discloud-cloud-admin-create-profile', async (e, { label } = {}) => { try { await cloudPost('/api/admin/profiles', { label }); return { ok: true }; } catch (er) { return { ok: false, error: er.message }; } });

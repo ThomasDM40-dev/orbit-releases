@@ -46,6 +46,11 @@ export default function DriveStudio() {
   const [serverUrl, setServerUrl] = useState('');
   const [email, setEmail] = useState('');
   const [isRegister, setIsRegister] = useState(false);
+  const [serverInfo, setServerInfo] = useState<{ mail?: boolean; registration?: boolean } | null>(null);
+  const [forgotMode, setForgotMode] = useState<'none' | 'request' | 'reset'>('none');
+  const [code, setCode] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [info, setInfo] = useState<string | null>(null);
 
   // Shared passphrase / password field
   const [pass, setPass] = useState('');
@@ -70,6 +75,7 @@ export default function DriveStudio() {
   const refreshCloud = useCallback(async () => {
     const s = await api()?.cloudStatus?.();
     setCloud(s || null);
+    if (s?.server && !s.loggedIn) { api().cloudServerInfo().then((i: any) => setServerInfo(i || {})).catch(() => setServerInfo({})); }
     if (s?.loggedIn && !s.unlocked) {
       const c = await api().cloudCryptoStatus().catch(() => null);
       setCloudCrypto(c?.ok ? { hasParams: c.hasParams } : { hasParams: false });
@@ -121,6 +127,24 @@ export default function DriveStudio() {
     } finally { setBusy(false); }
   };
   const handleLogout = async () => { await api().cloudLogout(); setCloudCrypto(null); await refreshCloud(); };
+  const handleForgotRequest = async () => {
+    setError(null); setInfo(null); setBusy(true);
+    try {
+      const r = await api().cloudForgot({ email: email.trim() });
+      if (!r?.ok && r?.error) { setError(r.error); return; }
+      setInfo(t('Si un compte existe pour cet e-mail, un code vient d\'être envoyé.'));
+      setForgotMode('reset');
+    } finally { setBusy(false); }
+  };
+  const handleResetPassword = async () => {
+    setError(null); setInfo(null); setBusy(true);
+    try {
+      const r = await api().cloudReset({ email: email.trim(), code: code.trim(), password: newPass });
+      if (!r?.ok) { setError(r?.error || t('Code invalide ou expiré.')); return; }
+      setCode(''); setNewPass(''); setForgotMode('none');
+      setInfo(t('Mot de passe réinitialisé. Connecte-toi avec ton nouveau mot de passe.'));
+    } finally { setBusy(false); }
+  };
   const handleCloudSetupCrypto = async () => {
     setError(null); setBusy(true);
     try {
@@ -260,7 +284,47 @@ export default function DriveStudio() {
     </>, 'max-w-md');
   }
   if (mode === 'cloud' && cloud && !cloud.loggedIn) {
+    const infoBar = info && (
+      <div className="flex items-center gap-2 text-sm text-green-300 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2">
+        <ShieldCheck className="w-4 h-4 shrink-0" /> <span className="flex-1">{info}</span>
+        <button onClick={() => setInfo(null)} className="text-green-400/60 hover:text-green-300"><X className="w-4 h-4" /></button>
+      </div>
+    );
+    // Demande de code (mot de passe oublié)
+    if (forgotMode === 'request') {
+      return card(<>
+        {infoBar}
+        <h2 className="text-base font-semibold text-white">{t('Mot de passe oublié')}</h2>
+        <p className="text-[11px] text-gray-500">{t('Entre ton e-mail : on t\'envoie un code à 6 chiffres pour choisir un nouveau mot de passe.')}</p>
+        <div>
+          <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><Mail className="w-3.5 h-3.5" /> {t('E-mail')}</label>
+          <input className={INPUT} type="email" autoFocus placeholder="vous@exemple.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleForgotRequest()} />
+        </div>
+        <button onClick={handleForgotRequest} disabled={busy || !email} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} {t('Envoyer le code')}</button>
+        <button onClick={() => { setForgotMode('none'); setError(null); }} className="text-xs text-gray-400 hover:text-gray-200 w-full text-center">{t('Retour à la connexion')}</button>
+      </>, 'max-w-md');
+    }
+    // Saisie du code + nouveau mot de passe
+    if (forgotMode === 'reset') {
+      return card(<>
+        {infoBar}
+        <h2 className="text-base font-semibold text-white">{t('Nouveau mot de passe')}</h2>
+        <p className="text-[11px] text-gray-500">{t('Saisis le code reçu par e-mail et ton nouveau mot de passe.')}</p>
+        <div>
+          <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">{t('Code reçu par e-mail')}</label>
+          <input className={INPUT} inputMode="numeric" placeholder="123456" value={code} onChange={e => setCode(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><KeyRound className="w-3.5 h-3.5" /> {t('Nouveau mot de passe')}</label>
+          <input className={INPUT} type="password" placeholder={t('Nouveau mot de passe')} value={newPass} onChange={e => setNewPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleResetPassword()} />
+        </div>
+        <button onClick={handleResetPassword} disabled={busy || !code || !newPass} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t('Réinitialiser')}</button>
+        <button onClick={() => { setForgotMode('request'); setError(null); }} className="text-xs text-gray-400 hover:text-gray-200 w-full text-center">{t('Renvoyer un code')}</button>
+      </>, 'max-w-md');
+    }
+    // Connexion / inscription
     return card(<>
+      {infoBar}
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-white">{isRegister ? t('Créer un compte') : t('Connexion')}</h2>
         <button onClick={() => { api().cloudSetServer({ server: '' }); refreshCloud(); }} className="text-[11px] text-gray-500 hover:text-gray-300">{t('Changer de serveur')}</button>
@@ -274,7 +338,10 @@ export default function DriveStudio() {
         <input className={INPUT} type="password" placeholder={t('Mot de passe')} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
       </div>
       <button onClick={handleAuth} disabled={busy || !email || !pass} className={primaryBtn} style={grad}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserIcon className="w-4 h-4" />} {isRegister ? t('Créer le compte') : t('Se connecter')}</button>
-      <button onClick={() => { setIsRegister(!isRegister); setError(null); }} className="text-xs text-pink-400 hover:text-pink-300 w-full text-center">{isRegister ? t('J\'ai déjà un compte') : t('Créer un compte')}</button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => { setIsRegister(!isRegister); setError(null); }} className="text-xs text-pink-400 hover:text-pink-300">{isRegister ? t('J\'ai déjà un compte') : t('Créer un compte')}</button>
+        {!isRegister && serverInfo?.mail && <button onClick={() => { setForgotMode('request'); setError(null); setInfo(null); }} className="text-xs text-gray-400 hover:text-gray-200">{t('Mot de passe oublié ?')}</button>}
+      </div>
     </>, 'max-w-md');
   }
   if (mode === 'cloud' && cloud && cloud.loggedIn && !cloud.unlocked) {
