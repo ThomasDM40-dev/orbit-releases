@@ -4440,6 +4440,20 @@ async function cloudWebhooks() {
 // du serveur : on peut donc paralléliser autant qu'il y a de webhooks (plafonné).
 function directConcurrency(poolLen) { return Math.max(2, Math.min(poolLen || 1, 16)); }
 
+// Config de stockage (mode direct multi-backend) : { provider, telegram, discord }.
+// provider = backend ACTIF pour les nouveaux envois ; on peut lire d'anciens blocs
+// des deux backends (chaque bloc connaît son provider). null si serveur trop ancien.
+async function cloudStorage() {
+  try {
+    const s = await cloudJson('/api/drive/storage');
+    if (s && s.provider) return s;
+  } catch (e) {}
+  // Repli : ancien serveur sans /storage → on tente le pool de webhooks.
+  const w = await cloudWebhooks();
+  if (w) return { provider: 'discord', telegram: null, discord: w };
+  return null;
+}
+
 ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, admin: !!cloud.admin, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
 
 ipcMain.handle('discloud-cloud-set-server', async (e, { server } = {}) => {
@@ -4565,10 +4579,14 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
   paths = (paths || []).filter(Boolean);
   if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
   jobId = jobId || discloud.uuid();
-  // Mode direct si le serveur fournit un pool ; sinon repli sur le relais.
-  const pool = await cloudWebhooks();
-  const direct = !!(pool && pool.active && pool.active.length);
-  const conc = direct ? directConcurrency(pool.active.length) : await cloudConcurrency();
+  // Détermine le backend actif (Telegram prioritaire), sinon Discord direct, sinon relais.
+  const storage = await cloudStorage();
+  const tg = (storage && storage.provider === 'telegram' && storage.telegram && storage.telegram.token) ? storage.telegram : null;
+  const dPool = (storage && storage.discord) ? storage.discord : null;
+  const directDiscord = !tg && !!(dPool && dPool.active && dPool.active.length);
+  const CHUNK = tg ? (tg.chunkSize || discloud.TG_CHUNK_SIZE) : discloud.CHUNK_SIZE;
+  // Telegram limite plus fort par bot → concurrence prudente ; Discord = pool de webhooks.
+  const conc = tg ? 4 : (directDiscord ? directConcurrency(dPool.active.length) : await cloudConcurrency());
   try {
     for (let fi = 0; fi < paths.length; fi++) {
       const filePath = paths[fi];
@@ -4577,32 +4595,35 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
       const total = stat.size;
       let icon = null;
       try { const img = await app.getFileIcon(filePath, { size: 'normal' }); if (img && !img.isEmpty()) icon = img.toDataURL(); } catch (x) {}
-      const numChunks = Math.max(1, Math.ceil(total / discloud.CHUNK_SIZE));
+      const numChunks = Math.max(1, Math.ceil(total / CHUNK));
       const fh = await fs.promises.open(filePath, 'r');
       const chunks = new Array(numChunks);
       let uploaded = 0, doneCount = 0;
       try {
         await discloud.runPool(numChunks, conc, async (i) => {
           if (discloudCancelled.has(jobId)) throw new Error('Annulé');
-          const len = Math.min(discloud.CHUNK_SIZE, total - i * discloud.CHUNK_SIZE);
+          const len = Math.min(CHUNK, total - i * CHUNK);
           const buf = Buffer.allocUnsafe(len);
-          if (len > 0) await fh.read(buf, 0, len, i * discloud.CHUNK_SIZE);
+          if (len > 0) await fh.read(buf, 0, len, i * CHUNK);
           const payload = discloud.encryptBuffer(cloudKey, buf);
-          if (direct) {
-            // L'app envoie le bloc DIRECTEMENT sur Discord. Round-robin par index :
-            // des blocs consécutifs vont sur des webhooks différents → 0 collision.
-            const wh = pool.active[i % pool.active.length];
+          if (tg) {
+            // Envoi DIRECT sur Telegram.
+            const r = await discloud.tgUpload(tg.token, tg.chatId, 'blk_' + Date.now() + '_' + i + '.orb', payload);
+            chunks[i] = { idx: i, provider: 'telegram', messageId: r.messageId, fileId: r.fileId, size: len };
+          } else if (directDiscord) {
+            // Envoi DIRECT sur Discord, round-robin par index (0 collision sous concurrence).
+            const wh = dPool.active[i % dPool.active.length];
             const r = await discloud.webhookUpload(wh.url, 'blk_' + Date.now() + '_' + i + '.orb', payload);
-            chunks[i] = { idx: i, webhookId: wh.id, messageId: r.messageId, size: len };
+            chunks[i] = { idx: i, provider: 'discord', webhookId: wh.id, messageId: r.messageId, size: len };
           } else {
             const r = await cloudUploadChunk(payload);
-            chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
+            chunks[i] = { idx: i, provider: 'discord', webhookId: r.webhookId, messageId: r.messageId, size: len };
           }
           uploaded += len; doneCount++;
           discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
         });
       } finally { await fh.close(); }
-      await cloudPost('/api/drive/upload/commit', { name, parent: parent || null, size: total, chunkSize: discloud.CHUNK_SIZE, icon, chunks });
+      await cloudPost('/api/drive/upload/commit', { name, parent: parent || null, size: total, chunkSize: CHUNK, icon, chunks });
     }
     discloudCancelled.delete(jobId);
     return { ok: true };
@@ -4619,13 +4640,19 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
   if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
   jobId = jobId || discloud.uuid();
   const chunkSize = node.chunkSize || discloud.CHUNK_SIZE;
-  // Mode direct : on télécharge les blocs DIRECTEMENT depuis Discord. On utilise la
-  // table id→url du serveur ; chaque bloc a son webhookId+messageId pour régénérer
-  // un lien frais. Repli sur le relais si le serveur ne fournit pas le pool.
-  const pool = await cloudWebhooks();
-  const allMap = (pool && pool.all) || null;
-  const canDirect = !!(allMap && list.length && list.every(c => c.webhookId && c.messageId && allMap[c.webhookId]));
-  const conc = canDirect ? directConcurrency(pool.active.length) : await cloudConcurrency();
+  // Mode direct : on télécharge les blocs DIRECTEMENT depuis Discord/Telegram selon
+  // le provider de CHAQUE bloc. Repli sur le relais si on ne peut pas faire en direct.
+  const storage = await cloudStorage();
+  const tg = (storage && storage.telegram && storage.telegram.token) ? storage.telegram : null;
+  const allMap = (storage && storage.discord && storage.discord.all) || null;
+  const canDirect = !!(list.length && list.every(c =>
+    c.provider === 'telegram'
+      ? !!(tg && c.fileId)
+      : !!(allMap && c.webhookId && c.messageId && allMap[c.webhookId])
+  ));
+  const hasTg = canDirect && list.some(c => c.provider === 'telegram');
+  const dActive = (storage && storage.discord && storage.discord.active) || [];
+  const conc = canDirect ? (hasTg ? 4 : directConcurrency(dActive.length)) : await cloudConcurrency();
   const fh = await fs.promises.open(save.filePath, 'w');
   let done = 0, doneCount = 0;
   try {
@@ -4634,7 +4661,10 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = list[k];
       let blob;
-      if (canDirect) {
+      if (canDirect && ch.provider === 'telegram') {
+        const url = await discloud.tgGetUrl(tg.token, ch.fileId);
+        blob = await discloud.fetchBytes(url);
+      } else if (canDirect) {
         const url = await discloud.webhookGetUrl(allMap[ch.webhookId], ch.messageId);
         blob = await discloud.fetchBytes(url);
       } else {

@@ -137,6 +137,45 @@ async function fetchBytes(url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// ── REST Bot Telegram ────────────────────────────────────────────────────────
+// Bloc Telegram : 18 Mio (sous la limite de download de 20 Mo de l'API bot).
+const TG_CHUNK_SIZE = 18 * 1024 * 1024;
+
+// Envoie un bloc (Buffer) en pièce jointe Telegram → { messageId, fileId, size }.
+async function tgUpload(token, chatId, filename, buffer, attempt = 0) {
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  form.append('document', new Blob([buffer]), filename);
+  const res = await fetch('https://api.telegram.org/bot' + token + '/sendDocument', { method: 'POST', body: form });
+  if (res.status === 429) {
+    let wait = 1000;
+    try { const j = await res.json(); wait = Math.ceil(((j.parameters && j.parameters.retry_after) || 1) * 1000) + 250; } catch (e) {}
+    await sleep(wait);
+    return tgUpload(token, chatId, filename, buffer, attempt);
+  }
+  if ((res.status >= 500) && attempt < 4) { await sleep(1000 * (attempt + 1)); return tgUpload(token, chatId, filename, buffer, attempt + 1); }
+  const j = await res.json().catch(() => null);
+  if (!res.ok || !j || !j.ok) throw new Error('Telegram a refusé l\'envoi (HTTP ' + res.status + ')');
+  const doc = j.result && j.result.document;
+  if (!doc || !doc.file_id) throw new Error('Réponse Telegram invalide à l\'envoi');
+  return { messageId: String(j.result.message_id), fileId: doc.file_id, size: doc.file_size || buffer.length };
+}
+
+// Régénère un lien de téléchargement frais à partir du file_id (file_path expire ~1 h).
+async function tgGetUrl(token, fileId, attempt = 0) {
+  const res = await fetch('https://api.telegram.org/bot' + token + '/getFile?file_id=' + encodeURIComponent(fileId));
+  if (res.status === 429) {
+    let wait = 1000;
+    try { const j = await res.json(); wait = Math.ceil(((j.parameters && j.parameters.retry_after) || 1) * 1000) + 250; } catch (e) {}
+    await sleep(wait);
+    return tgGetUrl(token, fileId, attempt);
+  }
+  if (!res.ok && attempt < 3) { await sleep(800 * (attempt + 1)); return tgGetUrl(token, fileId, attempt + 1); }
+  const j = await res.json().catch(() => null);
+  if (!j || !j.ok || !j.result || !j.result.file_path) throw new Error('Bloc Telegram introuvable');
+  return 'https://api.telegram.org/file/bot' + token + '/' + j.result.file_path;
+}
+
 // Exécute `worker(i)` pour i dans [0, count) avec au plus `concurrency` tâches
 // en parallèle. S'arrête dès qu'un worker échoue (les autres ne prennent plus de
 // nouveau travail). C'est ce qui accélère les transferts : plusieurs blocs à la fois.
@@ -162,8 +201,9 @@ function isValidWebhook(url) {
 }
 
 module.exports = {
-  CHUNK_SIZE,
+  CHUNK_SIZE, TG_CHUNK_SIZE,
   indexPath, configPath, loadIndex, saveIndex, loadConfig, saveConfig, uuid,
   deriveKey, encryptBuffer, decryptBuffer, makeVerifier, checkVerifier,
   webhookUpload, webhookGetUrl, webhookDelete, fetchBytes, isValidWebhook, runPool,
+  tgUpload, tgGetUrl,
 };
