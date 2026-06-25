@@ -33,6 +33,8 @@ export default function DriveStudio() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const jobRef = useRef<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<Node | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Local mode
   const [localStatus, setLocalStatus] = useState<{ configured: boolean; unlocked: boolean; webhookMasked: string } | null>(null);
@@ -188,12 +190,18 @@ export default function DriveStudio() {
       if (!r?.ok && !r?.cancelled && !/annul/i.test(r?.error || '')) setError(r?.error || t('Échec du téléchargement'));
     } finally { setBusy(false); setProg(null); jobRef.current = null; }
   };
-  const handleDelete = async (n: Node) => {
-    const msg = n.type === 'folder' ? t('Supprimer ce dossier et tout son contenu de Discord ?') : t('Supprimer ce fichier de Discord ?');
-    if (!window.confirm(msg)) return;
-    setBusy(true);
-    try { const r = await backend.del({ id: n.id }); if (r?.nodes) setNodes(r.nodes); else await refreshNodes(); }
-    finally { setBusy(false); }
+  const handleDelete = (n: Node) => setConfirmDel(n);
+  const doDelete = async () => {
+    const n = confirmDel;
+    if (!n) return;
+    setDeleting(true); setError(null);
+    try {
+      const r = await backend.del({ id: n.id });
+      if (r?.ok === false) { setError(r?.error || t('Échec de la suppression')); return; }
+      if (r?.nodes) setNodes(r.nodes); else await refreshNodes();
+      setConfirmDel(null);
+    } catch (e: any) { setError(e?.message || t('Échec de la suppression')); }
+    finally { setDeleting(false); }
   };
   const handleCancel = () => { if (jobRef.current) api().discloudCancel(jobRef.current); };
 
@@ -390,6 +398,55 @@ export default function DriveStudio() {
       </div>
 
       {showAdmin && <DriveAdmin onClose={() => setShowAdmin(false)} />}
+
+      <AnimatePresence>
+        {confirmDel && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => !deleting && setConfirmDel(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#15161d] border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/25 flex items-center justify-center mb-4">
+                  <Trash2 className="w-7 h-7 text-red-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">
+                  {confirmDel.type === 'folder' ? t('Supprimer ce dossier ?') : t('Supprimer ce fichier ?')}
+                </h3>
+                <div className="inline-flex items-center gap-2 max-w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mb-4">
+                  {confirmDel.type === 'folder'
+                    ? <Folder className="w-4 h-4 text-pink-400 shrink-0" />
+                    : (confirmDel.icon
+                        ? <img src={confirmDel.icon} alt="" className="w-4 h-4 object-contain shrink-0" draggable={false} />
+                        : <FileIcon className="w-4 h-4 text-gray-400 shrink-0" />)}
+                  <span className="text-sm text-gray-200 truncate">{confirmDel.name}</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                  {confirmDel.type === 'folder'
+                    ? t('Le dossier et tout son contenu seront définitivement supprimés de Discord. Cette action est irréversible.')
+                    : t('Ce fichier sera définitivement supprimé de Discord. Cette action est irréversible.')}
+                </p>
+                <div className="flex items-center gap-2 w-full">
+                  <button onClick={() => setConfirmDel(null)} disabled={deleting}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-all disabled:opacity-40">
+                    {t('Annuler')}
+                  </button>
+                  <button onClick={doDelete} disabled={deleting}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500/90 hover:bg-red-500 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+                    {deleting ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('Suppression…')}</> : <><Trash2 className="w-4 h-4" /> {t('Supprimer')}</>}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex items-center gap-1 mb-3 text-sm flex-wrap">
         <button onClick={() => setFolder(null)} className={`px-2 py-1 rounded-lg hover:bg-white/5 transition-colors ${folder === null ? 'text-pink-400 font-semibold' : 'text-gray-400'}`}>{t('Racine')}</button>

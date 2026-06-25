@@ -4504,13 +4504,44 @@ ipcMain.handle('discloud-cloud-delete', async (e, { id } = {}) => {
   catch (er) { return { ok: false, error: er.message }; }
 });
 
+const cloudSleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 // Envoie un bloc chiffré au serveur, qui le pousse sur un webhook du pool.
+// Ré-essaie sur erreur réseau / 5xx / 429 (transitoires) ; échoue vite sur une
+// erreur définitive (4xx : auth, taille). → un bloc capricieux ne casse plus tout.
 async function cloudUploadChunk(payload) {
-  const form = new FormData();
-  form.append('file', new Blob([payload]), 'blk.orb');
-  const res = await cloudFetch('/api/drive/upload/chunk', { method: 'POST', body: form });
-  if (!res.ok) { let b = null; try { b = await res.json(); } catch (x) {} throw new Error((b && b.error) || ('Envoi refusé (HTTP ' + res.status + ')')); }
-  return res.json(); // { webhookId, messageId }
+  let lastErr;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let res;
+    try {
+      const form = new FormData();
+      form.append('file', new Blob([payload]), 'blk.orb');
+      res = await cloudFetch('/api/drive/upload/chunk', { method: 'POST', body: form });
+    } catch (e) { lastErr = e; await cloudSleep(800 * (attempt + 1)); continue; } // réseau
+    if (res.ok) return res.json(); // { webhookId, messageId }
+    if (res.status < 500 && res.status !== 429) { // erreur définitive : inutile de ré-essayer
+      let b = null; try { b = await res.json(); } catch (x) {}
+      throw new Error((b && b.error) || ('Envoi refusé (HTTP ' + res.status + ')'));
+    }
+    lastErr = new Error('Envoi refusé (HTTP ' + res.status + ')');
+    await cloudSleep(800 * (attempt + 1));
+  }
+  throw lastErr || new Error('Envoi du bloc échoué');
+}
+
+// Récupère les octets (chiffrés) d'un bloc, avec retries sur erreurs transitoires.
+async function cloudDownloadChunk(chunkId) {
+  let lastErr;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let res;
+    try { res = await cloudFetch('/api/drive/chunk/' + chunkId); }
+    catch (e) { lastErr = e; await cloudSleep(800 * (attempt + 1)); continue; }
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+    if (res.status < 500 && res.status !== 429) throw new Error('Bloc indisponible (HTTP ' + res.status + ')');
+    lastErr = new Error('Bloc indisponible (HTTP ' + res.status + ')');
+    await cloudSleep(800 * (attempt + 1));
+  }
+  throw lastErr || new Error('Téléchargement du bloc échoué');
 }
 
 ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {}) => {
@@ -4570,9 +4601,7 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
     await discloud.runPool(list.length, conc, async (k) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = list[k];
-      const res = await cloudFetch('/api/drive/chunk/' + ch.id);
-      if (!res.ok) throw new Error('Bloc indisponible (HTTP ' + res.status + ')');
-      const blob = Buffer.from(await res.arrayBuffer());
+      const blob = await cloudDownloadChunk(ch.id);
       const plain = node.encrypted ? discloud.decryptBuffer(cloudKey, blob) : blob;
       await fh.write(plain, 0, plain.length, ch.idx * chunkSize);
       done += ch.size; doneCount++;
