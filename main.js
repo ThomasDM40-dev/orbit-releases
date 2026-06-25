@@ -4425,6 +4425,21 @@ async function cloudConcurrency() {
   return 4;
 }
 
+// Mode « direct » : récupère le pool de webhooks du serveur pour que l'app parle
+// directement à Discord (le serveur ne relaie plus les octets → bien plus rapide,
+// plus de limite RAM serveur / 502). Renvoie null si le serveur ne le supporte pas
+// (ancien serveur) → on retombe alors sur le relais.
+async function cloudWebhooks() {
+  try {
+    const w = await cloudJson('/api/drive/webhooks');
+    if (w && Array.isArray(w.active)) return { active: w.active, all: w.all || {} };
+  } catch (e) {}
+  return null;
+}
+// En direct, c'est Discord qui limite (un envoi à la fois par webhook), plus la RAM
+// du serveur : on peut donc paralléliser autant qu'il y a de webhooks (plafonné).
+function directConcurrency(poolLen) { return Math.max(2, Math.min(poolLen || 1, 16)); }
+
 ipcMain.handle('discloud-cloud-status', () => ({ server: cloud.server, email: cloud.email, admin: !!cloud.admin, loggedIn: !!cloud.token, unlocked: !!cloudKey }));
 
 ipcMain.handle('discloud-cloud-set-server', async (e, { server } = {}) => {
@@ -4550,7 +4565,10 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
   paths = (paths || []).filter(Boolean);
   if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
   jobId = jobId || discloud.uuid();
-  const conc = await cloudConcurrency();
+  // Mode direct si le serveur fournit un pool ; sinon repli sur le relais.
+  const pool = await cloudWebhooks();
+  const direct = !!(pool && pool.active && pool.active.length);
+  const conc = direct ? directConcurrency(pool.active.length) : await cloudConcurrency();
   try {
     for (let fi = 0; fi < paths.length; fi++) {
       const filePath = paths[fi];
@@ -4570,8 +4588,16 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
           const buf = Buffer.allocUnsafe(len);
           if (len > 0) await fh.read(buf, 0, len, i * discloud.CHUNK_SIZE);
           const payload = discloud.encryptBuffer(cloudKey, buf);
-          const r = await cloudUploadChunk(payload);
-          chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
+          if (direct) {
+            // L'app envoie le bloc DIRECTEMENT sur Discord. Round-robin par index :
+            // des blocs consécutifs vont sur des webhooks différents → 0 collision.
+            const wh = pool.active[i % pool.active.length];
+            const r = await discloud.webhookUpload(wh.url, 'blk_' + Date.now() + '_' + i + '.orb', payload);
+            chunks[i] = { idx: i, webhookId: wh.id, messageId: r.messageId, size: len };
+          } else {
+            const r = await cloudUploadChunk(payload);
+            chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
+          }
           uploaded += len; doneCount++;
           discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
         });
@@ -4593,7 +4619,13 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
   if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
   jobId = jobId || discloud.uuid();
   const chunkSize = node.chunkSize || discloud.CHUNK_SIZE;
-  const conc = await cloudConcurrency();
+  // Mode direct : on télécharge les blocs DIRECTEMENT depuis Discord. On utilise la
+  // table id→url du serveur ; chaque bloc a son webhookId+messageId pour régénérer
+  // un lien frais. Repli sur le relais si le serveur ne fournit pas le pool.
+  const pool = await cloudWebhooks();
+  const allMap = (pool && pool.all) || null;
+  const canDirect = !!(allMap && list.length && list.every(c => c.webhookId && c.messageId && allMap[c.webhookId]));
+  const conc = canDirect ? directConcurrency(pool.active.length) : await cloudConcurrency();
   const fh = await fs.promises.open(save.filePath, 'w');
   let done = 0, doneCount = 0;
   try {
@@ -4601,7 +4633,13 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
     await discloud.runPool(list.length, conc, async (k) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = list[k];
-      const blob = await cloudDownloadChunk(ch.id);
+      let blob;
+      if (canDirect) {
+        const url = await discloud.webhookGetUrl(allMap[ch.webhookId], ch.messageId);
+        blob = await discloud.fetchBytes(url);
+      } else {
+        blob = await cloudDownloadChunk(ch.id);
+      }
       const plain = node.encrypted ? discloud.decryptBuffer(cloudKey, blob) : blob;
       await fh.write(plain, 0, plain.length, ch.idx * chunkSize);
       done += ch.size; doneCount++;
