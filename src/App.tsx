@@ -597,7 +597,7 @@ export default function App() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute right-0 top-full mt-2 z-50 w-72 flex flex-col gap-1.5 p-3 rounded-2xl origin-top-right"
+                  className="absolute right-0 top-full mt-2 z-50 w-72 flex flex-col gap-1.5 p-3 rounded-2xl origin-top-right max-h-[calc(100vh-90px)] overflow-y-auto"
                   style={{
                     background: "rgba(15,15,25,0.92)",
                     backdropFilter: "blur(24px) saturate(180%)",
@@ -693,7 +693,7 @@ export default function App() {
         data-ai-toggle
         onClick={() => setShowAIAssistant(!showAIAssistant)}
         aria-label={t("Assistant IA")}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-2xl transition-all flex items-center justify-center text-white z-40 group hover:scale-105 active:scale-95"
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-2xl transition-all duration-200 flex items-center justify-center text-white z-40 group hover:scale-105 active:scale-95 ${showMainTabSettings ? 'opacity-0 pointer-events-none scale-90' : ''}`}
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent,#ec4899) 88%, white), var(--accent,#ec4899))',
           border: '1px solid rgba(255,255,255,0.18)',
