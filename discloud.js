@@ -79,12 +79,23 @@ function checkVerifier(key, verifierB64) {
 // ── REST webhook Discord ─────────────────────────────────────────────────────
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+// fetch avec délai maximal : si la requête se bloque (réseau coupé, Discord/CDN
+// qui ne répond jamais), on l'abandonne au lieu de figer le transfert à l'infini.
+// L'abandon lève une erreur → les boucles de retry la rattrapent et réessaient.
+async function fetchT(url, opts = {}, ms = 60000) {
+  if (opts.signal) return fetch(url, opts);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctrl.signal }); }
+  finally { clearTimeout(timer); }
+}
+
 // Envoie un blob en pièce jointe et renvoie l'ID du message. Gère le rate-limit
 // (429 → on attend retry_after) et quelques erreurs transitoires.
 async function webhookUpload(webhook, filename, buffer, attempt = 0) {
   const form = new FormData();
   form.append('file', new Blob([buffer]), filename);
-  const res = await fetch(webhook + '?wait=true', { method: 'POST', body: form });
+  const res = await fetchT(webhook + '?wait=true', { method: 'POST', body: form }, 90000);
   if (res.status === 429) {
     let wait = 1000;
     try { const j = await res.json(); wait = Math.ceil((j.retry_after || 1) * 1000) + 250; } catch (e) {}
@@ -104,7 +115,7 @@ async function webhookUpload(webhook, filename, buffer, attempt = 0) {
 
 // Régénère un lien frais (les liens Discord expirent) à partir de l'ID de message.
 async function webhookGetUrl(webhook, messageId, attempt = 0) {
-  const res = await fetch(webhook + '/messages/' + messageId);
+  const res = await fetchT(webhook + '/messages/' + messageId, {}, 45000);
   if (res.status === 429) {
     let wait = 1000;
     try { const j = await res.json(); wait = Math.ceil((j.retry_after || 1) * 1000) + 250; } catch (e) {}
@@ -120,7 +131,7 @@ async function webhookGetUrl(webhook, messageId, attempt = 0) {
 }
 
 async function webhookDelete(webhook, messageId, attempt = 0) {
-  const res = await fetch(webhook + '/messages/' + messageId, { method: 'DELETE' });
+  const res = await fetchT(webhook + '/messages/' + messageId, { method: 'DELETE' }, 30000);
   if (res.status === 429) {
     let wait = 1000;
     try { const j = await res.json(); wait = Math.ceil((j.retry_after || 1) * 1000) + 250; } catch (e) {}
@@ -132,7 +143,7 @@ async function webhookDelete(webhook, messageId, attempt = 0) {
 }
 
 async function fetchBytes(url) {
-  const res = await fetch(url);
+  const res = await fetchT(url, {}, 90000);
   if (!res.ok) throw new Error('Téléchargement du chunk échoué (HTTP ' + res.status + ')');
   return Buffer.from(await res.arrayBuffer());
 }
@@ -146,7 +157,7 @@ async function tgUpload(token, chatId, filename, buffer, attempt = 0) {
   const form = new FormData();
   form.append('chat_id', String(chatId));
   form.append('document', new Blob([buffer]), filename);
-  const res = await fetch('https://api.telegram.org/bot' + token + '/sendDocument', { method: 'POST', body: form });
+  const res = await fetchT('https://api.telegram.org/bot' + token + '/sendDocument', { method: 'POST', body: form }, 120000);
   if (res.status === 429) {
     let wait = 1000;
     try { const j = await res.json(); wait = Math.ceil(((j.parameters && j.parameters.retry_after) || 1) * 1000) + 250; } catch (e) {}
@@ -163,7 +174,7 @@ async function tgUpload(token, chatId, filename, buffer, attempt = 0) {
 
 // Régénère un lien de téléchargement frais à partir du file_id (file_path expire ~1 h).
 async function tgGetUrl(token, fileId, attempt = 0) {
-  const res = await fetch('https://api.telegram.org/bot' + token + '/getFile?file_id=' + encodeURIComponent(fileId));
+  const res = await fetchT('https://api.telegram.org/bot' + token + '/getFile?file_id=' + encodeURIComponent(fileId), {}, 45000);
   if (res.status === 429) {
     let wait = 1000;
     try { const j = await res.json(); wait = Math.ceil(((j.parameters && j.parameters.retry_after) || 1) * 1000) + 250; } catch (e) {}

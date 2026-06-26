@@ -4403,7 +4403,14 @@ function cloudBase() { if (!cloud.server) throw new Error('Serveur non configur�
 async function cloudFetch(p, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (cloud.token) headers['Authorization'] = 'Bearer ' + cloud.token;
-  return fetch(cloudBase() + p, { ...opts, headers });
+  // Délai maximal par défaut : empêche un transfert de se figer indéfiniment si
+  // le serveur (Render endormi) ou le réseau ne répond jamais. Le caller peut
+  // fournir son propre signal (ex. cloudWake) pour gérer son propre délai.
+  if (opts.signal) return fetch(cloudBase() + p, { ...opts, headers });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs || 90000);
+  try { return await fetch(cloudBase() + p, { ...opts, headers, signal: ctrl.signal }); }
+  finally { clearTimeout(timer); }
 }
 async function cloudJson(p, opts = {}) {
   const res = await cloudFetch(p, opts);
@@ -4568,7 +4575,10 @@ ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
   jobId = jobId || discloud.uuid();
   const results = [];
   try {
-    await cloudWake();   // réveille Render (évite le 502 sur le 1ᵉʳ appel)
+    // réveille Render (évite le 502 sur le 1ᵉʳ appel) ; si injoignable, on échoue
+    // proprement au lieu de figer l'interface plusieurs minutes.
+    const awake = await cloudWake();
+    if (!awake) return { ok: false, error: 'Serveur injoignable pour le moment. Réessaie dans quelques instants.' };
     // Récupère les webhooks du pool → envoi DIRECT à Discord (rapide, sans charger
     // Render). Repli sur le relais serveur si aucun webhook n'est exposé.
     let targets = [];
@@ -4616,7 +4626,8 @@ ipcMain.handle('discloud-drop-download', async (e, { code, jobId } = {}) => {
   let key; try { key = Buffer.from(code.slice(sep + 1), 'base64url'); } catch (x) { key = Buffer.alloc(0); }
   if (key.length !== 32) return { ok: false, error: 'Code invalide (clé).' };
   let meta;
-  await cloudWake();   // réveille Render endormi (évite le 502 sur la 1ʳᵉ requête)
+  const awake = await cloudWake();   // réveille Render endormi (évite le 502 sur la 1ʳᵉ requête)
+  if (!awake) return { ok: false, error: 'Serveur injoignable pour le moment. Réessaie dans quelques instants.' };
   try { meta = await cloudJson('/api/drop/' + encodeURIComponent(id)); } catch (er) { return { ok: false, error: er.message }; }
   const list = meta.chunks || [];
   const chunkSize = meta.chunkSize || discloud.CHUNK_SIZE;
