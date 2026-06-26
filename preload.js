@@ -232,6 +232,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   licenseStatus: () => ipcRenderer.invoke('license-status'),
   licenseActivate: (key) => ipcRenderer.invoke('license-activate', { key }),
   licenseDeactivate: () => ipcRenderer.invoke('license-deactivate'),
+  licenseCheckout: () => ipcRenderer.invoke('license-checkout'),
+  licenseSync: () => ipcRenderer.invoke('license-sync'),
 
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),

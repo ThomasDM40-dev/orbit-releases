@@ -4215,6 +4215,36 @@ const discloudCancelled = new Set();
 ipcMain.handle('license-status', () => licensing.getStatus());
 ipcMain.handle('license-activate', (e, { key } = {}) => licensing.activate(key));
 ipcMain.handle('license-deactivate', () => licensing.clearLicense());
+
+// Achat : crée une session Stripe (lié au compte connecté) et ouvre le checkout.
+ipcMain.handle('license-checkout', async () => {
+  try {
+    const r = await cloudJson('/api/license/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (r && r.url) { shell.openExternal(r.url); return { ok: true, url: r.url }; }
+    return { ok: false, error: 'URL de paiement indisponible.' };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+
+// Synchro depuis le serveur : si le compte est devenu Premium, on récupère la clé
+// signée, on lie l'appareil (1 seul) et on active localement (vérif hors-ligne).
+ipcMain.handle('license-sync', async () => {
+  try {
+    const me = await cloudJson('/api/license/me');
+    if (!me || !me.premium) return { premium: false, status: licensing.getStatus() };
+    if (me.key) {
+      const device = licensing.deviceFingerprint();
+      try {
+        await cloudJson('/api/license/bind', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device }) });
+      } catch (e) {
+        return { premium: true, error: e.message, status: licensing.getStatus() };
+      }
+      licensing.activate(me.key);
+    }
+    return { premium: true, status: licensing.getStatus() };
+  } catch (e) {
+    return { premium: false, error: e.message, status: licensing.getStatus() };
+  }
+});
 // Nombre de blocs envoyés/téléchargés en parallèle. Plus = plus rapide, mais
 // Discord limite le débit par webhook (429) — 6 est un bon compromis vitesse/stabilité.
 const DISCLOUD_CONCURRENCY = 6;

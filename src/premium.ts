@@ -51,5 +51,15 @@ export function usePremium() {
     await refreshLicense();
   }, []);
 
-  return { premium: cache.active, status: cache, refresh: refreshLicense, activate, deactivate };
+  // Ouvre le checkout Stripe (lié au compte connecté).
+  const checkout = useCallback(async () => api()?.licenseCheckout?.(), []);
+
+  // Récupère la licence depuis le serveur (après paiement) → active si premium.
+  const sync = useCallback(async () => {
+    const r = await api()?.licenseSync?.();
+    await refreshLicense();
+    return r;
+  }, []);
+
+  return { premium: cache.active, status: cache, refresh: refreshLicense, activate, deactivate, checkout, sync };
 }
