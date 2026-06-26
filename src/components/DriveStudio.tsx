@@ -227,7 +227,7 @@ export default function DriveStudio() {
 
   const Header = (
     <div className="flex items-start justify-between gap-3 gap-y-3 mb-6 flex-wrap">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center gap-3 flex-1 min-w-[240px]">
         <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)', boxShadow: '0 8px 24px rgba(168,85,247,0.35)' }}>
           <HardDrive className="w-6 h-6 text-white" />
         </div>
