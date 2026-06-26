@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { t } from '@/i18n';
 import DriveAdmin from './DriveAdmin';
+import DriveTelegram from './DriveTelegram';
+import { Send } from 'lucide-react';
 
 const api = () => (window as any).electronAPI;
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -44,6 +46,8 @@ export default function DriveStudio() {
   // Cloud mode
   const [cloud, setCloud] = useState<{ server: string; email: string; admin?: boolean; loggedIn: boolean; unlocked: boolean } | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showTelegram, setShowTelegram] = useState(false);
+  const [tgOn, setTgOn] = useState(false);
   const [cloudCrypto, setCloudCrypto] = useState<{ hasParams: boolean } | null>(null);
   const [serverUrl, setServerUrl] = useState('');
   const [email, setEmail] = useState('');
@@ -86,6 +90,9 @@ export default function DriveStudio() {
   }, []);
 
   useEffect(() => { setFolder(null); setError(null); setPass(''); if (mode === 'local') refreshLocal(); else refreshCloud(); }, [mode, refreshLocal, refreshCloud]);
+
+  const refreshTg = useCallback(async () => { try { const s = await api()?.tgStatus?.(); setTgOn(!!s?.loggedIn); } catch { setTgOn(false); } }, []);
+  useEffect(() => { refreshTg(); }, [refreshTg]);
 
   useEffect(() => {
     const off = api()?.onDiscloudProgress?.((p: Prog) => setProg(p));
@@ -389,6 +396,11 @@ export default function DriveStudio() {
           <RefreshCw className="w-4 h-4" />
         </button>
         <div className="flex-1" />
+        {mode === 'cloud' && (
+          <button onClick={() => setShowTelegram(true)} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border transition-all ${tgOn ? 'text-sky-300 bg-sky-500/10 border-sky-500/25' : 'text-gray-400 bg-white/5 hover:bg-white/10 border-white/10'}`} title={t('Stockage Telegram')}>
+            <Send className="w-4 h-4" /> {tgOn ? t('Telegram ✓') : t('Telegram')}
+          </button>
+        )}
         {mode === 'cloud' && cloud?.admin && (
           <button onClick={() => setShowAdmin(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all" title={t('Webhooks & profils')}><FolderCog className="w-4 h-4" /> {t('Webhooks')}</button>
         )}
@@ -398,6 +410,9 @@ export default function DriveStudio() {
       </div>
 
       {showAdmin && <DriveAdmin onClose={() => setShowAdmin(false)} />}
+      <AnimatePresence>
+        {showTelegram && <DriveTelegram onClose={() => setShowTelegram(false)} onChanged={refreshTg} />}
+      </AnimatePresence>
 
       <AnimatePresence>
         {confirmDel && (

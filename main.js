@@ -4204,7 +4204,9 @@ ipcMain.handle('yolo-detect', async (e, params = {}) => {
 //  Discloud — stockage de fichiers sur Discord (webhook + AES-256)
 // ─────────────────────────────────────────────────────────────────────────────
 const discloud = require('./discloud.js');
+const tgm = require('./telegram-mtproto.js');   // backend Telegram MTProto (compte perso, sans bot)
 const DISCLOUD_DIR = path.join(ORBIT_DIR, 'discloud');
+tgm.init(DISCLOUD_DIR);
 // Clé de chiffrement dérivée de la phrase secrète, gardée en mémoire le temps
 // de la session uniquement (jamais écrite sur le disque).
 let discloudKey = null;
@@ -4478,6 +4480,14 @@ ipcMain.handle('discloud-cloud-login', async (e, { email, password } = {}) => {
 });
 ipcMain.handle('discloud-cloud-logout', () => { cloud.token = ''; cloud.email = ''; cloud.admin = false; cloudKey = null; saveCloud(); return { ok: true }; });
 
+// ── Stockage Telegram (MTProto, compte perso, sans bot) ──────────────────────
+ipcMain.handle('discloud-tg-status', () => tgm.status());
+ipcMain.handle('discloud-tg-set-api', (e, { apiId, apiHash } = {}) => tgm.setApi(apiId, apiHash));
+ipcMain.handle('discloud-tg-send-code', (e, { phone } = {}) => tgm.sendCode(phone));
+ipcMain.handle('discloud-tg-sign-in', (e, { code } = {}) => tgm.signIn(code));
+ipcMain.handle('discloud-tg-sign-in-password', (e, { password } = {}) => tgm.signInPassword(password));
+ipcMain.handle('discloud-tg-logout', () => tgm.logout());
+
 // Infos publiques du serveur (webhooks, mail dispo, etc.) — pour adapter l'UI.
 ipcMain.handle('discloud-cloud-server-info', async () => { try { const r = await cloudFetch('/health'); return await r.json(); } catch (e) { return {}; } });
 // Mot de passe oublié : demande d'un code par e-mail, puis réinitialisation.
@@ -4579,14 +4589,16 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
   paths = (paths || []).filter(Boolean);
   if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
   jobId = jobId || discloud.uuid();
-  // Détermine le backend actif (Telegram prioritaire), sinon Discord direct, sinon relais.
-  const storage = await cloudStorage();
-  const tg = (storage && storage.provider === 'telegram' && storage.telegram && storage.telegram.token) ? storage.telegram : null;
+  // Priorité au stockage Telegram MTProto (compte perso) s'il est connecté dans l'app.
+  // Sinon : backend décidé par le serveur (Telegram bot / Discord direct / relais).
+  const mt = tgm.isReady();
+  const storage = mt ? null : await cloudStorage();
+  const tg = (!mt && storage && storage.provider === 'telegram' && storage.telegram && storage.telegram.token) ? storage.telegram : null;
   const dPool = (storage && storage.discord) ? storage.discord : null;
-  const directDiscord = !tg && !!(dPool && dPool.active && dPool.active.length);
-  const CHUNK = tg ? (tg.chunkSize || discloud.TG_CHUNK_SIZE) : discloud.CHUNK_SIZE;
-  // Telegram limite plus fort par bot → concurrence prudente ; Discord = pool de webhooks.
-  const conc = tg ? 4 : (directDiscord ? directConcurrency(dPool.active.length) : await cloudConcurrency());
+  const directDiscord = !mt && !tg && !!(dPool && dPool.active && dPool.active.length);
+  const CHUNK = mt ? tgm.MTPROTO_CHUNK_SIZE : (tg ? (tg.chunkSize || discloud.TG_CHUNK_SIZE) : discloud.CHUNK_SIZE);
+  // MTProto = un seul client (concurrence basse) ; bot Telegram = 4 ; Discord = pool.
+  const conc = mt ? 2 : (tg ? 4 : (directDiscord ? directConcurrency(dPool.active.length) : await cloudConcurrency()));
   try {
     for (let fi = 0; fi < paths.length; fi++) {
       const filePath = paths[fi];
@@ -4606,8 +4618,12 @@ ipcMain.handle('discloud-cloud-upload', async (e, { paths, parent, jobId } = {})
           const buf = Buffer.allocUnsafe(len);
           if (len > 0) await fh.read(buf, 0, len, i * CHUNK);
           const payload = discloud.encryptBuffer(cloudKey, buf);
-          if (tg) {
-            // Envoi DIRECT sur Telegram.
+          if (mt) {
+            // Envoi via TON compte Telegram (MTProto) → Messages enregistrés.
+            const r = await tgm.uploadChunk(payload, 'blk_' + Date.now() + '_' + i + '.orb');
+            chunks[i] = { idx: i, provider: 'telegram', messageId: r.messageId, size: len };
+          } else if (tg) {
+            // Envoi DIRECT sur Telegram (bot).
             const r = await discloud.tgUpload(tg.token, tg.chatId, 'blk_' + Date.now() + '_' + i + '.orb', payload);
             chunks[i] = { idx: i, provider: 'telegram', messageId: r.messageId, fileId: r.fileId, size: len };
           } else if (directDiscord) {
@@ -4642,17 +4658,19 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
   const chunkSize = node.chunkSize || discloud.CHUNK_SIZE;
   // Mode direct : on télécharge les blocs DIRECTEMENT depuis Discord/Telegram selon
   // le provider de CHAQUE bloc. Repli sur le relais si on ne peut pas faire en direct.
+  const mt = tgm.isReady();
   const storage = await cloudStorage();
   const tg = (storage && storage.telegram && storage.telegram.token) ? storage.telegram : null;
   const allMap = (storage && storage.discord && storage.discord.all) || null;
-  const canDirect = !!(list.length && list.every(c =>
-    c.provider === 'telegram'
-      ? !!(tg && c.fileId)
-      : !!(allMap && c.webhookId && c.messageId && allMap[c.webhookId])
-  ));
+  // Un bloc Telegram avec fileId vient du bot (→ besoin du bot) ; sans fileId, il
+  // vient de MTProto (→ besoin du compte MTProto connecté). Un bloc Discord → pool.
+  const chunkOk = (c) => c.provider === 'telegram'
+    ? (c.fileId ? !!tg : (mt && !!c.messageId))
+    : !!(allMap && c.webhookId && c.messageId && allMap[c.webhookId]);
+  const canDirect = !!(list.length && list.every(chunkOk));
   const hasTg = canDirect && list.some(c => c.provider === 'telegram');
   const dActive = (storage && storage.discord && storage.discord.active) || [];
-  const conc = canDirect ? (hasTg ? 4 : directConcurrency(dActive.length)) : await cloudConcurrency();
+  const conc = canDirect ? (hasTg ? 3 : directConcurrency(dActive.length)) : await cloudConcurrency();
   const fh = await fs.promises.open(save.filePath, 'w');
   let done = 0, doneCount = 0;
   try {
@@ -4662,8 +4680,12 @@ ipcMain.handle('discloud-cloud-download', async (e, { id, jobId } = {}) => {
       const ch = list[k];
       let blob;
       if (canDirect && ch.provider === 'telegram') {
-        const url = await discloud.tgGetUrl(tg.token, ch.fileId);
-        blob = await discloud.fetchBytes(url);
+        if (ch.fileId) {                                   // bloc bot Telegram
+          const url = await discloud.tgGetUrl(tg.token, ch.fileId);
+          blob = await discloud.fetchBytes(url);
+        } else {                                           // bloc MTProto (ton compte)
+          blob = await tgm.downloadChunk(ch.messageId);
+        }
       } else if (canDirect) {
         const url = await discloud.webhookGetUrl(allMap[ch.webhookId], ch.messageId);
         blob = await discloud.fetchBytes(url);

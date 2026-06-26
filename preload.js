@@ -196,6 +196,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cloudRegister: (data) => ipcRenderer.invoke('discloud-cloud-register', data),
   cloudLogin: (data) => ipcRenderer.invoke('discloud-cloud-login', data),
   cloudLogout: () => ipcRenderer.invoke('discloud-cloud-logout'),
+  // Stockage Telegram (MTProto, compte perso, sans bot)
+  tgStatus: () => ipcRenderer.invoke('discloud-tg-status'),
+  tgSetApi: (data) => ipcRenderer.invoke('discloud-tg-set-api', data),
+  tgSendCode: (data) => ipcRenderer.invoke('discloud-tg-send-code', data),
+  tgSignIn: (data) => ipcRenderer.invoke('discloud-tg-sign-in', data),
+  tgSignInPassword: (data) => ipcRenderer.invoke('discloud-tg-sign-in-password', data),
+  tgLogout: () => ipcRenderer.invoke('discloud-tg-logout'),
   cloudServerInfo: () => ipcRenderer.invoke('discloud-cloud-server-info'),
   cloudForgot: (data) => ipcRenderer.invoke('discloud-cloud-forgot', data),
   cloudReset: (data) => ipcRenderer.invoke('discloud-cloud-reset', data),
