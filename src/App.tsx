@@ -424,6 +424,41 @@ export default function App() {
     }
   };
 
+  // Export/import des abonnements (côté renderer : aucune IPC supplémentaire).
+  const handleExportSubs = async () => {
+    setActiveMenu(null);
+    try {
+      const subs = await (window as any).electronAPI?.getSubscriptions?.();
+      const blob = new Blob([JSON.stringify(subs || [], null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'orbit-abonnements.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { }
+  };
+
+  const handleImportSubs = () => {
+    setActiveMenu(null);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const list = Array.isArray(parsed) ? parsed : (parsed?.subscriptions || []);
+        for (const s of list) {
+          const url = typeof s === 'string' ? s : s?.url;
+          if (url) await (window as any).electronAPI?.addSubscription?.(url);
+        }
+        window.dispatchEvent(new Event('subscriptions-updated'));
+      } catch (e) { }
+    };
+    input.click();
+  };
+
   // Render a code-split tab: kept hidden (not unmounted) once visited so its
   // state survives, and only mounted the first time the tab is opened.
   const renderLazyTab = (id: string, node: any) => (
@@ -502,15 +537,14 @@ export default function App() {
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-72 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
                 <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openHomeDir(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">📁</span> {t("Ouvrir le dossier d'Orbit")}</button>
                 <button onClick={handleUpdateYtdlp} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">↻</span> {t("Réinstaller yt-dlp")}</button>
-                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '60ms' }}><span className="w-4">↻</span> {t("Réinstaller les dépendances Node")}</button>
                 <button onClick={() => { setActiveMenu(null); (window as any).electronAPI?.checkUpdates?.().then((res: any) => { setUpdateOk(res.upToDate); setUpdateStatus(res.message); setTimeout(() => setUpdateStatus(null), 6000); }); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '90ms' }}><span className="w-4">☼</span> {t("Mettre à jour yt-dlp avec les dernières configurations")}</button>
                 <div className="border-t border-white/10 my-1"></div>
                 <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://skeavisuals.com/donate'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '120ms' }}><span className="w-4">☆</span> {t("Faire un don à Orbit")}</button>
                 <div className="border-t border-white/10 my-1"></div>
                 <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openChangelog(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '150ms' }}><span className="w-4">🌐</span> {t("Voir le journal des modifications (local)")}</button>
                 <div className="border-t border-white/10 my-1"></div>
-                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '180ms' }}><span className="w-4">⎘</span> {t("Exporter/Sauvegarder les abonnements")}</button>
-                <button onClick={() => { setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '210ms' }}><span className="w-4">⎗</span> {t("Importer/Restaurer les abonnements")}</button>
+                <button onClick={handleExportSubs} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '180ms' }}><span className="w-4">⎘</span> {t("Exporter/Sauvegarder les abonnements")}</button>
+                <button onClick={handleImportSubs} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '210ms' }}><span className="w-4">⎗</span> {t("Importer/Restaurer les abonnements")}</button>
                 <div className="border-t border-white/10 my-1"></div>
                 <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://skeavisuals.com'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '240ms' }}><span className="w-4">🌐</span> {t("Ouvrir le site d'Orbit (web)")}</button>
                 <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openExternalUrl('https://ffmpeg.org/download.html'); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '270ms' }}><span className="w-4">🌐</span> {t("Installer ffmpeg manuellement (web)")}</button>

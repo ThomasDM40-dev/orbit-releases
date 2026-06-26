@@ -106,6 +106,10 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
   const [logPanel, setLogPanel] = useState<{id: string, title: string} | null>(null);
   const downloadLogsRef = React.useRef<Map<string, Array<{line: string, level: string}>>>(new Map());
   const formatPopoverRef = React.useRef<HTMLDivElement>(null);
+  // Always-fresh format for the (once-registered) sniffer listener, so changing
+  // the global format never re-registers the IPC listeners (which would stack up).
+  const globalFormatRef = React.useRef(globalFormat);
+  globalFormatRef.current = globalFormat;
 
   useEffect(() => {
     if (globalSettings?.outputDir) {
@@ -246,7 +250,7 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
             title: data.videoTitle || data.title || tr('Flux intercepté : {type}', { type: data.type }),
             thumbnail: "",
             platform: "Patreon/Web",
-            format: globalFormat,
+            format: globalFormatRef.current,
             status: "ready",
             cookies: data.cookies,
             referer: data.referer || data.pageUrl || "",
@@ -260,7 +264,9 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
       window.addEventListener('sniffer-add', onSnifferAdd);
       return () => window.removeEventListener('sniffer-add', onSnifferAdd);
     }
-  }, [globalFormat]);
+    // Register once: these IPC listeners don't depend on globalFormat (it's read
+    // through globalFormatRef), so we avoid stacking duplicate listeners.
+  }, []);
 
   // Scheduler Loop
   useEffect(() => {

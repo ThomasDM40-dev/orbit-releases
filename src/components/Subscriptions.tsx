@@ -19,6 +19,10 @@ export default function Subscriptions() {
 
   useEffect(() => {
     loadSubs();
+    // Refresh when subscriptions are imported from the Tools menu.
+    const onUpdated = () => loadSubs();
+    window.addEventListener('subscriptions-updated', onUpdated);
+    return () => window.removeEventListener('subscriptions-updated', onUpdated);
   }, []);
 
   const loadSubs = async () => {
