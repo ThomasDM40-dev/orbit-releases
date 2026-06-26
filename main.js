@@ -346,11 +346,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#111111',
-      symbolColor: '#ffffff'
-    },
+    // Fully frameless: no native caption buttons — Orbit draws its own window
+    // controls in the custom title bar (avoids the duplicate native min/max/close).
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
