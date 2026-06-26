@@ -228,6 +228,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cloudAdminToggleWebhook: (data) => ipcRenderer.invoke('discloud-cloud-admin-toggle-webhook', data),
   cloudAdminDeleteWebhook: (data) => ipcRenderer.invoke('discloud-cloud-admin-delete-webhook', data),
 
+  // ── Licence Premium ──
+  licenseStatus: () => ipcRenderer.invoke('license-status'),
+  licenseActivate: (key) => ipcRenderer.invoke('license-activate', { key }),
+  licenseDeactivate: () => ipcRenderer.invoke('license-deactivate'),
+
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),
   llmStatus: () => ipcRenderer.invoke('llm-status'),

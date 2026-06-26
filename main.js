@@ -4202,6 +4202,7 @@ ipcMain.handle('yolo-detect', async (e, params = {}) => {
 //  Discloud — stockage de fichiers sur Discord (webhook + AES-256)
 // ─────────────────────────────────────────────────────────────────────────────
 const discloud = require('./discloud.js');
+const licensing = require('./license.js');   // licence Premium (vérif Ed25519 hors-ligne)
 const tgm = require('./telegram-mtproto.js');   // backend Telegram MTProto (compte perso, sans bot)
 const DISCLOUD_DIR = path.join(ORBIT_DIR, 'discloud');
 tgm.init(DISCLOUD_DIR);
@@ -4209,6 +4210,11 @@ tgm.init(DISCLOUD_DIR);
 // de la session uniquement (jamais écrite sur le disque).
 let discloudKey = null;
 const discloudCancelled = new Set();
+
+// ── Licence Premium ──────────────────────────────────────────────────────────
+ipcMain.handle('license-status', () => licensing.getStatus());
+ipcMain.handle('license-activate', (e, { key } = {}) => licensing.activate(key));
+ipcMain.handle('license-deactivate', () => licensing.clearLicense());
 // Nombre de blocs envoyés/téléchargés en parallèle. Plus = plus rapide, mais
 // Discord limite le débit par webhook (429) — 6 est un bon compromis vitesse/stabilité.
 const DISCLOUD_CONCURRENCY = 6;

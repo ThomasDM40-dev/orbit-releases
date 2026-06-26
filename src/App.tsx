@@ -7,6 +7,9 @@ import OnboardingModal from "@/components/OnboardingModal";
 import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import AIAssistant from "@/components/AIAssistant";
+import PremiumModal from "@/components/PremiumModal";
+import PremiumGate from "@/components/PremiumGate";
+import { usePremium, PREMIUM_TABS } from "@/premium";
 import { Sparkles, UploadCloud, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -97,6 +100,8 @@ export default function App() {
   const language: Lang = getLang();
   const [showSettings, setShowSettings] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPremium, setShowPremium] = useState(false);
+  const { premium } = usePremium();
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('orbit-onboarded'));
   
   // AI Assistant & Drag & Drop State
@@ -461,15 +466,20 @@ export default function App() {
 
   // Render a code-split tab: kept hidden (not unmounted) once visited so its
   // state survives, and only mounted the first time the tab is opened.
-  const renderLazyTab = (id: string, node: any) => (
-    <div className={activeTab === id ? 'os-anim-fade' : 'hidden'} style={{ height: '100%' }}>
-      {visited.has(id) && (
-        <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-gray-600"><Loader2 className="w-7 h-7 animate-spin" /></div>}>
-          {node}
-        </Suspense>
-      )}
-    </div>
-  );
+  const renderLazyTab = (id: string, node: any) => {
+    const locked = PREMIUM_TABS.has(id) && !premium;
+    return (
+      <div className={activeTab === id ? 'os-anim-fade' : 'hidden'} style={{ height: '100%' }}>
+        {locked ? (
+          <PremiumGate onUnlock={() => setShowPremium(true)} />
+        ) : visited.has(id) && (
+          <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-gray-600"><Loader2 className="w-7 h-7 animate-spin" /></div>}>
+            {node}
+          </Suspense>
+        )}
+      </div>
+    );
+  };
 
   return (
     <main className="h-screen w-screen space-bg text-gray-300 flex flex-col overflow-hidden font-sans selection:bg-pink-500/30 select-none">
@@ -488,8 +498,10 @@ export default function App() {
             <button onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')} className={`menu-btn transition-colors ${activeMenu === 'file' ? 'text-[var(--accent-strong)]' : 'hover:text-gray-200'}`}>{t("Fichier")}</button>
             {activeMenu === 'file' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-52 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
-                <button onClick={() => { setShowSettings(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⚙</span> {t("Réglages")}</button>
-                <button onClick={() => { setShowImportModal(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '15ms' }}><span className="w-4">📥</span> {t("Importer")}</button>
+                <button onClick={() => { setShowPremium(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">{premium ? '👑' : '✨'}</span> {premium ? t("Premium actif") : t("Passer en Premium")}</button>
+                <div className="border-t border-white/10 my-1"></div>
+                <button onClick={() => { setShowSettings(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '15ms' }}><span className="w-4">⚙</span> {t("Réglages")}</button>
+                <button onClick={() => { setShowImportModal(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">📥</span> {t("Importer")}</button>
                 <div className="border-t border-white/10 my-1"></div>
                 <button onClick={handleOpenDir} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '30ms' }}><span className="w-4">📁</span> {t("Ouvrir le dossier de téléchargements")}</button>
                 <div className="border-t border-white/10 my-1"></div>
@@ -720,6 +732,9 @@ export default function App() {
       {showImportModal && (
         <ImportModal onClose={() => setShowImportModal(false)} language={language} />
       )}
+
+      {/* Premium Modal */}
+      {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
 
       {/* First-run onboarding wizard (tailors visible tabs to the user's profile) */}
       {showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
