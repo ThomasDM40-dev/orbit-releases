@@ -14,8 +14,10 @@ const { StringSession } = require('telegram/sessions');
 const { CustomFile } = require('telegram/client/uploads');
 const { computeCheck } = require('telegram/Password');
 
-// Bloc MTProto : 100 Mio (gros blocs = peu de requêtes ; tenu en RAM le temps de l'envoi).
-const MTPROTO_CHUNK_SIZE = 100 * 1024 * 1024;
+// Bloc MTProto : 18 Mio. gramjs `sendFile` n'envoie depuis la RAM que < 20 Mo
+// (au-delà il exige un chemin de fichier). 18 Mio reste 2× plus gros que Discord
+// et évite l'erreur « buffer or filePath should be specified ».
+const MTPROTO_CHUNK_SIZE = 18 * 1024 * 1024;
 
 let CFG_PATH = null;
 let cfg = { apiId: 0, apiHash: '', session: '', phone: '' };

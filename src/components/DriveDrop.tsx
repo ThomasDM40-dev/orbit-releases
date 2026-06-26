@@ -8,7 +8,7 @@ const INPUT = "bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm 
 
 type Drop = { name: string; code: string };
 
-export default function DriveDrop() {
+export default function DriveDrop({ progress }: { progress?: { phase: string; name?: string; percent: number; chunk?: number; chunks?: number } | null }) {
   const [tab, setTab] = useState<'send' | 'receive'>('send');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +16,7 @@ export default function DriveDrop() {
   const [copied, setCopied] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [okMsg, setOkMsg] = useState<string | null>(null);
+  const prog = progress;
 
   const send = async () => {
     setError(null); setOkMsg(null);
@@ -65,6 +66,20 @@ export default function DriveDrop() {
 
         {error && <div className="mb-4 text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</div>}
         {okMsg && <div className="mb-4 text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 break-all">{okMsg}</div>}
+
+        {busy && (
+          <div className="mb-4 bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="flex items-center justify-between text-xs text-gray-300 mb-1.5">
+              <span className="flex items-center gap-2 truncate">
+                <Loader2 className="w-3.5 h-3.5 text-pink-400 animate-spin shrink-0" />
+                <span className="truncate">{prog?.name || t('Préparation…')}</span>
+                {prog?.chunks ? <span className="text-gray-500">· {t('bloc')} {prog.chunk}/{prog.chunks}</span> : null}
+              </span>
+              <span>{prog?.percent ?? 0}%</span>
+            </div>
+            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: (prog?.percent ?? 0) + '%', background: 'linear-gradient(90deg, #e879f9, #a855f7)' }} /></div>
+          </div>
+        )}
 
         {tab === 'send' && (
           <div className="space-y-4">

@@ -258,7 +258,7 @@ export default function DriveStudio() {
     return (
       <div className="h-full flex flex-col p-6">
         {Header}
-        <div className="flex-1 min-h-0"><DriveDrop /></div>
+        <div className="flex-1 min-h-0"><DriveDrop progress={prog} /></div>
       </div>
     );
   }
