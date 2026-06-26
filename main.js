@@ -4488,6 +4488,91 @@ ipcMain.handle('discloud-tg-sign-in', (e, { code } = {}) => tgm.signIn(code));
 ipcMain.handle('discloud-tg-sign-in-password', (e, { password } = {}) => tgm.signInPassword(password));
 ipcMain.handle('discloud-tg-logout', () => tgm.logout());
 
+// ── Drop : partage de fichiers SANS compte (clé aléatoire dans le code) ───────
+// Code = "<id>~<cléBase64url>". Upload/download passent par le serveur (proxy Discord).
+ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
+  if (!cloud.server) return { ok: false, error: 'Serveur non configuré (mode Cloud).' };
+  paths = (paths || []).filter(Boolean);
+  if (!paths.length) return { ok: false, error: 'Aucun fichier.' };
+  jobId = jobId || discloud.uuid();
+  const results = [];
+  try {
+    for (let fi = 0; fi < paths.length; fi++) {
+      const filePath = paths[fi];
+      const stat = fs.statSync(filePath);
+      const name = path.basename(filePath);
+      const total = stat.size;
+      const key = require('crypto').randomBytes(32);   // clé de chiffrement aléatoire par drop
+      const CHUNK = discloud.CHUNK_SIZE;
+      const numChunks = Math.max(1, Math.ceil(total / CHUNK));
+      const fh = await fs.promises.open(filePath, 'r');
+      const chunks = new Array(numChunks);
+      let uploaded = 0, doneCount = 0;
+      try {
+        await discloud.runPool(numChunks, 3, async (i) => {
+          if (discloudCancelled.has(jobId)) throw new Error('Annulé');
+          const len = Math.min(CHUNK, total - i * CHUNK);
+          const buf = Buffer.allocUnsafe(len);
+          if (len > 0) await fh.read(buf, 0, len, i * CHUNK);
+          const payload = discloud.encryptBuffer(key, buf);
+          const form = new FormData();
+          form.append('file', new Blob([payload]), 'd.orb');
+          const res = await cloudFetch('/api/drop/chunk', { method: 'POST', body: form });
+          if (!res.ok) throw new Error('Envoi refusé (HTTP ' + res.status + ')');
+          const r = await res.json();
+          chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
+          uploaded += len; doneCount++;
+          discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
+        });
+      } finally { await fh.close(); }
+      const commit = await cloudJson('/api/drop/commit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, size: total, chunkSize: CHUNK, chunks }) });
+      results.push({ name, code: commit.id + '~' + key.toString('base64url'), expiresAt: commit.expiresAt });
+    }
+    discloudCancelled.delete(jobId);
+    return { ok: true, drops: results };
+  } catch (er) { discloudCancelled.delete(jobId); return { ok: false, error: er.message }; }
+});
+
+ipcMain.handle('discloud-drop-download', async (e, { code, jobId } = {}) => {
+  if (!cloud.server) return { ok: false, error: 'Serveur non configuré (mode Cloud).' };
+  code = String(code || '').trim();
+  const sep = code.lastIndexOf('~');
+  if (sep < 1) return { ok: false, error: 'Code invalide.' };
+  const id = code.slice(0, sep);
+  let key; try { key = Buffer.from(code.slice(sep + 1), 'base64url'); } catch (x) { key = Buffer.alloc(0); }
+  if (key.length !== 32) return { ok: false, error: 'Code invalide (clé).' };
+  let meta;
+  try { meta = await cloudJson('/api/drop/' + encodeURIComponent(id)); } catch (er) { return { ok: false, error: er.message }; }
+  const list = meta.chunks || [];
+  const chunkSize = meta.chunkSize || discloud.CHUNK_SIZE;
+  const save = await dialog.showSaveDialog(uiWin(), { defaultPath: meta.name, title: 'Enregistrer le fichier' });
+  if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
+  jobId = jobId || discloud.uuid();
+  const fh = await fs.promises.open(save.filePath, 'w');
+  let done = 0, doneCount = 0;
+  try {
+    try { await fh.truncate(meta.size || 0); } catch (x) {}
+    await discloud.runPool(list.length, 3, async (k) => {
+      if (discloudCancelled.has(jobId)) throw new Error('Annulé');
+      const ch = list[k];
+      const res = await cloudFetch('/api/drop/' + encodeURIComponent(id) + '/chunk/' + ch.idx);
+      if (!res.ok) throw new Error('Bloc indisponible (HTTP ' + res.status + ')');
+      const blob = Buffer.from(await res.arrayBuffer());
+      const plain = discloud.decryptBuffer(key, blob);
+      await fh.write(plain, 0, plain.length, ch.idx * chunkSize);
+      done += plain.length; doneCount++;
+      discloudEmit({ id: jobId, phase: 'download', name: meta.name, percent: meta.size ? Math.round((done / meta.size) * 100) : 100, chunk: doneCount, chunks: list.length });
+    });
+    await fh.close(); discloudCancelled.delete(jobId);
+    return { ok: true, path: save.filePath };
+  } catch (er) {
+    discloudCancelled.delete(jobId);
+    try { await fh.close(); } catch (x) {}
+    try { fs.unlinkSync(save.filePath); } catch (x) {}
+    return { ok: false, error: er.message };
+  }
+});
+
 // Infos publiques du serveur (webhooks, mail dispo, etc.) — pour adapter l'UI.
 ipcMain.handle('discloud-cloud-server-info', async () => { try { const r = await cloudFetch('/health'); return await r.json(); } catch (e) { return {}; } });
 // Mot de passe oublié : demande d'un code par e-mail, puis réinitialisation.

@@ -8,6 +8,7 @@ import {
 import { t } from '@/i18n';
 import DriveAdmin from './DriveAdmin';
 import DriveTelegram from './DriveTelegram';
+import DriveDrop from './DriveDrop';
 import { Send } from 'lucide-react';
 
 const api = () => (window as any).electronAPI;
@@ -22,7 +23,7 @@ type Prog = { id: string; phase: 'upload' | 'download'; name: string; percent: n
 
 const fmtSize = (b?: number) => !b ? '0 o' : b > 1e9 ? (b / 1e9).toFixed(2) + ' Go' : b > 1e6 ? (b / 1e6).toFixed(1) + ' Mo' : Math.round(b / 1e3) + ' Ko';
 
-type Mode = 'local' | 'cloud';
+type Mode = 'local' | 'cloud' | 'drop';
 
 export default function DriveStudio() {
   const [mode, setMode] = useState<Mode>(() => (localStorage.getItem('orbit_drive_mode') as Mode) || 'local');
@@ -215,10 +216,10 @@ export default function DriveStudio() {
   // ── Header + mode switch ────────────────────────────────────────────────────
   const ModeSwitch = (
     <div className="inline-flex rounded-xl bg-white/5 border border-white/10 p-0.5 text-sm">
-      {(['local', 'cloud'] as Mode[]).map(m => (
+      {(['local', 'cloud', 'drop'] as Mode[]).map(m => (
         <button key={m} onClick={() => setMode(m)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${mode === m ? 'bg-pink-500/20 text-pink-300' : 'text-gray-400 hover:text-gray-200'}`}>
-          {m === 'local' ? <Monitor className="w-3.5 h-3.5" /> : <Cloud className="w-3.5 h-3.5" />}
-          {m === 'local' ? t('Local') : t('Cloud (compte)')}
+          {m === 'local' ? <Monitor className="w-3.5 h-3.5" /> : m === 'cloud' ? <Cloud className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+          {m === 'local' ? t('Local') : m === 'cloud' ? t('Cloud (compte)') : t('Drop')}
         </button>
       ))}
     </div>
@@ -251,6 +252,16 @@ export default function DriveStudio() {
   );
   const primaryBtn = "w-full py-2.5 rounded-xl font-semibold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2";
   const grad = { background: 'linear-gradient(135deg, #e879f9, #a855f7)' };
+
+  // ── DROP: partage sans compte (indépendant du login) ────────────────────────
+  if (mode === 'drop') {
+    return (
+      <div className="h-full flex flex-col p-6">
+        {Header}
+        <div className="flex-1 min-h-0"><DriveDrop /></div>
+      </div>
+    );
+  }
 
   // ── LOCAL: gating screens ───────────────────────────────────────────────────
   if (mode === 'local' && localStatus && !localStatus.configured) {

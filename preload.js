@@ -203,6 +203,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   tgSignIn: (data) => ipcRenderer.invoke('discloud-tg-sign-in', data),
   tgSignInPassword: (data) => ipcRenderer.invoke('discloud-tg-sign-in-password', data),
   tgLogout: () => ipcRenderer.invoke('discloud-tg-logout'),
+  // Drop : partage sans compte (code)
+  dropUpload: (data) => ipcRenderer.invoke('discloud-drop-upload', data),
+  dropDownload: (data) => ipcRenderer.invoke('discloud-drop-download', data),
   cloudServerInfo: () => ipcRenderer.invoke('discloud-cloud-server-info'),
   cloudForgot: (data) => ipcRenderer.invoke('discloud-cloud-forgot', data),
   cloudReset: (data) => ipcRenderer.invoke('discloud-cloud-reset', data),
