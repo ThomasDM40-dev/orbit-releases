@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { UploadCloud, Download, Copy, Check, Loader2, Link2, FileUp } from 'lucide-react';
 import { t } from '@/i18n';
+import { useEta } from '@/eta';
 
 const api = () => (window as any).electronAPI;
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -17,6 +18,7 @@ export default function DriveDrop({ progress }: { progress?: { phase: string; na
   const [code, setCode] = useState('');
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const prog = progress;
+  const eta = useEta(prog);
 
   const send = async () => {
     setError(null); setOkMsg(null);
@@ -74,6 +76,7 @@ export default function DriveDrop({ progress }: { progress?: { phase: string; na
                 <Loader2 className="w-3.5 h-3.5 text-pink-400 animate-spin shrink-0" />
                 <span className="truncate">{prog?.name || t('Préparation…')}</span>
                 {prog?.chunks ? <span className="text-gray-500">· {t('bloc')} {prog.chunk}/{prog.chunks}</span> : null}
+                {eta && <span className="text-gray-500">· {eta} {t('restant')}</span>}
               </span>
               <span>{prog?.percent ?? 0}%</span>
             </div>

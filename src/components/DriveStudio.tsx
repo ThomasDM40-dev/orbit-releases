@@ -6,6 +6,7 @@ import {
   Cloud, Monitor, LogOut, Server, Mail, User as UserIcon, FolderCog,
 } from 'lucide-react';
 import { t } from '@/i18n';
+import { useEta } from '@/eta';
 import DriveAdmin from './DriveAdmin';
 import DriveTelegram from './DriveTelegram';
 import DriveDrop from './DriveDrop';
@@ -63,6 +64,7 @@ export default function DriveStudio() {
   const [pass, setPass] = useState('');
 
   const unlocked = mode === 'local' ? !!localStatus?.unlocked : !!cloud?.unlocked;
+  const eta = useEta(prog);
 
   const backend = mode === 'local'
     ? { nodes: () => api().discloudIndex(), mkdir: (d: any) => api().discloudMkdir(d), del: (d: any) => api().discloudDelete(d), upload: (d: any) => api().discloudUpload(d), download: (d: any) => api().discloudDownload(d) }
@@ -493,6 +495,7 @@ export default function DriveStudio() {
                 <span className="truncate">{prog.name || t('Préparation…')}</span>
                 {prog.fileCount && prog.fileCount > 1 && <span className="text-gray-500">({(prog.fileIndex ?? 0) + 1}/{prog.fileCount})</span>}
                 {prog.chunks ? <span className="text-gray-500">· {t('bloc')} {prog.chunk}/{prog.chunks}</span> : null}
+                {eta && <span className="text-gray-500">· {eta} {t('restant')}</span>}
               </span>
               <span className="flex items-center gap-2">{prog.percent}%<button onClick={handleCancel} className="text-gray-500 hover:text-red-400"><X className="w-3.5 h-3.5" /></button></span>
             </div>
