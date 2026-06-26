@@ -215,10 +215,10 @@ export default function DriveStudio() {
 
   // ── Header + mode switch ────────────────────────────────────────────────────
   const ModeSwitch = (
-    <div className="inline-flex rounded-xl bg-white/5 border border-white/10 p-0.5 text-sm">
+    <div className="inline-flex flex-wrap rounded-xl bg-white/5 border border-white/10 p-0.5 text-sm shrink-0">
       {(['local', 'cloud', 'drop'] as Mode[]).map(m => (
-        <button key={m} onClick={() => setMode(m)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${mode === m ? 'bg-pink-500/20 text-pink-300' : 'text-gray-400 hover:text-gray-200'}`}>
-          {m === 'local' ? <Monitor className="w-3.5 h-3.5" /> : m === 'cloud' ? <Cloud className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+        <button key={m} onClick={() => setMode(m)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${mode === m ? 'bg-pink-500/20 text-pink-300' : 'text-gray-400 hover:text-gray-200'}`}>
+          {m === 'local' ? <Monitor className="w-3.5 h-3.5 shrink-0" /> : m === 'cloud' ? <Cloud className="w-3.5 h-3.5 shrink-0" /> : <Link2 className="w-3.5 h-3.5 shrink-0" />}
           {m === 'local' ? t('Local') : m === 'cloud' ? t('Cloud (compte)') : t('Drop')}
         </button>
       ))}
@@ -226,13 +226,13 @@ export default function DriveStudio() {
   );
 
   const Header = (
-    <div className="flex items-center justify-between gap-3 mb-6">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)', boxShadow: '0 8px 24px rgba(168,85,247,0.35)' }}>
+    <div className="flex items-start justify-between gap-3 gap-y-3 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)', boxShadow: '0 8px 24px rgba(168,85,247,0.35)' }}>
           <HardDrive className="w-6 h-6 text-white" />
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">{t('Drive Discord')} <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20">{t('Chiffré AES-256')}</span></h1>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">{t('Drive Discord')} <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20 whitespace-nowrap">{t('Chiffré AES-256')}</span></h1>
           <p className="text-xs text-gray-500">{t('Stockez vos fichiers gratuitement sur un salon Discord, chiffrés de bout en bout.')}</p>
         </div>
       </div>
