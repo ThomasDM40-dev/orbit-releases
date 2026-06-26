@@ -439,7 +439,7 @@ export default function App() {
   return (
     <main className="h-screen w-screen space-bg text-gray-300 flex flex-col overflow-hidden font-sans selection:bg-pink-500/30 select-none">
       {/* Custom Title Bar */}
-      <div className="h-8 flex items-center justify-between px-3 glass-panel border-b-0 border-white/5 relative z-50" style={{ WebkitAppRegion: 'drag' } as any}>
+      <div className="h-9 flex items-center justify-between pl-3 pr-2 glass-panel border-b-0 border-white/5 relative z-50" style={{ WebkitAppRegion: 'drag' } as any}>
         <div className="flex items-center gap-4 text-xs font-medium text-gray-400 relative" style={{ WebkitAppRegion: 'no-drag' } as any} ref={menuRef}>
           <div className="flex items-center gap-2 mr-2">
             <div className="flex items-center justify-center w-5 h-5 rounded-md text-white" style={{ background: 'linear-gradient(135deg, var(--accent-strong), var(--accent-2))', boxShadow: '0 0 10px -1px var(--accent-glow), 0 1px 0 rgba(255,255,255,0.25) inset' }}>

@@ -516,13 +516,29 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
       <div className="flex-1 flex flex-col items-center justify-center relative">
         {downloads.length === 0 ? (
           <div className="flex flex-col items-center text-center os-anim-fade">
-            <div className="orbit-emblem w-52 h-52 mb-8">
+            <div className="orbit-emblem w-56 h-56 mb-8">
+              <div className="orbit-emblem__halo" />
+              {[
+                { top: '6%', left: '20%', d: '0s' }, { top: '12%', left: '78%', d: '.6s' },
+                { top: '26%', left: '8%', d: '1.1s' }, { top: '30%', left: '92%', d: '1.7s' },
+                { top: '72%', left: '12%', d: '.3s' }, { top: '82%', left: '30%', d: '1.4s' },
+                { top: '78%', left: '82%', d: '.9s' }, { top: '90%', left: '62%', d: '2.1s' },
+                { top: '16%', left: '50%', d: '1.9s' }, { top: '60%', left: '95%', d: '.5s' },
+                { top: '48%', left: '3%', d: '1.2s' }, { top: '4%', left: '58%', d: '2.4s' },
+              ].map((s, i) => (
+                <span key={i} className="orbit-star" style={{ top: s.top, left: s.left, animationDelay: s.d }} />
+              ))}
               <div className="orbit-emblem__core" />
+              <div className="orbit-emblem__saturn" />
               <div className="orbit-emblem__plane orbit-emblem__plane--a">
                 <div className="orbit-emblem__path" />
                 <div className="orbit-emblem__spin"><div className="orbit-emblem__moon" /></div>
               </div>
               <div className="orbit-emblem__plane orbit-emblem__plane--b">
+                <div className="orbit-emblem__path" />
+                <div className="orbit-emblem__spin"><div className="orbit-emblem__moon" /></div>
+              </div>
+              <div className="orbit-emblem__plane orbit-emblem__plane--c">
                 <div className="orbit-emblem__path" />
                 <div className="orbit-emblem__spin"><div className="orbit-emblem__moon" /></div>
               </div>
