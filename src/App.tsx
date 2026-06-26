@@ -441,13 +441,16 @@ export default function App() {
       {/* Custom Title Bar */}
       <div className="h-8 flex items-center justify-between px-3 glass-panel border-b-0 border-white/5 relative z-50" style={{ WebkitAppRegion: 'drag' } as any}>
         <div className="flex items-center gap-4 text-xs font-medium text-gray-400 relative" style={{ WebkitAppRegion: 'no-drag' } as any} ref={menuRef}>
-          <div className="flex items-center justify-center w-5 h-5 rounded-md bg-pink-500/20 text-pink-500 mr-2">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+          <div className="flex items-center gap-2 mr-2">
+            <div className="flex items-center justify-center w-5 h-5 rounded-md text-white" style={{ background: 'linear-gradient(135deg, var(--accent-strong), var(--accent-2))', boxShadow: '0 0 10px -1px var(--accent-glow), 0 1px 0 rgba(255,255,255,0.25) inset' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+            </div>
+            <span className="os-text-gradient text-[13px] font-extrabold tracking-tight hidden sm:inline">Orbit</span>
           </div>
 
           {/* File Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')} className={`menu-btn transition-colors ${activeMenu === 'file' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Fichier")}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')} className={`menu-btn transition-colors ${activeMenu === 'file' ? 'text-[var(--accent-strong)]' : 'hover:text-gray-200'}`}>{t("Fichier")}</button>
             {activeMenu === 'file' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-52 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
                 <button onClick={() => { setShowSettings(true); setActiveMenu(null); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⚙</span> {t("Réglages")}</button>
@@ -462,7 +465,7 @@ export default function App() {
 
           {/* Downloads Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'downloads' ? null : 'downloads')} className={`menu-btn transition-colors ${activeMenu === 'downloads' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Téléchargements")}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'downloads' ? null : 'downloads')} className={`menu-btn transition-colors ${activeMenu === 'downloads' ? 'text-[var(--accent-strong)]' : 'hover:text-gray-200'}`}>{t("Téléchargements")}</button>
             {activeMenu === 'downloads' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-72 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
                 <button onClick={() => dispatchAction('pauseAll')} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">⏸</span> {t("Mettre tous les téléchargements en pause")}</button>
@@ -479,7 +482,7 @@ export default function App() {
 
           {/* Language Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'language' ? null : 'language')} className={`menu-btn transition-colors ${activeMenu === 'language' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Langue")}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'language' ? null : 'language')} className={`menu-btn transition-colors ${activeMenu === 'language' ? 'text-[var(--accent-strong)]' : 'hover:text-gray-200'}`}>{t("Langue")}</button>
             {activeMenu === 'language' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-44 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
                 {LANGS.map((l, i) => (
@@ -494,7 +497,7 @@ export default function App() {
 
           {/* Tools Menu */}
           <div className="relative">
-            <button onClick={() => setActiveMenu(activeMenu === 'tools' ? null : 'tools')} className={`menu-btn transition-colors ${activeMenu === 'tools' ? 'text-pink-500' : 'hover:text-gray-200'}`}>{t("Outils")}</button>
+            <button onClick={() => setActiveMenu(activeMenu === 'tools' ? null : 'tools')} className={`menu-btn transition-colors ${activeMenu === 'tools' ? 'text-[var(--accent-strong)]' : 'hover:text-gray-200'}`}>{t("Outils")}</button>
             {activeMenu === 'tools' && (
               <div className="dropdown-menu absolute top-full left-0 mt-2 w-72 bg-[#1e1e1e] border border-white/10 rounded-md shadow-lg py-1 z-50">
                 <button onClick={() => { setActiveMenu(null); if (typeof window !== 'undefined' && (window as any).electronAPI) (window as any).electronAPI.openHomeDir(); }} className="menu-item w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2" style={{ animationDelay: '0ms' }}><span className="w-4">📁</span> {t("Ouvrir le dossier d'Orbit")}</button>
@@ -515,12 +518,12 @@ export default function App() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-0.5 text-gray-500" style={{ WebkitAppRegion: 'no-drag' } as any}>
-          <button onClick={() => setShowSettings(true)} title={t("Réglages")} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/10 transition-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
-          <div className="w-px h-4 bg-white/10 mx-1.5"></div>
-          <button onClick={handleMinimize} title={t("Réduire")} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/10 transition-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-          <button onClick={() => (window as any).electronAPI?.toggleMaximizeWindow?.()} title={t("Agrandir / Restaurer")} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/10 transition-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg></button>
-          <button onClick={handleQuit} title={t("Quitter")} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-red-500/80 transition-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        <div className="flex items-center gap-1 text-gray-500" style={{ WebkitAppRegion: 'no-drag' } as any}>
+          <button onClick={() => setShowSettings(true)} title={t("Réglages")} className="winctl group text-gray-400 hover:text-[var(--accent-strong)] hover:bg-[var(--accent-soft)] hover:shadow-[0_0_14px_-2px_var(--accent-glow)]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300 group-hover:rotate-90"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+          <div className="w-px h-4 bg-white/10 mx-1"></div>
+          <button onClick={handleMinimize} title={t("Réduire")} className="winctl text-gray-400 hover:text-amber-200 hover:bg-amber-400/15 hover:shadow-[0_0_14px_-2px_rgba(251,191,36,0.5)]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+          <button onClick={() => (window as any).electronAPI?.toggleMaximizeWindow?.()} title={t("Agrandir / Restaurer")} className="winctl text-gray-400 hover:text-[var(--accent-strong)] hover:bg-[var(--accent-soft)] hover:shadow-[0_0_14px_-2px_var(--accent-glow)]"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="3" ry="3"></rect></svg></button>
+          <button onClick={handleQuit} title={t("Quitter")} className="winctl text-gray-400 hover:text-white hover:bg-red-500/90 hover:shadow-[0_0_16px_-2px_rgba(239,68,68,0.7)]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
       </div>
 

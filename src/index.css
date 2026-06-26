@@ -487,6 +487,52 @@ button:focus-visible {
 .os-stagger > *:nth-child(7) { animation-delay: 240ms; }
 .os-stagger > *:nth-child(8) { animation-delay: 280ms; }
 
+/* ── Window controls (custom title bar) ─────────────────────────────────── */
+.winctl {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 24px; border-radius: 8px;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease,
+              box-shadow var(--t-base) var(--ease-out), transform var(--t-fast) var(--ease-spring);
+}
+.winctl:hover { transform: translateY(-0.5px); }
+.winctl:active { transform: scale(0.9); }
+
+/* ── Orbit animated emblem (welcome / empty states) — pure CSS, no image ─── */
+.orbit-emblem { position: relative; perspective: 900px; animation: orbitFloat 7s ease-in-out infinite; }
+.orbit-emblem__core {
+  position: absolute; top: 50%; left: 50%; width: 34%; height: 34%;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--accent) 55%, #fff), var(--accent) 44%, var(--accent-2) 100%);
+  animation: orbitPulse 4.5s ease-in-out infinite;
+}
+.orbit-emblem__plane { position: absolute; inset: 0; transform-style: preserve-3d; }
+.orbit-emblem__plane--a { transform: rotateX(74deg); }
+.orbit-emblem__plane--b { transform: rotateX(74deg) rotateY(62deg); }
+.orbit-emblem__path {
+  position: absolute; inset: 5%; border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.orbit-emblem__plane--b .orbit-emblem__path { inset: 17%; border-color: color-mix(in srgb, var(--accent-2) 30%, transparent); }
+.orbit-emblem__spin { position: absolute; inset: 5%; animation: orbitSpin 9s linear infinite; }
+.orbit-emblem__plane--b .orbit-emblem__spin { inset: 17%; animation: orbitSpin 14s linear infinite reverse; }
+.orbit-emblem__moon {
+  position: absolute; top: -5px; left: 50%; width: 11px; height: 11px; margin-left: -5.5px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 0 12px 2px var(--accent-glow);
+  transform: rotateX(-74deg);
+}
+.orbit-emblem__plane--b .orbit-emblem__moon {
+  background: color-mix(in srgb, var(--accent-2) 45%, #fff);
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent-2) 55%, transparent);
+  transform: rotateX(-74deg) rotateY(-62deg);
+}
+@keyframes orbitSpin { to { transform: rotate(360deg); } }
+@keyframes orbitFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes orbitPulse {
+  0%, 100% { box-shadow: 0 0 30px -2px var(--accent-glow), 0 0 70px -6px var(--accent-glow), inset -6px -6px 16px rgba(0,0,0,.45), inset 4px 4px 10px rgba(255,255,255,.25); }
+  50%      { box-shadow: 0 0 44px 2px var(--accent-glow), 0 0 104px 0 var(--accent-glow), inset -6px -6px 16px rgba(0,0,0,.45), inset 4px 4px 10px rgba(255,255,255,.3); }
+}
+
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

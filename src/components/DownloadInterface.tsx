@@ -515,11 +515,19 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
       {/* Content Area */}
       <div className="flex-1 flex flex-col items-center justify-center relative">
         {downloads.length === 0 ? (
-          <div className="flex flex-col items-center text-center animate-in fade-in duration-1000">
-            <div className="w-56 h-56 mb-8 relative drop-shadow-[0_0_35px_rgba(236,72,153,0.4)] hover:scale-105 transition-transform duration-700">
-              <img src="/orbit.png" alt="Orbit Space" className="w-full h-full object-contain mix-blend-screen animate-[spin_60s_linear_infinite]" />
+          <div className="flex flex-col items-center text-center os-anim-fade">
+            <div className="orbit-emblem w-52 h-52 mb-8">
+              <div className="orbit-emblem__core" />
+              <div className="orbit-emblem__plane orbit-emblem__plane--a">
+                <div className="orbit-emblem__path" />
+                <div className="orbit-emblem__spin"><div className="orbit-emblem__moon" /></div>
+              </div>
+              <div className="orbit-emblem__plane orbit-emblem__plane--b">
+                <div className="orbit-emblem__path" />
+                <div className="orbit-emblem__spin"><div className="orbit-emblem__moon" /></div>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-2">{tr("Bienvenue dans Orbit")}</h2>
+            <h2 className="text-2xl font-bold os-text-gradient mb-2">{tr("Bienvenue dans Orbit")}</h2>
             <p className="text-gray-400 max-w-md">{tr("Saisissez l'URL d'une vidéo ou d'une playlist ci-dessus pour lancer votre trajectoire de téléchargement orbital.")}</p>
           </div>
         ) : (
