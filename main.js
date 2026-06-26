@@ -4536,6 +4536,33 @@ async function dropGetChunk(id, idx) {
   throw lastErr || new Error('Téléchargement du bloc échoué');
 }
 
+// Mode DIRECT : envoie un bloc directement à Discord via un webhook du pool
+// (aucun octet ne transite par Render → rapide, et plus de plantage sur gros
+// fichiers). Bascule de webhook à chaque tentative pour répartir la charge.
+async function dropPutChunkDirect(targets, idx, payload) {
+  let lastErr;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const t = targets[(idx + attempt) % targets.length];
+    try {
+      const r = await discloud.webhookUpload(t.url, 'drop_' + idx + '.orb', payload);
+      return { webhookId: t.id, messageId: r.messageId };
+    } catch (e) { lastErr = e; await cloudSleep(800 * (attempt + 1)); }
+  }
+  throw lastErr || new Error('Envoi du bloc échoué');
+}
+// Mode DIRECT : récupère un bloc en demandant au serveur un lien frais, puis en le
+// téléchargeant directement depuis le CDN Discord (le webhook reste caché).
+async function dropGetChunkDirect(id, idx) {
+  let lastErr;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const meta = await cloudJson('/api/drop/' + encodeURIComponent(id) + '/chunk/' + idx + '/url');
+      return await discloud.fetchBytes(meta.url);
+    } catch (e) { lastErr = e; await cloudSleep(1000 * (attempt + 1)); }
+  }
+  throw lastErr || new Error('Téléchargement du bloc échoué');
+}
+
 ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
   if (!cloud.server) return { ok: false, error: 'Serveur non configuré (mode Cloud).' };
   paths = (paths || []).filter(Boolean);
@@ -4543,7 +4570,13 @@ ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
   jobId = jobId || discloud.uuid();
   const results = [];
   try {
-    await cloudWake();   // réveille Render (évite le 502 sur le 1ᵉʳ bloc)
+    await cloudWake();   // réveille Render (évite le 502 sur le 1ᵉʳ appel)
+    // Récupère les webhooks du pool → envoi DIRECT à Discord (rapide, sans charger
+    // Render). Repli sur le relais serveur si aucun webhook n'est exposé.
+    let targets = [];
+    try { const t = await cloudJson('/api/drop/targets'); targets = (t && t.webhooks) || []; } catch (x) {}
+    const direct = targets.length > 0;
+    const conc = direct ? Math.min(8, Math.max(4, targets.length * 2)) : 3;
     for (let fi = 0; fi < paths.length; fi++) {
       const filePath = paths[fi];
       const stat = fs.statSync(filePath);
@@ -4556,13 +4589,13 @@ ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
       const chunks = new Array(numChunks);
       let uploaded = 0, doneCount = 0;
       try {
-        await discloud.runPool(numChunks, 3, async (i) => {
+        await discloud.runPool(numChunks, conc, async (i) => {
           if (discloudCancelled.has(jobId)) throw new Error('Annulé');
           const len = Math.min(CHUNK, total - i * CHUNK);
           const buf = Buffer.allocUnsafe(len);
           if (len > 0) await fh.read(buf, 0, len, i * CHUNK);
           const payload = discloud.encryptBuffer(key, buf);
-          const r = await dropPostChunk(payload);
+          const r = direct ? await dropPutChunkDirect(targets, i, payload) : await dropPostChunk(payload);
           chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
           uploaded += len; doneCount++;
           discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
@@ -4585,9 +4618,17 @@ ipcMain.handle('discloud-drop-download', async (e, { code, jobId } = {}) => {
   let key; try { key = Buffer.from(code.slice(sep + 1), 'base64url'); } catch (x) { key = Buffer.alloc(0); }
   if (key.length !== 32) return { ok: false, error: 'Code invalide (clé).' };
   let meta;
+  await cloudWake();   // réveille Render endormi (évite le 502 sur la 1ʳᵉ requête)
   try { meta = await cloudJson('/api/drop/' + encodeURIComponent(id)); } catch (er) { return { ok: false, error: er.message }; }
   const list = meta.chunks || [];
   const chunkSize = meta.chunkSize || discloud.CHUNK_SIZE;
+  // Détecte le mode DIRECT (serveur récent) : téléchargement direct depuis le CDN
+  // Discord (rapide), sinon repli sur le relais serveur.
+  let direct = false;
+  if (list.length) {
+    try { const probe = await cloudFetch('/api/drop/' + encodeURIComponent(id) + '/chunk/' + list[0].idx + '/url'); direct = probe.ok; } catch (x) {}
+  }
+  const conc = direct ? 6 : 3;
   const save = await dialog.showSaveDialog(uiWin(), { defaultPath: meta.name, title: 'Enregistrer le fichier' });
   if (save.canceled || !save.filePath) return { ok: false, error: 'Annulé', cancelled: true };
   jobId = jobId || discloud.uuid();
@@ -4595,10 +4636,10 @@ ipcMain.handle('discloud-drop-download', async (e, { code, jobId } = {}) => {
   let done = 0, doneCount = 0;
   try {
     try { await fh.truncate(meta.size || 0); } catch (x) {}
-    await discloud.runPool(list.length, 3, async (k) => {
+    await discloud.runPool(list.length, conc, async (k) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = list[k];
-      const blob = await dropGetChunk(id, ch.idx);
+      const blob = direct ? await dropGetChunkDirect(id, ch.idx) : await dropGetChunk(id, ch.idx);
       const plain = discloud.decryptBuffer(key, blob);
       await fh.write(plain, 0, plain.length, ch.idx * chunkSize);
       done += plain.length; doneCount++;
