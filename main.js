@@ -4490,6 +4490,52 @@ ipcMain.handle('discloud-tg-logout', () => tgm.logout());
 
 // ── Drop : partage de fichiers SANS compte (clé aléatoire dans le code) ───────
 // Code = "<id>~<cléBase64url>". Upload/download passent par le serveur (proxy Discord).
+
+// Réveille le serveur Render (endormi après ~15 min) avant un transfert, pour
+// éviter un HTTP 502 sur la 1ʳᵉ requête. Attend jusqu'à ~60 s le démarrage à froid.
+async function cloudWake() {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 55000);
+      try { const r = await cloudFetch('/health', { signal: ctrl.signal }); if (r.ok) return true; }
+      finally { clearTimeout(timer); }
+    } catch (e) {}
+    await cloudSleep(1500);
+  }
+  return false;
+}
+// Envoi d'un bloc de drop, avec retries (502 = réveil Render, 429, réseau).
+async function dropPostChunk(payload) {
+  let lastErr;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let res;
+    try {
+      const form = new FormData();
+      form.append('file', new Blob([payload]), 'd.orb');
+      res = await cloudFetch('/api/drop/chunk', { method: 'POST', body: form });
+    } catch (e) { lastErr = e; await cloudSleep(1500 * (attempt + 1)); continue; }
+    if (res.ok) return res.json();
+    if (res.status < 500 && res.status !== 429) { let b = null; try { b = await res.json(); } catch (x) {} throw new Error((b && b.error) || ('Envoi refusé (HTTP ' + res.status + ')')); }
+    lastErr = new Error('Envoi refusé (HTTP ' + res.status + ')');
+    await cloudSleep(1500 * (attempt + 1));
+  }
+  throw lastErr || new Error('Envoi du bloc échoué');
+}
+async function dropGetChunk(id, idx) {
+  let lastErr;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let res;
+    try { res = await cloudFetch('/api/drop/' + encodeURIComponent(id) + '/chunk/' + idx); }
+    catch (e) { lastErr = e; await cloudSleep(1500 * (attempt + 1)); continue; }
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+    if (res.status < 500 && res.status !== 429) throw new Error('Bloc indisponible (HTTP ' + res.status + ')');
+    lastErr = new Error('Bloc indisponible (HTTP ' + res.status + ')');
+    await cloudSleep(1500 * (attempt + 1));
+  }
+  throw lastErr || new Error('Téléchargement du bloc échoué');
+}
+
 ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
   if (!cloud.server) return { ok: false, error: 'Serveur non configuré (mode Cloud).' };
   paths = (paths || []).filter(Boolean);
@@ -4497,6 +4543,7 @@ ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
   jobId = jobId || discloud.uuid();
   const results = [];
   try {
+    await cloudWake();   // réveille Render (évite le 502 sur le 1ᵉʳ bloc)
     for (let fi = 0; fi < paths.length; fi++) {
       const filePath = paths[fi];
       const stat = fs.statSync(filePath);
@@ -4515,11 +4562,7 @@ ipcMain.handle('discloud-drop-upload', async (e, { paths, jobId } = {}) => {
           const buf = Buffer.allocUnsafe(len);
           if (len > 0) await fh.read(buf, 0, len, i * CHUNK);
           const payload = discloud.encryptBuffer(key, buf);
-          const form = new FormData();
-          form.append('file', new Blob([payload]), 'd.orb');
-          const res = await cloudFetch('/api/drop/chunk', { method: 'POST', body: form });
-          if (!res.ok) throw new Error('Envoi refusé (HTTP ' + res.status + ')');
-          const r = await res.json();
+          const r = await dropPostChunk(payload);
           chunks[i] = { idx: i, webhookId: r.webhookId, messageId: r.messageId, size: len };
           uploaded += len; doneCount++;
           discloudEmit({ id: jobId, phase: 'upload', name, fileIndex: fi, fileCount: paths.length, percent: total ? Math.round((uploaded / total) * 100) : 100, chunk: doneCount, chunks: numChunks });
@@ -4555,9 +4598,7 @@ ipcMain.handle('discloud-drop-download', async (e, { code, jobId } = {}) => {
     await discloud.runPool(list.length, 3, async (k) => {
       if (discloudCancelled.has(jobId)) throw new Error('Annulé');
       const ch = list[k];
-      const res = await cloudFetch('/api/drop/' + encodeURIComponent(id) + '/chunk/' + ch.idx);
-      if (!res.ok) throw new Error('Bloc indisponible (HTTP ' + res.status + ')');
-      const blob = Buffer.from(await res.arrayBuffer());
+      const blob = await dropGetChunk(id, ch.idx);
       const plain = discloud.decryptBuffer(key, blob);
       await fh.write(plain, 0, plain.length, ch.idx * chunkSize);
       done += plain.length; doneCount++;
