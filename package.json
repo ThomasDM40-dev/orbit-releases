@@ -1,6 +1,6 @@
 {
     "name": "frontend",
-    "version": "0.31.0",
+    "version": "0.31.1",
     "private": true,
     "main": "main.js",
     "scripts": {
@@ -10,7 +10,8 @@
         "electron:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:5173 && electron .\"",
         "electron:build": "npm run build && electron-builder build --win",
         "lint": "eslint .",
-        "i18n:check": "node scripts/i18n-check.mjs"
+        "i18n:check": "node scripts/i18n-check.mjs",
+        "postinstall": "node scripts/use-stubs.mjs"
     },
     "build": {
         "appId": "com.orbit.app",

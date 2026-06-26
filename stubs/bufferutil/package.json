@@ -1,0 +1,7 @@
+{
+  "name": "bufferutil",
+  "version": "4.0.9",
+  "description": "Pure-JS stub of bufferutil (no native build) for Orbit packaging.",
+  "main": "index.js",
+  "license": "MIT"
+}

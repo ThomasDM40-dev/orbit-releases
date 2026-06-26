@@ -1,0 +1,7 @@
+{
+  "name": "utf-8-validate",
+  "version": "5.0.10",
+  "description": "Pure-JS stub of utf-8-validate (no native build) for Orbit packaging.",
+  "main": "index.js",
+  "license": "MIT"
+}
