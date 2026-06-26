@@ -277,7 +277,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-[#101018]" />
           </div>
           <div className="leading-tight">
-            <p className="font-bold text-white text-sm">Orbit IA</p>
+            <p className="font-bold os-text-gradient text-sm">Orbit IA</p>
             <p className="text-[10px] text-gray-400">{tr("Assistant intégré")}</p>
           </div>
         </div>

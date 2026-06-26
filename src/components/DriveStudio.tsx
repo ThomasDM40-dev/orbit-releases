@@ -234,7 +234,7 @@ export default function DriveStudio() {
           <HardDrive className="w-6 h-6 text-white" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">{t('Drive Discord')} <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20 whitespace-nowrap">{t('Chiffré AES-256')}</span></h1>
+          <h1 className="text-xl font-bold flex items-center gap-2 flex-wrap"><span className="os-text-gradient">{t('Drive Discord')}</span> <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20 whitespace-nowrap">{t('Chiffré AES-256')}</span></h1>
           <p className="text-xs text-gray-500">{t('Stockez vos fichiers gratuitement sur un salon Discord, chiffrés de bout en bout.')}</p>
         </div>
       </div>

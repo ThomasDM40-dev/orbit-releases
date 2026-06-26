@@ -90,7 +90,7 @@ export default function MattingStudio() {
       <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500/30 to-cyan-500/30 flex items-center justify-center border border-white/10"><Scissors className="w-5 h-5 text-teal-400" /></div>
-          <div><h2 className="text-lg font-bold text-white">{t("Suppression de fond IA")}</h2><p className="text-[11px] text-gray-500">{t("Robust Video Matting · détourage en alpha, sans fond vert")}</p></div>
+          <div><h2 className="text-lg font-bold os-text-gradient">{t("Suppression de fond IA")}</h2><p className="text-[11px] text-gray-500">{t("Robust Video Matting · détourage en alpha, sans fond vert")}</p></div>
         </div>
       </div>
 

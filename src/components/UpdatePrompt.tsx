@@ -54,7 +54,7 @@ export default function UpdatePrompt() {
           {/* Header */}
           <div className="px-6 pt-6 pb-4 text-center relative" style={{ background: 'radial-gradient(ellipse at 50% -20%, color-mix(in srgb, var(--accent,#ec4899) 22%, transparent), transparent 70%)' }}>
             <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-3" style={{ background: 'color-mix(in srgb, var(--accent,#ec4899) 18%, transparent)', border: '1px solid color-mix(in srgb, var(--accent,#ec4899) 40%, transparent)' }}>✨</div>
-            <h2 className="text-lg font-bold text-white">{t("Mise à jour disponible")}</h2>
+            <h2 className="text-lg font-bold os-text-gradient">{t("Mise à jour disponible")}</h2>
             <p className="text-xs text-gray-400 mt-1">{phase === 'ready' ? t('Téléchargée — prête à installer') : phase === 'working' ? t('Mise à jour en cours…') : t('Souhaitez-vous mettre à jour maintenant ?')}</p>
           </div>
 

@@ -331,7 +331,7 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--accent) 18%, transparent)', boxShadow: '0 0 50px color-mix(in srgb, var(--accent) 30%, transparent)' }}>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
             </div>
-            <div className="text-center"><h2 className="text-3xl font-bold text-white">Orbit</h2><p className="text-gray-400 font-mono text-sm mt-1">{t("Version")} {appVersion || '…'}</p></div>
+            <div className="text-center"><h2 className="text-3xl font-bold os-text-gradient">Orbit</h2><p className="text-gray-400 font-mono text-sm mt-1">{t("Version")} {appVersion || '…'}</p></div>
 
             <div className="w-full max-w-sm rounded-2xl p-5 flex flex-col gap-3 border border-white/8 bg-white/[0.02]">
               <p className="text-[11px] text-gray-500 uppercase font-semibold tracking-wider text-center">{t("Mise à jour")}</p>

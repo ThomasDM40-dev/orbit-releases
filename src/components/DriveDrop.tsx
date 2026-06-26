@@ -56,7 +56,7 @@ export default function DriveDrop({ progress }: { progress?: { phase: string; na
             <Link2 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{t('Partage rapide (Drop)')}</h2>
+            <h2 className="text-lg font-bold os-text-gradient">{t('Partage rapide (Drop)')}</h2>
             <p className="text-xs text-gray-500">{t('Sans compte : dépose un fichier, partage le code, récupère-le quand tu veux.')}</p>
           </div>
         </div>

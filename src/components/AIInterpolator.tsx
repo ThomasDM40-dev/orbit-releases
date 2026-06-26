@@ -230,7 +230,7 @@ export default function AIInterpolator() {
             <Zap className="w-5 h-5 text-purple-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Orbit Interpolator</h2>
+            <h2 className="text-lg font-bold os-text-gradient">Orbit Interpolator</h2>
             <p className="text-xs text-gray-500">Powered by RIFE-NCNN Vulkan</p>
           </div>
         </div>
@@ -566,7 +566,7 @@ export default function AIInterpolator() {
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.3)] border border-purple-500/20">
               <Zap className="w-10 h-10 text-purple-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Orbit Interpolator</h2>
+            <h2 className="text-2xl font-bold os-text-gradient">Orbit Interpolator</h2>
             <p className="text-gray-500 text-sm text-center max-w-md">
               {t("Interpolation vidéo par IA utilisant RIFE-NCNN (Real-time Intermediate Flow Estimation). Compatible GPU Vulkan (NVIDIA, AMD, Intel).")}
             </p>

@@ -148,8 +148,11 @@ export default function Converter({ globalSettings }: { language?: string, globa
   return (
     <div className="p-6 h-full flex flex-col gap-6 bg-transparent">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-200 flex items-center gap-2">
-          <Settings className="w-5 h-5 text-pink-500" /> {t("Convertisseur & Orbit AI Studio")}
+        <h2 className="text-xl font-bold flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent-border)' }}>
+            <Settings className="w-5 h-5" style={{ color: 'var(--accent-strong)' }} />
+          </span>
+          <span className="os-text-gradient">{t("Convertisseur & Orbit AI Studio")}</span>
         </h2>
         <button onClick={() => setItems([])} className="text-xs text-red-400 hover:text-red-300 transition-colors">{t("Tout effacer")}</button>
       </div>

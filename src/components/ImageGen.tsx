@@ -160,7 +160,7 @@ export default function ImageGen() {
             <Wand2 className="w-5 h-5 text-fuchsia-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{t("Génération d'image IA")} <span className="text-fuchsia-400">·</span> <span className="text-xs font-normal text-gray-500">{t("Flux — gratuit & illimité")}</span></h2>
+            <h2 className="text-lg font-bold"><span className="os-text-gradient">{t("Génération d'image IA")}</span> <span className="text-fuchsia-400">·</span> <span className="text-xs font-normal text-gray-500">{t("Flux — gratuit & illimité")}</span></h2>
             <p className="text-[11px] text-gray-500">{t("Décris ton image, choisis un style, et laisse l'IA créer. Aucune clé requise.")}</p>
           </div>
         </div>

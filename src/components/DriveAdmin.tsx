@@ -71,7 +71,7 @@ export default function DriveAdmin({ onClose }: { onClose: () => void }) {
         style={{ background: 'rgba(15,15,25,0.95)', backdropFilter: 'blur(24px)' }}
       >
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
-          <h2 className="text-base font-semibold text-white flex items-center gap-2"><FolderCog className="w-5 h-5 text-pink-400" /> {t('Webhooks & profils')}</h2>
+          <h2 className="text-base font-semibold flex items-center gap-2"><FolderCog className="w-5 h-5" style={{ color: 'var(--accent-strong)' }} /> <span className="os-text-gradient">{t('Webhooks & profils')}</span></h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
 

@@ -188,7 +188,7 @@ export default function OrbitEnhance() {
             <Sparkles className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{t("Amélioration IA")} <span className="text-cyan-400">·</span> <span className="text-xs font-normal text-gray-500">{t("moteur libre")}</span></h2>
+            <h2 className="text-lg font-bold"><span className="os-text-gradient">{t("Amélioration IA")}</span> <span className="text-cyan-400">·</span> <span className="text-xs font-normal text-gray-500">{t("moteur libre")}</span></h2>
             <p className="text-[11px] text-gray-500">
               {detect ? <>Real-ESRGAN {detect.esrganInstalled ? '✓' : t('(à installer)')} · RIFE {detect.rifeInstalled ? '✓' : t('(via Interpolateur)')} {detect.nvidia ? '· ' + detect.nvidia : ''}{detect.hasNvenc ? ' · NVENC' : ''}</> : t('Détection…')}
             </p>

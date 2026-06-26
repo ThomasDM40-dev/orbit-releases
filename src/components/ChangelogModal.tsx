@@ -59,9 +59,9 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-purple-500/10 opacity-50" />
-          <h2 className="text-xl font-bold text-white flex items-center gap-3 relative z-10">
-            <Sparkles className="w-5 h-5 text-pink-400" />
-            {t("Nouveautés & Historique")}
+          <h2 className="text-xl font-bold flex items-center gap-3 relative z-10">
+            <Sparkles className="w-5 h-5" style={{ color: 'var(--accent-strong)' }} />
+            <span className="os-text-gradient">{t("Nouveautés & Historique")}</span>
           </h2>
           <button 
             onClick={onClose}

@@ -128,7 +128,7 @@ export default function MediaLibrary() {
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-white/5">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/30 to-violet-500/30 flex items-center justify-center border border-white/10"><Library className="w-5 h-5 text-indigo-400" /></div>
-        <div className="mr-2"><h2 className="text-base font-bold text-white leading-tight">{t("Médiathèque")}</h2><p className="text-[10px] text-gray-500">{t("{n} médias", { n: items.length })}</p></div>
+        <div className="mr-2"><h2 className="text-base font-bold os-text-gradient leading-tight">{t("Médiathèque")}</h2><p className="text-[10px] text-gray-500">{t("{n} médias", { n: items.length })}</p></div>
         <div className="flex-1 relative max-w-md">
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t("Recherche instantanée…")} className={INPUT + ' w-full pl-9'} />

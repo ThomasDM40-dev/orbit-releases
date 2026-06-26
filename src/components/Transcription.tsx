@@ -102,8 +102,8 @@ export default function Transcription() {
 
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span>📝</span> Orbit Transcription
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <span>📝</span> <span className="os-text-gradient">Orbit Transcription</span>
           </h2>
           <p className="text-sm text-gray-500 mt-1">
             {tr("Transcris n'importe quelle vidéo/audio par IA, puis exporte vers Premiere, After Effects, CapCut, DaVinci…")}

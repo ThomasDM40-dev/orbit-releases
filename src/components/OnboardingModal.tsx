@@ -47,7 +47,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: (r: { visi
           <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-3" style={{ background: 'color-mix(in srgb, var(--accent,#ec4899) 18%, transparent)', border: '1px solid color-mix(in srgb, var(--accent,#ec4899) 40%, transparent)' }}>
             <Sparkles className="w-7 h-7" style={{ color: 'var(--accent,#ec4899)' }} />
           </div>
-          <h2 className="text-2xl font-bold text-white">{tr("Bienvenue dans Orbit")}</h2>
+          <h2 className="text-2xl font-bold os-text-gradient">{tr("Bienvenue dans Orbit")}</h2>
           <p className="text-sm text-gray-400 mt-1">{tr("Dis-nous ce que tu fais — on affichera les bons outils pour toi.")}</p>
         </div>
 

@@ -481,11 +481,17 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
       {/* Secondary Toolbar */}
       <div className="flex items-center justify-between mb-8 text-gray-400 border-b border-white/5 pb-2 mt-2">
         <div className="flex items-center gap-3">
-          <button onClick={() => setViewLayout('grid')} className={`p-1 rounded transition-colors ${viewLayout === 'grid' ? 'bg-pink-500 text-white' : 'hover:text-white'}`}><LayoutGrid className="w-4 h-4" /></button>
-          <button onClick={() => setViewLayout('list')} className={`p-1 rounded transition-colors ${viewLayout === 'list' ? 'bg-pink-500 text-white' : 'hover:text-white'}`}><List className="w-4 h-4" /></button>
-          <button onClick={() => setViewLayout('terminal')} className={`p-1 rounded transition-colors ${viewLayout === 'terminal' ? 'bg-pink-500 text-white' : 'hover:text-white'}`}><TerminalSquare className="w-4 h-4" /></button>
-          <div className="w-px h-4 bg-white/10 mx-1"></div>
-          <button onClick={clearCompleted} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors" title={tr("Effacer les terminés")}><Trash className="w-4 h-4" /> {tr("Effacer")}</button>
+          <div className="inline-flex items-center gap-0.5 p-0.5 rounded-xl bg-white/5 border border-white/10">
+            {([['grid', LayoutGrid], ['list', List], ['terminal', TerminalSquare]] as const).map(([mode, Icon]) => (
+              <button
+                key={mode}
+                onClick={() => setViewLayout(mode)}
+                className={`p-1.5 rounded-lg transition-all ${viewLayout === mode ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                style={viewLayout === mode ? { background: 'linear-gradient(135deg, var(--accent-strong), var(--accent-2))', boxShadow: '0 2px 10px -2px var(--accent-glow)' } : undefined}
+              ><Icon className="w-4 h-4" /></button>
+            ))}
+          </div>
+          <button onClick={clearCompleted} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-all" title={tr("Effacer les terminés")}><Trash className="w-4 h-4" /> {tr("Effacer")}</button>
         </div>
         <div className="flex items-center gap-3">
           <GlassSelect
@@ -499,7 +505,7 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
             className="w-40 py-1.5 text-xs"
             ariaLabel={tr("Trier")}
           />
-          <button onClick={handleSelectDir} className="flex items-center gap-2 border border-pink-500 text-pink-500 rounded-full px-3 py-1 text-xs font-medium hover:bg-pink-500/10 transition-colors truncate max-w-[200px]">
+          <button onClick={handleSelectDir} className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition-all truncate max-w-[200px] hover:brightness-110" style={{ color: 'var(--accent-strong)', border: '1px solid var(--accent-border)', background: 'var(--accent-soft)' }}>
             <Folder className="w-3 h-3 flex-shrink-0" />
             {outputDir}
           </button>

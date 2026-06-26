@@ -47,8 +47,50 @@ html, body {
   background: rgba(255,255,255,0.2);
 }
 
-/* Accent colour (overridden at runtime from Settings → Apparence) */
-:root { --accent: #ec4899; }
+/* ════════════════════════════════════════════════════════════════════════
+   ORBIT DESIGN SYSTEM — design tokens
+   Single source of truth for colour, depth, motion and spacing. `--accent` is
+   overridden at runtime from Settings → Apparence; everything else is derived
+   from it so the whole UI re-tints cohesively when the accent changes.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  --accent: #ec4899;
+  /* accent ramp (derived from --accent so theming stays cohesive) */
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-strong: color-mix(in srgb, var(--accent) 85%, white 0%);
+  --accent-glow: color-mix(in srgb, var(--accent) 45%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent) 32%, transparent);
+  --accent-2: #a855f7; /* secondary gradient stop for premium gradients */
+
+  /* surfaces */
+  --surface-0: rgba(255,255,255,0.02);
+  --surface-1: rgba(255,255,255,0.04);
+  --surface-2: rgba(255,255,255,0.06);
+  --surface-3: rgba(255,255,255,0.09);
+  --hairline: rgba(255,255,255,0.08);
+  --hairline-strong: rgba(255,255,255,0.14);
+
+  /* radii */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-2xl: 24px;
+
+  /* elevation (soft, realistic, layered) */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 1px 0 rgba(255,255,255,.04) inset;
+  --shadow-md: 0 6px 20px -6px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.05) inset;
+  --shadow-lg: 0 18px 50px -12px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.06) inset;
+  --shadow-glow: 0 10px 34px -8px var(--accent-glow);
+
+  /* motion — keep between 150–300ms, GPU-friendly easings */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 150ms;
+  --t-base: 220ms;
+  --t-slow: 300ms;
+}
 
 /* THEMES OVERRIDES */
 html.theme-light {
@@ -183,7 +225,7 @@ html.theme-midnight .bg-\[\#ff2a6d\] {
    instead of the raw OS control) ─────────────────────────────────────────── */
 select {
   color-scheme: dark;
-  accent-color: #ec4899;
+  accent-color: var(--accent);
   appearance: none;
   -webkit-appearance: none;
   background-color: rgba(255, 255, 255, 0.04);
@@ -199,8 +241,8 @@ select {
 select:hover { border-color: rgba(255, 255, 255, 0.2); }
 select:focus, select:focus-visible {
   outline: none;
-  border-color: rgba(236, 72, 153, 0.55);
-  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.12);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 select option {
   background-color: #14141a;
@@ -215,20 +257,23 @@ select optgroup {
 }
 
 /* Buttons: smooth feedback + clear keyboard focus everywhere */
-button { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease; }
+button { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.18s var(--ease-out), transform 0.12s var(--ease-spring); }
 button:not(:disabled):active { transform: scale(0.97); }
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.35);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
-/* Glassmorphism Panel */
+/* Text selection picks up the active accent */
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: #fff; }
+
+/* Glassmorphism Panel — refined depth + crisp top highlight */
 .glass-panel {
-  background: rgba(20, 20, 20, 0.4);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  background: rgba(20, 20, 22, 0.42);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 8px 32px 0 rgba(0, 0, 0, 0.34);
 }
 
 /* Deep Space Animated Background */
@@ -330,4 +375,124 @@ button:focus-visible {
 /* Shimmer placeholder for AI image generation tiles (Génération d'image IA) */
 @keyframes shimmer {
   100% { transform: translateX(200%); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ORBIT DESIGN SYSTEM — reusable components & motion
+   Opt-in classes used across studios for a consistent premium look. They are
+   additive: existing Tailwind markup keeps working untouched.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cards / panels ─────────────────────────────────────────────────────── */
+.os-card {
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+/* interactive card lifts + glows softly on hover */
+.os-card-interactive { transition: transform var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease-out); }
+.os-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.os-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.55rem 1rem; border-radius: var(--r-md);
+  font-weight: 600; font-size: 0.875rem; line-height: 1;
+  border: 1px solid transparent; cursor: pointer; user-select: none;
+  transition: transform var(--t-fast) var(--ease-spring), box-shadow var(--t-base) var(--ease-out),
+              background-color var(--t-fast) ease, border-color var(--t-fast) ease, filter var(--t-fast) ease;
+}
+.os-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.os-btn:not(:disabled):hover { transform: translateY(-1px); }
+.os-btn:not(:disabled):active { transform: translateY(0) scale(0.97); }
+
+/* primary — accent gradient with depth + glow on hover */
+.os-btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent-2));
+  border-color: color-mix(in srgb, #fff 18%, transparent);
+  box-shadow: 0 6px 18px -6px var(--accent-glow), 0 1px 0 rgba(255,255,255,.22) inset;
+}
+.os-btn-primary:not(:disabled):hover { filter: brightness(1.06); box-shadow: 0 12px 30px -8px var(--accent-glow), 0 1px 0 rgba(255,255,255,.28) inset; }
+
+/* secondary — glass */
+.os-btn-secondary {
+  color: #e5e7eb;
+  background: var(--surface-2);
+  border-color: var(--hairline);
+  box-shadow: var(--shadow-sm);
+}
+.os-btn-secondary:not(:disabled):hover { background: var(--surface-3); border-color: var(--hairline-strong); }
+
+/* ghost — minimal */
+.os-btn-ghost { color: #9ca3af; background: transparent; }
+.os-btn-ghost:not(:disabled):hover { color: #e5e7eb; background: var(--surface-2); }
+
+/* loading state: dim + show wait cursor (pair with a spinner icon) */
+.os-btn.is-loading { pointer-events: none; opacity: 0.8; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+.os-input {
+  width: 100%;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  padding: 0.6rem 0.8rem; font-size: 0.875rem; color: #e5e7eb;
+  outline: none;
+  transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease, background-color var(--t-fast) ease;
+}
+.os-input::placeholder { color: #6b7280; }
+.os-input:hover { background: var(--surface-2); }
+.os-input:focus { border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-ring); background: var(--surface-2); }
+
+/* ── Chips / badges ─────────────────────────────────────────────────────── */
+.os-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.2rem 0.6rem; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
+  background: var(--accent-soft); color: var(--accent-strong);
+  border: 1px solid var(--accent-border);
+}
+
+/* ── Glow & gradient text utilities ─────────────────────────────────────── */
+.os-glow { box-shadow: var(--shadow-glow); }
+.os-text-gradient {
+  background: linear-gradient(120deg, #fff, color-mix(in srgb, var(--accent) 70%, #fff));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.os-hairline { border-color: var(--hairline); }
+
+/* ── Entrance / page-transition animations ──────────────────────────────── */
+@keyframes osFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes osSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes osScaleIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+.os-anim-fade { animation: osFadeIn var(--t-slow) var(--ease-out) both; }
+.os-anim-up { animation: osSlideUp var(--t-slow) var(--ease-out) both; }
+.os-anim-scale { animation: osScaleIn var(--t-base) var(--ease-out) both; }
+/* stagger helpers for lists/grids */
+.os-stagger > * { animation: osSlideUp var(--t-slow) var(--ease-out) both; }
+.os-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.os-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.os-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.os-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.os-stagger > *:nth-child(5) { animation-delay: 160ms; }
+.os-stagger > *:nth-child(6) { animation-delay: 200ms; }
+.os-stagger > *:nth-child(7) { animation-delay: 240ms; }
+.os-stagger > *:nth-child(8) { animation-delay: 280ms; }
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

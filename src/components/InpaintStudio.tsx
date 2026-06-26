@@ -224,7 +224,7 @@ export default function InpaintStudio() {
             <Eraser className="w-5 h-5 text-rose-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{t("Gomme magique IA")} <span className="text-rose-400">·</span> <span className="text-xs font-normal text-gray-500">{t("effacer ou générer — gratuit")}</span></h2>
+            <h2 className="text-lg font-bold"><span className="os-text-gradient">{t("Gomme magique IA")}</span> <span className="text-rose-400">·</span> <span className="text-xs font-normal text-gray-500">{t("effacer ou générer — gratuit")}</span></h2>
             <p className="text-[11px] text-gray-500">{t("Peins une zone. Sans prompt l'IA efface l'objet ; avec un prompt elle génère ce que tu veux à la place.")}</p>
           </div>
         </div>

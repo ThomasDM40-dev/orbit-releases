@@ -78,9 +78,9 @@ export default function ImportModal({ onClose }: ImportModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl animate-in fade-in duration-200" onClick={onClose}>
-      <div className="glass-panel rounded-xl shadow-2xl w-full max-w-2xl p-8 flex flex-col" onClick={(e) => e.stopPropagation()}>
-        
-        <h2 className="text-2xl font-bold text-white mb-2">{t.title}</h2>
+      <div className="glass-panel os-anim-scale rounded-2xl shadow-2xl w-full max-w-2xl p-8 flex flex-col" onClick={(e) => e.stopPropagation()}>
+
+        <h2 className="text-2xl font-bold os-text-gradient mb-2">{t.title}</h2>
         <p className="text-gray-400 text-sm mb-6 leading-relaxed">
           {t.desc}
         </p>

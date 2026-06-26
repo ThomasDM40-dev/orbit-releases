@@ -127,13 +127,13 @@ export default function GlassSelect({ value, onChange, options, className = "", 
         }
         style={{
           background: "rgba(255,255,255,0.04)",
-          border: "1px solid " + (open ? "rgba(236,72,153,0.55)" : "rgba(255,255,255,0.10)"),
+          border: "1px solid " + (open ? "var(--accent-border)" : "rgba(255,255,255,0.10)"),
           backdropFilter: "blur(12px)",
-          boxShadow: open ? "0 0 0 3px rgba(236,72,153,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.04)",
+          boxShadow: open ? "0 0 0 3px var(--accent-ring)" : "inset 0 1px 0 rgba(255,255,255,0.04)",
         }}
       >
         <span className={"truncate " + (selected ? "" : "text-gray-500")}>{selected ? selected.label : placeholder}</span>
-        <ChevronDown className={"w-4 h-4 flex-shrink-0 text-gray-400 transition-transform duration-200 " + (open ? "rotate-180 text-pink-400" : "group-hover/gs:text-gray-200")} />
+        <ChevronDown className={"w-4 h-4 flex-shrink-0 text-gray-400 transition-transform duration-200 " + (open ? "rotate-180" : "group-hover/gs:text-gray-200")} style={open ? { color: 'var(--accent-strong)' } : undefined} />
       </button>
 
       {open && pos && createPortal(
@@ -168,11 +168,12 @@ export default function GlassSelect({ value, onChange, options, className = "", 
                 onClick={() => !row.opt.disabled && commit(row.opt.value)}
                 className={
                   "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm text-left transition-colors disabled:opacity-40 disabled:cursor-default " +
-                  (row.idx === activeIdx ? "bg-pink-500/15 text-white" : "text-gray-300")
+                  (row.idx === activeIdx ? "text-white" : "text-gray-300")
                 }
+                style={row.idx === activeIdx ? { background: 'var(--accent-soft)' } : undefined}
               >
                 <span className="flex-1 truncate">{row.opt.label}</span>
-                {row.opt.value === value && <Check className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />}
+                {row.opt.value === value && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--accent-strong)' }} />}
               </button>
             )
           )}
