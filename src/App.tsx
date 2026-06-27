@@ -6,11 +6,12 @@ import UpdatePrompt from "@/components/UpdatePrompt";
 import OnboardingModal from "@/components/OnboardingModal";
 import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
+import OrbitSpinner from "@/components/OrbitSpinner";
 import AIAssistant from "@/components/AIAssistant";
 import PremiumModal from "@/components/PremiumModal";
 import PremiumGate from "@/components/PremiumGate";
 import { usePremium, PREMIUM_TABS } from "@/premium";
-import { Sparkles, UploadCloud, Loader2 } from "lucide-react";
+import { Sparkles, UploadCloud } from "lucide-react";
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { t, getLang, setLang, LANGS, type Lang } from "@/i18n";
@@ -473,7 +474,7 @@ export default function App() {
         {locked ? (
           <PremiumGate onUnlock={() => setShowPremium(true)} />
         ) : visited.has(id) && (
-          <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-gray-600"><Loader2 className="w-7 h-7 animate-spin" /></div>}>
+          <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><OrbitSpinner size={34} /></div>}>
             {node}
           </Suspense>
         )}

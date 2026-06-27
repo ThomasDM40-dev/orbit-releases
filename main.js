@@ -4439,12 +4439,16 @@ ipcMain.handle('discloud-delete', async (e, { id } = {}) => {
 //  voit que du chiffré. Le sel + verifier vivent sur le serveur (multi-appareils).
 // ─────────────────────────────────────────────────────────────────────────────
 const CLOUD_CFG = path.join(DISCLOUD_DIR, 'cloud.json');
-let cloud = { server: '', token: '', email: '', admin: false };
+// Serveur officiel Orbit par défaut : les utilisateurs n'ont rien à configurer
+// pour acheter le Premium / utiliser le Drive. Reste surchargeable (cloudSetServer).
+const DEFAULT_CLOUD_SERVER = 'https://orbit-drive.onrender.com';
+let cloud = { server: DEFAULT_CLOUD_SERVER, token: '', email: '', admin: false };
 try { cloud = { ...cloud, ...JSON.parse(fs.readFileSync(CLOUD_CFG, 'utf8')) }; } catch (e) {}
+if (!cloud.server) cloud.server = DEFAULT_CLOUD_SERVER;
 let cloudKey = null;
 function saveCloud() { try { fs.mkdirSync(DISCLOUD_DIR, { recursive: true }); fs.writeFileSync(CLOUD_CFG, JSON.stringify(cloud)); } catch (e) {} }
 
-function cloudBase() { if (!cloud.server) throw new Error('Serveur non configuré.'); return cloud.server.replace(/\/+$/, ''); }
+function cloudBase() { return (cloud.server || DEFAULT_CLOUD_SERVER).replace(/\/+$/, ''); }
 async function cloudFetch(p, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (cloud.token) headers['Authorization'] = 'Bearer ' + cloud.token;

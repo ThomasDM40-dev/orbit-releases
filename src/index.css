@@ -587,6 +587,26 @@ button:focus-visible {
   50%      { box-shadow: 0 0 46px 2px var(--accent-glow), inset -7px -7px 18px rgba(0,0,0,.5), inset 5px 5px 12px rgba(255,255,255,.32); }
 }
 
+/* ── Orbit spinner : anneau conique + lune en orbite (transform GPU, ne fige pas) ── */
+.os-spinner { position: relative; display: inline-block; flex: none; }
+.os-spinner__ring,
+.os-spinner__orbit { position: absolute; inset: 0; border-radius: 50%; }
+.os-spinner__ring {
+  background: conic-gradient(from 90deg, transparent 0 28%, var(--accent-2, #a855f7), var(--accent-strong, #e879f9) 92%, transparent);
+  -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 3.5px), #000 calc(100% - 3px));
+          mask: radial-gradient(farthest-side, #0000 calc(100% - 3.5px), #000 calc(100% - 3px));
+  animation: osSpin 0.8s linear infinite;
+  will-change: transform;
+}
+.os-spinner__orbit { animation: osSpin 1.5s linear infinite; will-change: transform; }
+.os-spinner__moon {
+  position: absolute; top: -1px; left: 50%; margin-left: -11%;
+  width: 22%; height: 22%; border-radius: 50%;
+  background: var(--accent-strong, #e879f9);
+  box-shadow: 0 0 8px 1px var(--accent-glow, rgba(232,121,249,.6));
+}
+@keyframes osSpin { to { transform: rotate(360deg); } }
+
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

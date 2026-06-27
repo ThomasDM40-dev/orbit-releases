@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Check, Loader2, X, ShieldCheck, AlertCircle, CreditCard, Sparkles, Zap, Lock, LogOut, RefreshCw } from 'lucide-react';
+import { Crown, Check, X, ShieldCheck, AlertCircle, CreditCard, Sparkles, Zap, Lock, LogOut, RefreshCw } from 'lucide-react';
 import { usePremium } from '@/premium';
+import OrbitSpinner from '@/components/OrbitSpinner';
 import { t } from '@/i18n';
 
 const PRICE = '14,99 €';
@@ -29,6 +30,7 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
   const [showKey, setShowKey] = useState(false);
   const [key, setKey] = useState('');
   const pollRef = useRef<any>(null);
+  const syncingRef = useRef(false);   // évite d'empiler les requêtes pendant un cold-start
 
   const loadAcct = async () => {
     try {
@@ -74,8 +76,11 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
       if (pollRef.current) clearInterval(pollRef.current);
       let n = 0;
       pollRef.current = setInterval(async () => {
+        if (syncingRef.current) return;   // une requête est déjà en vol (serveur lent)
         n++;
-        const s = await sync();
+        syncingRef.current = true;
+        let s: any;
+        try { s = await sync(); } finally { syncingRef.current = false; }
         if (s?.premium || n > 100) { clearInterval(pollRef.current); pollRef.current = null; if (n > 100) setWaiting(false); }
       }, 4000);
     } finally { setBusy(false); }
@@ -129,13 +134,13 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
               <p className="text-xs text-gray-500 text-center">{t('Merci ! Tous les outils sont débloqués.')}</p>
             </div>
           ) : acct.loading ? (
-            <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+            <div className="py-10 flex justify-center"><OrbitSpinner size={30} /></div>
           ) : !acct.server ? (
             /* ── 1. Serveur non configuré ── */
             <div className="space-y-3">
               <p className="text-sm text-gray-300">{t('Connecte d\'abord le serveur Orbit pour gérer ton compte et ton Premium.')}</p>
               <input value={serverUrl} onChange={e => setServerUrl(e.target.value)} placeholder="https://mon-serveur.onrender.com" className="os-input text-sm select-text" />
-              <button onClick={saveServer} disabled={busy || !serverUrl.trim()} className="os-btn os-btn-primary w-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {t('Connecter le serveur')}</button>
+              <button onClick={saveServer} disabled={busy || !serverUrl.trim()} className="os-btn os-btn-primary w-full">{busy ? <OrbitSpinner size={16} /> : null} {t('Connecter le serveur')}</button>
             </div>
           ) : !acct.loggedIn ? (
             /* ── 2. Connexion / inscription ── */
@@ -143,7 +148,7 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
               <p className="text-sm text-gray-300">{isRegister ? t('Crée ton compte Orbit pour acheter Premium.') : t('Connecte-toi à ton compte Orbit.')}</p>
               <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder={t('Adresse e-mail')} className="os-input text-sm select-text" />
               <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder={t('Mot de passe')} onKeyDown={e => e.key === 'Enter' && doAuth()} className="os-input text-sm select-text" />
-              <button onClick={doAuth} disabled={busy || !email.trim() || !password} className="os-btn os-btn-primary w-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {isRegister ? t('Créer le compte') : t('Se connecter')}</button>
+              <button onClick={doAuth} disabled={busy || !email.trim() || !password} className="os-btn os-btn-primary w-full">{busy ? <OrbitSpinner size={16} /> : null} {isRegister ? t('Créer le compte') : t('Se connecter')}</button>
               <button onClick={() => { setIsRegister(v => !v); setError(null); }} className="w-full text-center text-xs text-gray-400 hover:text-white transition-colors">
                 {isRegister ? t('J\'ai déjà un compte → Se connecter') : t('Pas de compte ? En créer un')}
               </button>
@@ -170,14 +175,14 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
               {waiting ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-white/[0.04] border border-white/10">
-                    <Loader2 className="w-5 h-5 animate-spin shrink-0" style={{ color: 'var(--accent-strong)' }} />
+                    <OrbitSpinner size={22} className="shrink-0" />
                     <div className="text-xs text-gray-300">{t('En attente de la confirmation du paiement… Le Premium se débloque automatiquement.')}</div>
                   </div>
                   <button onClick={checkNow} disabled={busy} className="os-btn os-btn-secondary w-full"><RefreshCw className="w-4 h-4" /> {t('J\'ai payé — vérifier maintenant')}</button>
                 </div>
               ) : (
                 <button onClick={buy} disabled={busy} className="os-btn os-btn-primary w-full">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} {t('Acheter — {price}', { price: PRICE })}
+                  {busy ? <OrbitSpinner size={16} /> : <CreditCard className="w-4 h-4" />} {t('Acheter — {price}', { price: PRICE })}
                 </button>
               )}
 

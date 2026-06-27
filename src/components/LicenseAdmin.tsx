@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Loader2, AlertCircle, Crown, ShieldCheck, ShieldOff, Smartphone, KeyRound,
+  X, AlertCircle, Crown, ShieldCheck, ShieldOff, Smartphone, KeyRound,
   Copy, Check, RefreshCw, Users, CreditCard, Search, Trash2, ChevronDown, Gift, Mail, Calendar, Fingerprint, Hash, Tag,
 } from 'lucide-react';
 import { t } from '@/i18n';
+import OrbitSpinner from '@/components/OrbitSpinner';
 
 const api = () => (window as any).electronAPI;
 const INPUT = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 outline-none hover:bg-white/10 focus:border-pink-500/50 transition-all w-full select-text";
@@ -35,6 +36,7 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
   const [filter, setFilter] = useState<'all' | 'premium' | 'free'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<Lic | null>(null);
 
   const [grantEmail, setGrantEmail] = useState('');
   const [genEmail, setGenEmail] = useState('');
@@ -69,7 +71,7 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
   const revoke = (email: string) => act('revoke:' + email, () => api().licenseAdminRevoke(email));
   const resetDevice = (email: string) => act('reset:' + email, () => api().licenseAdminResetDevice(email));
   const del = async (email: string) => {
-    if (!window.confirm(t('Supprimer définitivement le compte {email} ? Cette action est irréversible.', { email }))) return;
+    setConfirmDel(null);
     await act('del:' + email, () => api().licenseAdminDeleteUser(email));
   };
 
@@ -174,7 +176,7 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
                 <div className="flex gap-2">
                   <input className={INPUT} type="email" placeholder={t('e-mail du compte…')} value={grantEmail} onChange={e => setGrantEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && doGrantNew()} />
                   <button onClick={doGrantNew} disabled={busy === 'grantnew' || !grantEmail.trim()} className="shrink-0 px-4 rounded-lg bg-pink-500/20 text-pink-300 hover:bg-pink-500/30 disabled:opacity-40 text-sm font-semibold flex items-center gap-1.5">
-                    {busy === 'grantnew' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />} {t('Offrir')}
+                    {busy === 'grantnew' ? <OrbitSpinner size={16} /> : <Crown className="w-4 h-4" />} {t('Offrir')}
                   </button>
                 </div>
               </div>
@@ -194,7 +196,7 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
               </div>
 
               {loading ? (
-                <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+                <div className="py-10 flex justify-center"><OrbitSpinner size={28} /></div>
               ) : filtered.length === 0 ? (
                 <p className="text-sm text-gray-600 py-8 text-center">{t('Aucun compte.')}</p>
               ) : (
@@ -234,20 +236,20 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
                                 <div className="flex flex-wrap items-center gap-2 pt-1">
                                   {u.premium ? (
                                     <button onClick={() => revoke(u.email)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-300 hover:bg-red-500/20 flex items-center gap-1.5 disabled:opacity-40">
-                                      {busy === 'revoke:' + u.email ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldOff className="w-3.5 h-3.5" />} {t('Révoquer Premium')}
+                                      {busy === 'revoke:' + u.email ? <OrbitSpinner size={14} /> : <ShieldOff className="w-3.5 h-3.5" />} {t('Révoquer Premium')}
                                     </button>
                                   ) : (
                                     <button onClick={() => grant(u.email)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-500/10 text-green-300 hover:bg-green-500/20 flex items-center gap-1.5 disabled:opacity-40">
-                                      {busy === 'grant:' + u.email ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} {t('Donner Premium')}
+                                      {busy === 'grant:' + u.email ? <OrbitSpinner size={14} /> : <ShieldCheck className="w-3.5 h-3.5" />} {t('Donner Premium')}
                                     </button>
                                   )}
                                   {u.device && (
                                     <button onClick={() => resetDevice(u.email)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1.5 disabled:opacity-40">
-                                      {busy === 'reset:' + u.email ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Smartphone className="w-3.5 h-3.5" />} {t('Réinitialiser l\'appareil')}
+                                      {busy === 'reset:' + u.email ? <OrbitSpinner size={14} /> : <Smartphone className="w-3.5 h-3.5" />} {t('Réinitialiser l\'appareil')}
                                     </button>
                                   )}
-                                  <button onClick={() => del(u.email)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-1.5 disabled:opacity-40 ml-auto">
-                                    {busy === 'del:' + u.email ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {t('Supprimer le compte')}
+                                  <button onClick={() => setConfirmDel(u)} disabled={!!busy} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-1.5 disabled:opacity-40 ml-auto">
+                                    {busy === 'del:' + u.email ? <OrbitSpinner size={14} /> : <Trash2 className="w-3.5 h-3.5" />} {t('Supprimer le compte')}
                                   </button>
                                 </div>
                               </div>
@@ -287,7 +289,7 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
               <div className="flex gap-2">
                 <input className={INPUT} type="email" placeholder={t('Adresse e-mail du client')} value={genEmail} onChange={e => setGenEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && doGenKey()} />
                 <button onClick={doGenKey} disabled={busy === 'genkey' || !genEmail.trim()} className="shrink-0 px-4 rounded-lg text-sm font-semibold text-white flex items-center gap-2 disabled:opacity-40" style={{ background: 'linear-gradient(135deg, #e879f9, #a855f7)' }}>
-                  {busy === 'genkey' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} {t('Générer')}
+                  {busy === 'genkey' ? <OrbitSpinner size={16} /> : <KeyRound className="w-4 h-4" />} {t('Générer')}
                 </button>
               </div>
               {genKey && (
@@ -305,6 +307,34 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </motion.div>
+
+      {/* Confirmation de suppression (stylée, remplace window.confirm) */}
+      <AnimatePresence>
+        {confirmDel && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 backdrop-blur-md p-4" onMouseDown={() => setConfirmDel(null)}>
+            <motion.div initial={{ scale: 0.92, opacity: 0, y: 8 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }} onMouseDown={e => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl border border-red-500/20 overflow-hidden" style={{ background: 'rgba(22,13,17,0.98)', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+              <div className="p-6 text-center">
+                <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 bg-red-500/15 border border-red-500/25">
+                  <Trash2 className="w-7 h-7 text-red-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-1">{t('Supprimer ce compte ?')}</h3>
+                <p className="text-sm text-gray-300 mb-1 break-all">{confirmDel.email}</p>
+                <p className="text-xs text-gray-500 mb-5">{confirmDel.premium ? t('Ce compte est Premium — sa licence sera aussi supprimée.') : t('Cette action est définitive et irréversible.')}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setConfirmDel(null)} className="os-btn os-btn-secondary flex-1">{t('Annuler')}</button>
+                  <button onClick={() => del(confirmDel.email)} disabled={busy === 'del:' + confirmDel.email}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#ef4444,#b91c1c)', boxShadow: '0 8px 24px -6px rgba(239,68,68,0.6)' }}>
+                    {busy === 'del:' + confirmDel.email ? <OrbitSpinner size={16} /> : <Trash2 className="w-4 h-4" />} {t('Supprimer')}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
