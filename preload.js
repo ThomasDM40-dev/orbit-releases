@@ -240,6 +240,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   licenseAdminResetDevice: (email) => ipcRenderer.invoke('license-admin-reset-device', { email }),
   licenseAdminGenKey: (email) => ipcRenderer.invoke('license-admin-genkey', { email }),
   licenseAdminPayments: () => ipcRenderer.invoke('license-admin-payments'),
+  licenseAdminDeleteUser: (email) => ipcRenderer.invoke('license-admin-delete-user', { email }),
 
   // ── AI Assistant ──
   aiChat: (data) => ipcRenderer.invoke('ai-chat', data),

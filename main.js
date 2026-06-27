@@ -4253,6 +4253,7 @@ ipcMain.handle('license-admin-revoke', async (e, { email } = {}) => { try { retu
 ipcMain.handle('license-admin-reset-device', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/reset-device', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-genkey', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/genkey', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-payments', async () => { try { return await cloudJson('/api/license/admin/payments'); } catch (e) { return { ok: false, error: e.message }; } });
+ipcMain.handle('license-admin-delete-user', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/delete-user', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 // Nombre de blocs envoyés/téléchargés en parallèle. Plus = plus rapide, mais
 // Discord limite le débit par webhook (429) — 6 est un bon compromis vitesse/stabilité.
 const DISCLOUD_CONCURRENCY = 6;
