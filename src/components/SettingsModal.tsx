@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, Download, Palette, Monitor, Cpu, Globe, Info,
-  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot, Boxes
+  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot, Boxes, Crown
 } from 'lucide-react';
 import ChangelogModal from './ChangelogModal';
+import LicenseAdmin from './LicenseAdmin';
 import ModulesPanel from './ModulesPanel';
 import GlassSelect from './GlassSelect';
 import { t, LANGS, type Lang } from '@/i18n';
@@ -53,6 +54,8 @@ const INPUT = "bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm 
 export default function SettingsModal({ onClose, language, settings, saveSettings, handleLanguageChange, electronAPI }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState('general');
   const [appVersion, setAppVersion] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLicenseAdmin, setShowLicenseAdmin] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'ready' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; percent?: number; message?: string }>({});
@@ -100,6 +103,12 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
   const handleCheckUpdate = async () => { setUpdateState('checking'); setUpdateInfo({}); const r = await electronAPI?.checkForUpdate?.(); if (!r?.success) setUpdateState('error'); };
 
   const fmtMo = (b: number) => !b ? '0 Mo' : b > 1e9 ? (b / 1e9).toFixed(2) + ' Go' : (b / 1e6).toFixed(1) + ' Mo';
+
+  useEffect(() => {
+    (async () => {
+      try { const s = await (electronAPI as any)?.cloudStatus?.(); setIsAdmin(!!s?.admin); } catch { /* non connecté */ }
+    })();
+  }, [electronAPI]);
 
   const tabs = [
     { id: 'general', label: t('Général'), icon: <SettingsIcon className="w-4 h-4" /> },
@@ -385,6 +394,12 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
                   {tab.icon}{tab.label}
                 </button>
               ))}
+              {isAdmin && (
+                <button onClick={() => setShowLicenseAdmin(true)}
+                  className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2.5 text-gray-400 hover:text-white hover:bg-white/5">
+                  <Crown className="w-4 h-4" style={{ color: 'var(--accent-strong)' }} />{t('Licences (admin)')}
+                </button>
+              )}
             </div>
           </div>
 
@@ -397,6 +412,7 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
         </motion.div>
       </div>
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
+      {showLicenseAdmin && <LicenseAdmin onClose={() => setShowLicenseAdmin(false)} />}
     </>
   );
 }

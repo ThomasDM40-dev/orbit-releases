@@ -4245,6 +4245,14 @@ ipcMain.handle('license-sync', async () => {
     return { premium: false, error: e.message, status: licensing.getStatus() };
   }
 });
+
+// ── Administration des licences (comptes admin) ──────────────────────────────
+ipcMain.handle('license-admin-list', async () => { try { return await cloudJson('/api/license/admin/list'); } catch (e) { return { ok: false, error: e.message }; } });
+ipcMain.handle('license-admin-grant', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/grant', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-revoke', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/revoke', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-reset-device', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/reset-device', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-genkey', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/genkey', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-payments', async () => { try { return await cloudJson('/api/license/admin/payments'); } catch (e) { return { ok: false, error: e.message }; } });
 // Nombre de blocs envoyés/téléchargés en parallèle. Plus = plus rapide, mais
 // Discord limite le débit par webhook (429) — 6 est un bon compromis vitesse/stabilité.
 const DISCLOUD_CONCURRENCY = 6;
