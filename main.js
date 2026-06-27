@@ -4254,6 +4254,21 @@ ipcMain.handle('license-admin-reset-device', async (e, { email } = {}) => { try 
 ipcMain.handle('license-admin-genkey', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/genkey', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-payments', async () => { try { return await cloudJson('/api/license/admin/payments'); } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('license-admin-delete-user', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/delete-user', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-grant-device', async (e, { device, note } = {}) => { try { return await cloudPost('/api/license/admin/grant-device', { device, note }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-revoke-device', async (e, { device } = {}) => { try { return await cloudPost('/api/license/admin/revoke-device', { device }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-devices', async () => { try { return await cloudJson('/api/license/admin/devices'); } catch (e) { return { ok: false, error: e.message }; } });
+
+// ID d'appareil affiché dans l'app (= empreinte servant à offrir le Premium).
+ipcMain.handle('license-device-id', () => { try { return { ok: true, device: licensing.deviceFingerprint() }; } catch (e) { return { ok: false, error: e.message }; } });
+// Réclame un Premium offert à cet appareil (sans compte) → active localement.
+ipcMain.handle('license-claim-device', async () => {
+  try {
+    const device = licensing.deviceFingerprint();
+    const r = await cloudJson('/api/license/device-claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device }) });
+    if (r && r.premium && r.key) { licensing.activate(r.key); return { premium: true, status: licensing.getStatus() }; }
+    return { premium: false, status: licensing.getStatus() };
+  } catch (e) { return { premium: false, error: e.message, status: licensing.getStatus() }; }
+});
 // Nombre de blocs envoyés/téléchargés en parallèle. Plus = plus rapide, mais
 // Discord limite le débit par webhook (429) — 6 est un bon compromis vitesse/stabilité.
 const DISCLOUD_CONCURRENCY = 6;

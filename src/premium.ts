@@ -31,12 +31,22 @@ export async function refreshLicense() {
   subs.forEach(f => f());
 }
 
+// Réclame en silence un Premium offert à cet appareil (cadeau par ID, sans compte).
+// Appelé au démarrage : si un ami nous a offert le Premium, il s'active tout seul.
+async function autoClaimDevice() {
+  try {
+    if (cache.active) return;
+    const r = await api()?.licenseClaimDevice?.();
+    if (r?.premium) await refreshLicense();
+  } catch { /* hors-ligne : on réessaiera au prochain lancement */ }
+}
+
 export function usePremium() {
   const [, force] = useState(0);
   useEffect(() => {
     const cb = () => force(x => x + 1);
     subs.add(cb);
-    if (!loaded) { loaded = true; refreshLicense(); }
+    if (!loaded) { loaded = true; refreshLicense().then(autoClaimDevice); }
     return () => { subs.delete(cb); };
   }, []);
 
@@ -61,5 +71,12 @@ export function usePremium() {
     return r;
   }, []);
 
-  return { premium: cache.active, status: cache, refresh: refreshLicense, activate, deactivate, checkout, sync };
+  // Réclame un Premium offert à cet appareil (cadeau par ID).
+  const claimDevice = useCallback(async () => {
+    const r = await api()?.licenseClaimDevice?.();
+    await refreshLicense();
+    return r;
+  }, []);
+
+  return { premium: cache.active, status: cache, refresh: refreshLicense, activate, deactivate, checkout, sync, claimDevice };
 }

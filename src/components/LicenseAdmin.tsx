@@ -41,6 +41,9 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
   const [grantEmail, setGrantEmail] = useState('');
   const [genEmail, setGenEmail] = useState('');
   const [genKey, setGenKey] = useState('');
+  const [devInput, setDevInput] = useState('');
+  const [devNote, setDevNote] = useState('');
+  const [devices, setDevices] = useState<{ device: string; note: string | null; plan: string | null; created_at: string }[]>([]);
 
   const loadList = useCallback(async () => {
     setLoading(true); setError(null);
@@ -57,7 +60,28 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
     else setError(r?.error || t('Paiements indisponibles.'));
   }, []);
 
-  useEffect(() => { loadList(); loadPayments(); }, [loadList, loadPayments]);
+  const loadDevices = useCallback(async () => {
+    const r = await api()?.licenseAdminDevices?.();
+    if (r?.ok) setDevices(r.devices || []);
+  }, []);
+
+  useEffect(() => { loadList(); loadPayments(); loadDevices(); }, [loadList, loadPayments, loadDevices]);
+
+  const grantDevice = async () => {
+    const d = devInput.trim();
+    if (!d) return;
+    setBusy('grantdev'); setError(null);
+    try {
+      const r = await api().licenseAdminGrantDevice(d, devNote.trim());
+      if (r?.ok === false) { setError(r.error || t('Échec')); return; }
+      setDevInput(''); setDevNote(''); await loadDevices();
+    } finally { setBusy(null); }
+  };
+  const revokeDevice = async (device: string) => {
+    setBusy('revdev:' + device); setError(null);
+    try { const r = await api().licenseAdminRevokeDevice(device); if (r?.ok === false) { setError(r.error || t('Échec')); return; } await loadDevices(); }
+    finally { setBusy(null); }
+  };
 
   const copy = (text: string, field: string) => { navigator.clipboard.writeText(text); setCopiedField(field); setTimeout(() => setCopiedField(null), 1500); };
 
@@ -303,6 +327,36 @@ export default function LicenseAdmin({ onClose }: { onClose: () => void }) {
                   <p className="text-[11px] text-gray-500">{t('Envoie cette clé au client. Elle est liée au 1er appareil sur lequel il l\'active.')}</p>
                 </div>
               )}
+
+              {/* Offrir par ID d'appareil (sans compte ni clé à renvoyer) */}
+              <div className="pt-4 mt-2 border-t border-white/10 space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-300"><Gift className="w-4 h-4" style={{ color: 'var(--accent-strong)' }} /> {t('Offrir par ID d\'appareil')}</div>
+                <p className="text-[11px] text-gray-500">{t('Demande à ton ami son « ID d\'appareil » (affiché dans sa fenêtre Premium), colle-le ici → son app se débloque toute seule, sans compte ni paiement.')}</p>
+                <input className={INPUT + ' font-mono text-xs'} placeholder={t('ID d\'appareil de l\'ami')} value={devInput} onChange={e => setDevInput(e.target.value)} />
+                <div className="flex gap-2">
+                  <input className={INPUT} placeholder={t('Note (ex. cadeau Théo) — optionnel')} value={devNote} onChange={e => setDevNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && grantDevice()} />
+                  <button onClick={grantDevice} disabled={busy === 'grantdev' || !devInput.trim()} className="shrink-0 px-4 rounded-lg bg-pink-500/20 text-pink-300 hover:bg-pink-500/30 disabled:opacity-40 text-sm font-semibold flex items-center gap-1.5">
+                    {busy === 'grantdev' ? <OrbitSpinner size={16} /> : <Gift className="w-4 h-4" />} {t('Offrir')}
+                  </button>
+                </div>
+                {devices.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{t('Appareils offerts')}</p>
+                    {devices.map(d => (
+                      <div key={d.device} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/5">
+                        <Fingerprint className="w-4 h-4 text-gray-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-gray-200 truncate">{d.note || t('(sans note)')}</div>
+                          <div className="text-[10px] text-gray-600 font-mono truncate">{d.device}</div>
+                        </div>
+                        <button onClick={() => revokeDevice(d.device)} disabled={!!busy} title={t('Révoquer')} className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/10 shrink-0">
+                          {busy === 'revdev:' + d.device ? <OrbitSpinner size={14} /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

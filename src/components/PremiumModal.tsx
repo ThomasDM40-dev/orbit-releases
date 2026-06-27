@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Check, X, ShieldCheck, AlertCircle, CreditCard, Sparkles, Zap, Lock, LogOut, RefreshCw } from 'lucide-react';
+import { Crown, Check, X, ShieldCheck, AlertCircle, CreditCard, Sparkles, Zap, Lock, LogOut, RefreshCw, Gift, Copy, Fingerprint } from 'lucide-react';
 import { usePremium } from '@/premium';
 import OrbitSpinner from '@/components/OrbitSpinner';
 import { t } from '@/i18n';
@@ -18,8 +18,10 @@ const FEATURES = [
 type Acct = { loading: boolean; server: string; loggedIn: boolean; email: string };
 
 export default function PremiumModal({ onClose }: { onClose: () => void }) {
-  const { status, activate, checkout, sync } = usePremium();
+  const { status, activate, checkout, sync, claimDevice } = usePremium();
   const [acct, setAcct] = useState<Acct>({ loading: true, server: '', loggedIn: false, email: '' });
+  const [deviceId, setDeviceId] = useState('');
+  const [copiedId, setCopiedId] = useState(false);
   const [serverUrl, setServerUrl] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,7 +43,18 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
     } catch { setAcct({ loading: false, server: '', loggedIn: false, email: '' }); }
   };
 
-  useEffect(() => { loadAcct(); return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
+  useEffect(() => {
+    loadAcct();
+    (async () => { try { const r = await api()?.licenseDeviceId?.(); if (r?.ok) setDeviceId(r.device || ''); } catch { /* ignore */ } })();
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  const copyId = () => { if (!deviceId) return; navigator.clipboard.writeText(deviceId); setCopiedId(true); setTimeout(() => setCopiedId(false), 1500); };
+  const claimGift = async () => {
+    setBusy(true); setError(null);
+    try { const r = await claimDevice(); if (!r?.premium) setError(t('Aucun cadeau trouvé pour cet appareil. Vérifie que ton ami a bien validé ton ID.')); }
+    finally { setBusy(false); }
+  };
   // Stoppe l'attente dès que le premium est actif.
   useEffect(() => { if (status.active && pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; setWaiting(false); } }, [status.active]);
 
@@ -152,6 +165,17 @@ export default function PremiumModal({ onClose }: { onClose: () => void }) {
               <button onClick={() => { setIsRegister(v => !v); setError(null); }} className="w-full text-center text-xs text-gray-400 hover:text-white transition-colors">
                 {isRegister ? t('J\'ai déjà un compte → Se connecter') : t('Pas de compte ? En créer un')}
               </button>
+
+              {/* Cadeau par ID d'appareil (sans compte) */}
+              <div className="pt-3 mt-1 border-t border-white/10 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-gray-400"><Gift className="w-4 h-4" style={{ color: 'var(--accent-strong)' }} /> {t('On t\'offre le Premium ? Donne cet ID à la personne :')}</div>
+                <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2">
+                  <Fingerprint className="w-4 h-4 text-gray-500 shrink-0" />
+                  <span className="flex-1 font-mono text-xs text-gray-200 truncate select-text">{deviceId || '…'}</span>
+                  <button onClick={copyId} title={t('Copier')} className="text-gray-500 hover:text-white shrink-0">{copiedId ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}</button>
+                </div>
+                <button onClick={claimGift} disabled={busy} className="os-btn os-btn-secondary w-full">{busy ? <OrbitSpinner size={16} /> : <Gift className="w-4 h-4" />} {t('Vérifier mon cadeau')}</button>
+              </div>
             </div>
           ) : (
             /* ── 3. Connecté, pas premium → achat ── */
