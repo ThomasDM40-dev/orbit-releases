@@ -220,26 +220,6 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
                 <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('orbit-onboarding')); }} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">{t("Relancer")}</button>
               </Row>
             </Card>
-            <Card title={t("Aide & rapports")} icon={<Bug className="w-3.5 h-3.5" />}>
-              <Row title={t("Envoi automatique des erreurs")} desc={t("Aide à corriger les bugs plus vite. Aucune donnée perso (chemins masqués).")}>
-                <Toggle checked={settings.errorReports !== false} onChange={(c) => update('errorReports', c)} />
-              </Row>
-              <div className="px-3 py-2.5 space-y-2">
-                <p className="text-sm text-gray-200">{t("Signaler un bug")}</p>
-                <textarea value={bugText} onChange={e => setBugText(e.target.value)} rows={3}
-                  placeholder={t("Décris le problème : ce que tu faisais, ce qui s'est passé…")}
-                  className={INPUT + " w-full resize-none select-text"} />
-                <div className="flex items-center gap-2">
-                  <button onClick={sendBug} disabled={!bugText.trim() || bugStatus === 'sending'}
-                    className="px-3 py-1.5 rounded-lg text-sm border transition-all flex items-center gap-1.5 disabled:opacity-40"
-                    style={{ background: 'color-mix(in srgb, var(--accent) 18%, transparent)', borderColor: 'color-mix(in srgb, var(--accent) 40%, transparent)' }}>
-                    {bugStatus === 'sending' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}{t("Envoyer le rapport")}
-                  </button>
-                  {bugStatus === 'sent' && <span className="text-xs text-green-400">{t("Merci ! Rapport envoyé ✓")}</span>}
-                  {bugStatus === 'error' && <span className="text-xs text-red-400">{t("Échec de l'envoi (réessaie plus tard).")}</span>}
-                </div>
-              </div>
-            </Card>
             <Card title={t("Couleur d'accent")} icon={<Palette className="w-3.5 h-3.5" />}>
               <div className="flex gap-3 p-3 flex-wrap">
                 {ACCENTS.map(a => (
@@ -397,6 +377,25 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
             <div className="flex gap-3">
               <button onClick={() => setShowChangelog(true)} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2"><FileText className="w-4 h-4" /> Changelog</button>
               <button onClick={() => electronAPI?.openExternalUrl?.('https://github.com/ThomasDM40-dev/orbit-releases')} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2"><ExternalLink className="w-4 h-4" /> GitHub</button>
+            </div>
+
+            <div className="w-full max-w-sm rounded-2xl p-5 flex flex-col gap-3 border border-white/8 bg-white/[0.02]">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] text-gray-500 uppercase font-semibold tracking-wider flex items-center gap-1.5"><Bug className="w-3.5 h-3.5" /> {t("Signaler un bug")}</p>
+                <label className="flex items-center gap-2 text-[11px] text-gray-400 cursor-pointer">{t("Envoi auto")}<Toggle checked={settings.errorReports !== false} onChange={(c) => update('errorReports', c)} /></label>
+              </div>
+              <textarea value={bugText} onChange={e => setBugText(e.target.value)} rows={3}
+                placeholder={t("Décris le problème : ce que tu faisais, ce qui s'est passé…")}
+                className={INPUT + " w-full resize-none select-text"} />
+              <div className="flex items-center gap-2">
+                <button onClick={sendBug} disabled={!bugText.trim() || bugStatus === 'sending'}
+                  className="px-3 py-2 rounded-lg text-sm border transition-all flex items-center gap-1.5 disabled:opacity-40 text-white"
+                  style={{ background: 'color-mix(in srgb, var(--accent) 22%, transparent)', borderColor: 'color-mix(in srgb, var(--accent) 45%, transparent)' }}>
+                  {bugStatus === 'sending' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}{t("Envoyer le rapport")}
+                </button>
+                {bugStatus === 'sent' && <span className="text-xs text-green-400">{t("Merci ! Rapport envoyé ✓")}</span>}
+                {bugStatus === 'error' && <span className="text-xs text-red-400">{t("Échec de l'envoi (réessaie plus tard).")}</span>}
+              </div>
             </div>
           </div>
         );
