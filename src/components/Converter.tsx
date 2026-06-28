@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, FileVideo, FileAudio, Settings, Music, Play, X, Image as ImageIcon, Loader2, CheckCircle2, FolderOpen, FolderInput } from "lucide-react";
 import GlassSelect from "./GlassSelect";
 import { t } from "@/i18n";
+import { addRecent, notifyDone } from "@/recents";
+import { startTask, finishTask } from "@/tasks";
 
 type ConvertItem = {
   id: string;
@@ -34,6 +36,12 @@ export default function Converter({ globalSettings }: { language?: string, globa
   const [items, setItems] = useState<ConvertItem[]>([]);
   const [outputDir, setOutputDir] = useState(globalSettings?.outputDir || "");
   const [isDragging, setIsDragging] = useState(false);
+  const [bulkFormat, setBulkFormat] = useState<ConvertItem['targetFormat']>('MP3');
+  const [presets, setPresets] = useState<{ name: string; format: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('orbit-convert-presets') || '[]'); } catch { return []; }
+  });
+  const savePresets = (p: { name: string; format: string }[]) => { setPresets(p); try { localStorage.setItem('orbit-convert-presets', JSON.stringify(p)); } catch {} };
+  const applyFormatToAll = (fmt: string) => setItems(prev => prev.map(d => d.status === 'ready' ? { ...d, targetFormat: fmt as any } : d));
 
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).electronAPI) {
@@ -43,9 +51,15 @@ export default function Converter({ globalSettings }: { language?: string, globa
       });
       api.onConvertComplete((data: any) => {
         setItems(prev => prev.map(d => d.id === data.id ? { ...d, status: 'completed', outputFilePath: data.filePath } : d));
+        finishTask(data.id, true, data.filePath);
+        if (data.filePath) {
+          addRecent(data.filePath, t('Convertisseur'));
+          notifyDone(t('Orbit — terminé'), data.filePath.split(/[\\/]/).pop() || '');
+        }
       });
       api.onConvertError((data: any) => {
         setItems(prev => prev.map(d => d.id === data.id ? { ...d, status: 'error', errorMessage: data.error } : d));
+        finishTask(data.id, false, undefined, data.error);
       });
     }
   }, []);
@@ -123,6 +137,7 @@ export default function Converter({ globalSettings }: { language?: string, globa
   const handleConvert = (item: ConvertItem) => {
     if (typeof window !== "undefined" && (window as any).electronAPI) {
       updateItem(item.id, { status: 'converting', progress: '00:00:00', errorMessage: undefined });
+      startTask(item.id, item.file.name, t('Convertisseur'), true);
 
       let outDir = outputDir;
       if (!outDir) {
@@ -191,6 +206,38 @@ export default function Converter({ globalSettings }: { language?: string, globa
           </button>
         )}
       </div>
+
+      {/* Presets / bulk format */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-gray-500">{t("Tout en :")}</span>
+          <GlassSelect
+            value={bulkFormat}
+            onChange={(v) => setBulkFormat(v as any)}
+            className="w-52 py-1.5 text-xs"
+            ariaLabel={t("Format pour tous")}
+            options={[
+              { value: 'MP4', label: t('Convertir en MP4'), group: 'Conversion' },
+              { value: 'MP3', label: t('Convertir en MP3'), group: 'Conversion' },
+              { value: 'WAV', label: t('Convertir en WAV'), group: 'Conversion' },
+              { value: 'FLAC', label: t('Convertir en FLAC'), group: 'Conversion' },
+              { value: 'COMPRESS_DISCORD', label: t('Smart Compressor (Discord 25MB)'), group: 'Orbit AI Studio' },
+              { value: 'COMPRESS_WHATSAPP', label: t('Smart Compressor (WhatsApp 16MB)'), group: 'Orbit AI Studio' },
+              { value: 'AI_WHISPER', label: t('AI Whisper (Générer Sous-titres FR)'), group: 'Orbit AI Studio' },
+              { value: 'AI_VOCAL_REMOVER', label: t('AI Vocal Remover (Isoler Voix)'), group: 'Orbit AI Studio' },
+              { value: 'AI_UPSCALER', label: t('AI Upscaler & 60FPS (RIFE)'), group: 'Orbit AI Studio' },
+            ]}
+          />
+          <button onClick={() => applyFormatToAll(bulkFormat)} className="px-3 py-1.5 rounded-lg bg-pink-500/15 text-pink-300 border border-pink-500/20 hover:bg-pink-500/25 transition-colors">{t("Appliquer à tout")}</button>
+          <button onClick={() => { const name = window.prompt(t("Nom du préréglage ?")); if (name) savePresets([...presets.filter(p => p.name !== name), { name, format: bulkFormat }]); }} className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors">{t("Enregistrer préréglage")}</button>
+          {presets.map(p => (
+            <span key={p.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300">
+              <button onClick={() => { setBulkFormat(p.format as any); applyFormatToAll(p.format); }} className="hover:text-pink-300 transition-colors">{p.name}</button>
+              <button onClick={() => savePresets(presets.filter(x => x.name !== p.name))} className="text-gray-600 hover:text-red-400"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Drag & Drop Zone */}
       <div

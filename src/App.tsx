@@ -8,6 +8,7 @@ import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import OrbitSpinner from "@/components/OrbitSpinner";
 import AIAssistant from "@/components/AIAssistant";
+import TaskCenter from "@/components/TaskCenter";
 import PremiumModal from "@/components/PremiumModal";
 import PremiumGate from "@/components/PremiumGate";
 import { usePremium, PREMIUM_TABS } from "@/premium";
@@ -30,6 +31,7 @@ const HandBrake = lazy(() => import("@/components/HandBrake"));
 const MediaLibrary = lazy(() => import("@/components/MediaLibrary"));
 const MattingStudio = lazy(() => import("@/components/MattingStudio"));
 const DriveStudio = lazy(() => import("@/components/DriveStudio"));
+const Toolbox = lazy(() => import("@/components/Toolbox"));
 
 // Fires only once per real process launch. The whole tree is remounted when the
 // language changes (<App key={lang}/>), so without this guard the launch update
@@ -41,6 +43,7 @@ export default function App() {
   const defaultMainTabs = [
     { id: 'downloads', label: t('Téléchargements') },
     { id: 'converter', label: t('Convertisseur & Tags') },
+    { id: 'toolbox', label: t('Boîte à outils') },
     { id: 'subscriptions', label: t('Abonnements') },
     { id: 'interpolator', label: t('Interpolateur IA') },
     { id: 'library', label: t('Médiathèque') },
@@ -803,6 +806,7 @@ export default function App() {
             <DownloadInterface language={language} globalSettings={settings} setGlobalSettings={saveSettings} />
           </div>
           {renderLazyTab('converter', <Converter language={language} globalSettings={settings} />)}
+          {renderLazyTab('toolbox', <Toolbox />)}
           {renderLazyTab('interpolator', <AIInterpolator />)}
           {renderLazyTab('subscriptions', <Subscriptions />)}
           {renderLazyTab('enhance', <OrbitEnhance />)}
@@ -856,6 +860,9 @@ export default function App() {
       >
         <Sparkles className="w-6 h-6 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
       </button>
+
+      {/* Global task center (queue) */}
+      <TaskCenter />
 
       {/* AI Assistant */}
       <AnimatePresence>

@@ -1657,6 +1657,409 @@ ipcMain.handle('select-files', async () => {
   return result.canceled ? [] : result.filePaths;
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BOÎTE À OUTILS — quick video/audio/image utilities (trim, extract audio,
+// target-size compress, image convert). All powered by the bundled ffmpeg.
+// ─────────────────────────────────────────────────────────────────────────────
+function resolveFfmpeg() {
+  let loc = path.join(ORBIT_DIR, 'ffmpeg', 'ffmpeg.exe');
+  if (!fs.existsSync(loc)) loc = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
+  return loc;
+}
+
+const TOOLBOX_FILTERS = {
+  video: [{ name: 'Vidéos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'm4v', 'ts'] }],
+  audio: [{ name: 'Audio', extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'opus', 'wma'] }],
+  media: [{ name: 'Médias', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'm4v', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'] }],
+  image: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'avif', 'gif', 'ico'] }],
+};
+
+ipcMain.handle('toolbox-pick', async (event, kind) => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: TOOLBOX_FILTERS[kind] || TOOLBOX_FILTERS.media,
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+// Reusable Anthropic call (uses the user's OWN key from settings.json).
+function readApiKey() {
+  try { const gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); return (gs.aiApiKey || '').trim(); } catch (e) { return ''; }
+}
+function anthropicMessage(apiKey, payload) {
+  const body = JSON.stringify({ model: 'claude-3-5-sonnet-20241022', max_tokens: 4096, ...payload });
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let data = ''; res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) return resolve({ error: parsed.error.message || 'Erreur API Claude.' });
+          let text = '';
+          for (const b of (parsed.content || [])) if (b.type === 'text') text += b.text;
+          resolve({ text });
+        } catch (e) { resolve({ error: 'Réponse Claude illisible.' }); }
+      });
+    });
+    req.on('error', e => resolve({ error: e.message }));
+    req.setTimeout(120000, () => { req.destroy(); resolve({ error: 'Délai dépassé.' }); });
+    req.write(body); req.end();
+  });
+}
+
+// Parse / reassemble SRT so we only translate the dialogue, never the timecodes.
+function parseSrt(raw) {
+  const blocks = raw.replace(/\r/g, '').split(/\n\n+/).filter(b => b.trim());
+  return blocks.map(b => {
+    const lines = b.split('\n');
+    const idx = lines[0]; const time = lines[1] || '';
+    const text = lines.slice(2).join('\n');
+    return { idx, time, text };
+  }).filter(c => c.time.includes('-->'));
+}
+
+ipcMain.handle('toolbox-translate-srt', async (event, { jobId, subPath, lang }) => {
+  const apiKey = readApiKey();
+  if (!apiKey) return { ok: false, error: 'Ajoute ta clé API Anthropic dans Réglages → Assistant IA pour traduire.' };
+  if (!subPath || !fs.existsSync(subPath)) return { ok: false, error: 'Sous-titres introuvables.' };
+  const win = uiWin();
+  const send = (percent, label) => win?.webContents.send('toolbox-progress', { jobId, percent, label });
+  try {
+    const raw = fs.readFileSync(subPath, 'utf8');
+    const cues = parseSrt(raw);
+    if (!cues.length) return { ok: false, error: 'Format SRT non reconnu.' };
+    const BATCH = 40;
+    const out = [];
+    for (let i = 0; i < cues.length; i += BATCH) {
+      send(Math.round((i / cues.length) * 100), `Traduction… (${i}/${cues.length})`);
+      const slice = cues.slice(i, i + BATCH);
+      const r = await anthropicMessage(apiKey, {
+        system: `Tu es un traducteur de sous-titres. Traduis chaque chaîne du tableau JSON vers ${lang}. Conserve EXACTEMENT le même nombre d'éléments et l'ordre. Garde les retours à la ligne internes. Réponds UNIQUEMENT avec le tableau JSON traduit, sans texte autour.`,
+        messages: [{ role: 'user', content: JSON.stringify(slice.map(c => c.text)) }],
+      });
+      if (r.error) return { ok: false, error: r.error };
+      let arr;
+      try { arr = JSON.parse(r.text.match(/\[[\s\S]*\]/)[0]); } catch (e) { return { ok: false, error: 'Réponse de traduction invalide.' }; }
+      slice.forEach((c, j) => out.push({ ...c, text: arr[j] != null ? String(arr[j]) : c.text }));
+    }
+    const dir = path.dirname(subPath);
+    const base = path.basename(subPath, path.extname(subPath));
+    const code = String(lang).toLowerCase().slice(0, 5).replace(/[^a-z]/g, '');
+    const outPath = path.join(dir, `${base}.${code || 'trad'}.srt`);
+    fs.writeFileSync(outPath, out.map(c => `${c.idx}\n${c.time}\n${c.text}`).join('\n\n') + '\n', 'utf8');
+    send(100, 'Terminé');
+    return { ok: true, outputPath: outPath };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+});
+
+ipcMain.handle('toolbox-ocr', async (event, { imagePath }) => {
+  const apiKey = readApiKey();
+  if (!apiKey) return { ok: false, error: 'Ajoute ta clé API Anthropic dans Réglages → Assistant IA pour utiliser l’OCR.' };
+  if (!imagePath || !fs.existsSync(imagePath)) return { ok: false, error: 'Image introuvable.' };
+  try {
+    const ext = path.extname(imagePath).toLowerCase();
+    const media = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.gif' ? 'image/gif' : 'image/jpeg';
+    const data = fs.readFileSync(imagePath).toString('base64');
+    const r = await anthropicMessage(apiKey, {
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: media, data } },
+        { type: 'text', text: 'Extrais tout le texte visible dans cette image. Réponds UNIQUEMENT avec le texte brut, en respectant la mise en forme par lignes, sans aucun commentaire.' },
+      ] }],
+    });
+    if (r.error) return { ok: false, error: r.error };
+    return { ok: true, text: (r.text || '').trim() };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+});
+
+ipcMain.handle('toolbox-save-text', async (event, { suggestedName, content }) => {
+  const result = await dialog.showSaveDialog({ defaultPath: suggestedName || 'texte.txt', filters: [{ name: 'Texte', extensions: ['txt'] }] });
+  if (result.canceled || !result.filePath) return { ok: false };
+  try { fs.writeFileSync(result.filePath, content || '', 'utf8'); return { ok: true, outputPath: result.filePath }; }
+  catch (e) { return { ok: false, error: String(e.message || e) }; }
+});
+
+ipcMain.handle('toolbox-pick-sub', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Sous-titres', extensions: ['srt', 'ass', 'ssa', 'vtt'] }],
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('toolbox-pick-many', async (event, kind) => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: TOOLBOX_FILTERS[kind] || TOOLBOX_FILTERS.media,
+  });
+  return result.canceled ? [] : result.filePaths;
+});
+
+ipcMain.handle('toolbox-run', async (event, job) => {
+  const { jobId, op, inputPath, opts = {} } = job || {};
+  // merge-video works on opts.paths instead of a single inputPath.
+  if (op !== 'merge-video' && (!inputPath || !fs.existsSync(inputPath))) return { ok: false, error: 'Fichier introuvable.' };
+  const ffmpeg = resolveFfmpeg();
+  const win = uiWin();
+  const sendProgress = (percent, label) => win?.webContents.send('toolbox-progress', { jobId, percent, label });
+
+  const dir = opts.outputDir && fs.existsSync(opts.outputDir) ? opts.outputDir : path.dirname(inputPath);
+  const base = path.basename(inputPath, path.extname(inputPath)).replace(/[<>:"/\\|?*]+/g, '_');
+
+  // Run ffmpeg, parsing "time=" against a known duration for a real progress %.
+  const runFfmpeg = (args, totalDur, outPath, label) => new Promise((resolve) => {
+    sendProgress(0, label);
+    const proc = spawn(ffmpeg, args);
+    let stderr = '';
+    activeDownloads.set(jobId, { kill: () => proc.kill('SIGINT') });
+    proc.stderr.on('data', d => {
+      const s = d.toString(); stderr += s;
+      const m = s.match(/time=(\d+):(\d+):([\d.]+)/);
+      if (m && totalDur > 0) {
+        const t = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+        sendProgress(Math.min(99, Math.round((t / totalDur) * 100)), label);
+      }
+    });
+    proc.on('error', e => resolve({ ok: false, error: e.message }));
+    proc.on('close', code => {
+      activeDownloads.delete(jobId);
+      if (code === 0 && fs.existsSync(outPath)) { sendProgress(100, label); resolve({ ok: true, outputPath: outPath }); }
+      else resolve({ ok: false, error: (stderr.split('\n').filter(Boolean).pop() || 'Échec ffmpeg').slice(0, 240) });
+    });
+  });
+
+  try {
+    if (op === 'trim') {
+      const start = Math.max(0, Number(opts.start) || 0);
+      const end = Number(opts.end) || 0;
+      if (end <= start) return { ok: false, error: 'La fin doit être après le début.' };
+      const ext = path.extname(inputPath) || '.mp4';
+      const out = path.join(dir, `${base}_decoupe${ext}`);
+      // Input-seek (fast) + copy streams = no re-encode, near-instant, lossless.
+      return await runFfmpeg(['-y', '-ss', String(start), '-i', inputPath, '-t', String(end - start), '-c', 'copy', '-avoid_negative_ts', 'make_zero', out], end - start, out, 'Découpage…');
+    }
+
+    if (op === 'extract-audio') {
+      const fmt = (opts.format || 'mp3').toLowerCase();
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const out = path.join(dir, `${base}.${fmt}`);
+      const codecArgs = fmt === 'mp3' ? ['-c:a', 'libmp3lame', '-q:a', '2']
+        : fmt === 'wav' ? ['-c:a', 'pcm_s16le']
+        : fmt === 'flac' ? ['-c:a', 'flac']
+        : fmt === 'm4a' ? ['-c:a', 'aac', '-b:a', '256k']
+        : ['-c:a', 'libmp3lame', '-q:a', '2'];
+      return await runFfmpeg(['-y', '-i', inputPath, '-vn', ...codecArgs, out], dur || 0, out, 'Extraction de l’audio…');
+    }
+
+    if (op === 'compress') {
+      const targetMB = Math.max(1, Number(opts.targetMB) || 8);
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      if (!dur) return { ok: false, error: 'Impossible de lire la durée.' };
+      const audioKbps = 96;
+      const totalKbps = Math.floor((targetMB * 1024 * 1024 * 8) / dur / 1000);
+      const videoKbps = Math.max(totalKbps - audioKbps, 100);
+      const out = path.join(dir, `${base}_${targetMB}MB.mp4`);
+      const logPrefix = path.join(os.tmpdir(), `orbit-2pass-${jobId}`);
+      sendProgress(0, 'Compression (passe 1/2)…');
+      const p1 = await new Promise(res => {
+        const proc = spawn(ffmpeg, ['-y', '-i', inputPath, '-c:v', 'libx264', '-b:v', `${videoKbps}k`, '-pass', '1', '-passlogfile', logPrefix, '-an', '-f', 'null', process.platform === 'win32' ? 'NUL' : '/dev/null']);
+        let err = ''; proc.stderr.on('data', d => {
+          err += d; const m = d.toString().match(/time=(\d+):(\d+):([\d.]+)/);
+          if (m) { const t = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]); sendProgress(Math.min(49, Math.round((t / dur) * 50)), 'Compression (passe 1/2)…'); }
+        });
+        proc.on('error', e => res({ ok: false, error: e.message }));
+        proc.on('close', c => res(c === 0 ? { ok: true } : { ok: false, error: (err.split('\n').filter(Boolean).pop() || 'Échec passe 1').slice(0, 240) }));
+      });
+      if (!p1.ok) return p1;
+      const r = await new Promise(res => {
+        sendProgress(50, 'Compression (passe 2/2)…');
+        const proc = spawn(ffmpeg, ['-y', '-i', inputPath, '-c:v', 'libx264', '-b:v', `${videoKbps}k`, '-pass', '2', '-passlogfile', logPrefix, '-c:a', 'aac', '-b:a', `${audioKbps}k`, out]);
+        let err = ''; activeDownloads.set(jobId, { kill: () => proc.kill('SIGINT') });
+        proc.stderr.on('data', d => {
+          err += d; const m = d.toString().match(/time=(\d+):(\d+):([\d.]+)/);
+          if (m) { const t = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]); sendProgress(Math.min(99, 50 + Math.round((t / dur) * 50)), 'Compression (passe 2/2)…'); }
+        });
+        proc.on('error', e => res({ ok: false, error: e.message }));
+        proc.on('close', c => { activeDownloads.delete(jobId); res(c === 0 && fs.existsSync(out) ? { ok: true, outputPath: out } : { ok: false, error: (err.split('\n').filter(Boolean).pop() || 'Échec passe 2').slice(0, 240) }); });
+      });
+      // Cleanup 2-pass logs.
+      try { for (const f of fs.readdirSync(os.tmpdir())) if (f.startsWith(`orbit-2pass-${jobId}`)) fs.unlinkSync(path.join(os.tmpdir(), f)); } catch (e) {}
+      if (r.ok) sendProgress(100, 'Terminé');
+      return r;
+    }
+
+    if (op === 'convert-image') {
+      const fmt = (opts.format || 'png').toLowerCase();
+      const out = path.join(dir, `${base}.${fmt === 'jpeg' ? 'jpg' : fmt}`);
+      const vf = [];
+      const w = parseInt(opts.width, 10), h = parseInt(opts.height, 10);
+      if (w > 0 || h > 0) vf.push(`scale=${w > 0 ? w : -1}:${h > 0 ? h : -1}:flags=lanczos`);
+      const codec = fmt === 'jpg' || fmt === 'jpeg' ? ['-q:v', '2'] : fmt === 'webp' ? ['-quality', '90'] : [];
+      const args = ['-y', '-i', inputPath, ...(vf.length ? ['-vf', vf.join(',')] : []), '-frames:v', '1', ...codec, out];
+      return await runFfmpeg(args, 0, out, 'Conversion de l’image…');
+    }
+
+    if (op === 'hardsub') {
+      const subPath = opts.subPath;
+      if (!subPath || !fs.existsSync(subPath)) return { ok: false, error: 'Fichier de sous-titres introuvable.' };
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const out = path.join(dir, `${base}_soustitres.mp4`);
+      // The subtitles filter path is painful to escape on Windows, so copy the
+      // sub to a temp dir with a safe name and run ffmpeg from that directory.
+      const tmpSub = path.join(os.tmpdir(), `orbit_sub_${jobId}${path.extname(subPath) || '.srt'}`);
+      fs.copyFileSync(subPath, tmpSub);
+      const r = await new Promise((resolve) => {
+        sendProgress(0, 'Incrustation des sous-titres…');
+        const proc = spawn(ffmpeg, ['-y', '-i', inputPath, '-vf', `subtitles=${path.basename(tmpSub)}`, '-c:a', 'copy', out], { cwd: os.tmpdir() });
+        let err = ''; activeDownloads.set(jobId, { kill: () => proc.kill('SIGINT') });
+        proc.stderr.on('data', d => {
+          err += d; const m = d.toString().match(/time=(\d+):(\d+):([\d.]+)/);
+          if (m && dur) { const t = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]); sendProgress(Math.min(99, Math.round((t / dur) * 100)), 'Incrustation des sous-titres…'); }
+        });
+        proc.on('error', e => resolve({ ok: false, error: e.message }));
+        proc.on('close', c => { activeDownloads.delete(jobId); resolve(c === 0 && fs.existsSync(out) ? { ok: true, outputPath: out } : { ok: false, error: (err.split('\n').filter(Boolean).pop() || 'Échec incrustation').slice(0, 240) }); });
+      });
+      try { fs.unlinkSync(tmpSub); } catch (e) {}
+      if (r.ok) sendProgress(100, 'Terminé');
+      return r;
+    }
+
+    if (op === 'merge-video') {
+      const paths = (opts.paths || []).filter(p => p && fs.existsSync(p));
+      if (paths.length < 2) return { ok: false, error: 'Sélectionne au moins deux vidéos.' };
+      const outDir = opts.outputDir && fs.existsSync(opts.outputDir) ? opts.outputDir : path.dirname(paths[0]);
+      const out = path.join(outDir, `fusion_${Date.now()}.mp4`);
+      // Re-encode each input to a uniform format via the concat filter — robust
+      // even when the sources have different codecs/resolutions.
+      sendProgress(0, 'Fusion des vidéos…');
+      let totalDur = 0;
+      for (const p of paths) { const d = await getVideoDuration(ffmpeg, p); totalDur += (d || 0); }
+      const inputs = [];
+      paths.forEach(p => { inputs.push('-i', p); });
+      const n = paths.length;
+      const filter = paths.map((_, i) => `[${i}:v:0]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}];`).join('') +
+        paths.map((_, i) => `[v${i}][${i}:a:0?]`).join('') + `concat=n=${n}:v=1:a=1[v][a]`;
+      const args = ['-y', ...inputs, '-filter_complex', filter, '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', out];
+      const r = await new Promise((resolve) => {
+        const proc = spawn(ffmpeg, args);
+        let err = ''; activeDownloads.set(jobId, { kill: () => proc.kill('SIGINT') });
+        proc.stderr.on('data', d => {
+          err += d; const m = d.toString().match(/time=(\d+):(\d+):([\d.]+)/);
+          if (m && totalDur) { const t = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]); sendProgress(Math.min(99, Math.round((t / totalDur) * 100)), 'Fusion des vidéos…'); }
+        });
+        proc.on('error', e => resolve({ ok: false, error: e.message }));
+        proc.on('close', c => { activeDownloads.delete(jobId); resolve(c === 0 && fs.existsSync(out) ? { ok: true, outputPath: out } : { ok: false, error: (err.split('\n').filter(Boolean).pop() || 'Échec fusion').slice(0, 240) }); });
+      });
+      if (r.ok) sendProgress(100, 'Terminé');
+      return r;
+    }
+
+    return { ok: false, error: 'Opération inconnue.' };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message || e) };
+  }
+});
+
+ipcMain.handle('toolbox-cancel', async (event, jobId) => {
+  const d = activeDownloads.get(jobId);
+  if (d?.kill) { try { d.kill(); } catch (e) {} }
+  return { ok: true };
+});
+
+// ── Watch folder: auto-convert any media dropped into a folder ────────────────
+let watchState = null; // { watcher, folder, action, opts, seen:Set, queue:[], busy }
+const WATCH_VIDEO_RE = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v|ts)$/i;
+const WATCH_IMAGE_RE = /\.(png|jpe?g|webp|bmp|tiff|gif)$/i;
+
+function watchEmit(payload) { uiWin()?.webContents.send('toolbox-watch-event', payload); }
+
+// Wait until a file stops growing (finished copying) before touching it.
+function waitStable(file, tries = 0) {
+  return new Promise((resolve) => {
+    let last = -1;
+    const check = (n) => {
+      let size = -1;
+      try { size = fs.statSync(file).size; } catch { return resolve(false); }
+      if (size === last && size > 0) return resolve(true);
+      if (n > 40) return resolve(size > 0);
+      last = size;
+      setTimeout(() => check(n + 1), 500);
+    };
+    check(tries);
+  });
+}
+
+async function watchProcess(file) {
+  if (!watchState) return;
+  const ffmpeg = resolveFfmpeg();
+  const outDir = path.join(watchState.folder, 'orbit-out');
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+  const base = path.basename(file, path.extname(file)).replace(/[<>:"/\\|?*]+/g, '_');
+  const { action, opts } = watchState;
+
+  let args, out;
+  if (action === 'to-mp4' && WATCH_VIDEO_RE.test(file)) { out = path.join(outDir, `${base}.mp4`); args = ['-y', '-i', file, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', out]; }
+  else if (action === 'to-mp3' && WATCH_VIDEO_RE.test(file)) { out = path.join(outDir, `${base}.mp3`); args = ['-y', '-i', file, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', out]; }
+  else if (action === 'to-image' && WATCH_IMAGE_RE.test(file)) { const f = (opts.format || 'webp'); out = path.join(outDir, `${base}.${f}`); args = ['-y', '-i', file, '-frames:v', '1', out]; }
+  else return; // file type not handled by this action
+
+  watchEmit({ type: 'processing', file: path.basename(file) });
+  await new Promise((resolve) => {
+    const proc = spawn(ffmpeg, args);
+    proc.on('error', () => resolve());
+    proc.on('close', (code) => {
+      if (code === 0 && fs.existsSync(out)) watchEmit({ type: 'done', file: path.basename(file), outputPath: out });
+      else watchEmit({ type: 'error', file: path.basename(file) });
+      resolve();
+    });
+  });
+}
+
+async function watchDrain() {
+  if (!watchState || watchState.busy) return;
+  watchState.busy = true;
+  while (watchState && watchState.queue.length) {
+    const f = watchState.queue.shift();
+    const ok = await waitStable(f);
+    if (ok) { try { await watchProcess(f); } catch (e) {} }
+  }
+  if (watchState) watchState.busy = false;
+}
+
+ipcMain.handle('toolbox-watch-start', async (event, { folder, action, opts = {} }) => {
+  if (!folder || !fs.existsSync(folder)) return { ok: false, error: 'Dossier introuvable.' };
+  if (watchState) { try { watchState.watcher.close(); } catch (e) {} watchState = null; }
+  const seen = new Set();
+  try { for (const f of fs.readdirSync(folder)) seen.add(f); } catch (e) {}
+  try {
+    const watcher = fs.watch(folder, (evt, filename) => {
+      if (!filename || !watchState) return;
+      const full = path.join(folder, filename);
+      if (!fs.existsSync(full)) return;
+      try { if (fs.statSync(full).isDirectory()) return; } catch { return; }
+      if (!WATCH_VIDEO_RE.test(filename) && !WATCH_IMAGE_RE.test(filename)) return;
+      if (watchState.seen.has(filename)) return;
+      watchState.seen.add(filename);
+      watchState.queue.push(full);
+      watchDrain();
+    });
+    watchState = { watcher, folder, action, opts, seen, queue: [], busy: false };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+});
+
+ipcMain.handle('toolbox-watch-stop', async () => {
+  if (watchState) { try { watchState.watcher.close(); } catch (e) {} watchState = null; }
+  return { ok: true };
+});
+
+ipcMain.handle('toolbox-pick-folder', async () => {
+  const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+  return result.canceled ? null : result.filePaths[0];
+});
+
 ipcMain.handle('get-gpus', async () => {
   const modulesDir = path.join(ORBIT_DIR, 'modules');
   const rifeDir = path.join(modulesDir, 'rife');
@@ -2491,7 +2894,7 @@ ipcMain.on('convert-file', async (event, { id, inputPath, outputPath, targetForm
         sendProgress('Recomposition de la vidéo 60FPS...');
         // Step 3: Re-encode with original audio
         const upscaledOutput = outputPath.replace(/\.[^.]+$/, '_60fps.mp4');
-        const reencodeProc = spawn(ffmpegLocation, ['-y', '-framerate', '60', '-i', path.join(outputFramesDir, 'frame%08d.png'), '-i', inputPath, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'copy', upscaledOutput]);
+        const reencodeProc = spawn(ffmpegLocation, ['-y', '-framerate', '60', '-i', path.join(outputFramesDir, 'frame%08d.png'), '-i', inputPath, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', upscaledOutput]);
         reencodeProc.on('close', (reCode) => {
           // Cleanup temp frames
           try { fs.rmSync(framesDir, { recursive: true }); } catch(e) {}
