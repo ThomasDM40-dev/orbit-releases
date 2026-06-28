@@ -186,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.34.8** — **cercles de chargement fluides** : les spinners ne figent plus pendant qu'un outil travaille (animation sur le GPU)
 - **v0.34.7** — bouton **« Signaler un bug »** déplacé dans Réglages → À propos (plus facile à trouver)
 - **v0.34.6** — **Rapports de bug automatiques** (erreurs/crashs → Discord, avec journal récent, chemins masqués) · bouton **« Signaler un bug »** + interrupteur dans les réglages · **écran d'erreur propre** (Recharger / Copier le rapport)
 - **v0.34.5** — HandBrake : **estimation de taille** + avertissements (fichier plus gros / codec inefficace) · **recherche d'onglets** (Ctrl + K) · Sniffer ouvre sur sa page d'accueil (interface repensée) · fix alignement Drive · licences : **kill-switch de révocation** à distance (fail-open)

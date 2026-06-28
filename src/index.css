@@ -607,6 +607,13 @@ button:focus-visible {
 }
 @keyframes osSpin { to { transform: rotate(360deg); } }
 
+/* Indicateurs de chargement : on force l'animation sur le compositeur (GPU) pour
+   qu'elle ne FIGE PLUS quand le thread JS est occupé (flux de progression d'un
+   outil, gros re-renders…). Sans ça, un `transform` anim sur un SVG (Loader2)
+   tourne sur le thread principal et se bloque dès qu'un outil travaille.
+   `will-change` suffit à promouvoir la couche sans altérer le keyframe. */
+.animate-spin { will-change: transform; }
+
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

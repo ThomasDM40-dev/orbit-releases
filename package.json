@@ -1,6 +1,6 @@
 {
     "name": "frontend",
-    "version": "0.34.7",
+    "version": "0.34.8",
     "private": true,
     "main": "main.js",
     "scripts": {
