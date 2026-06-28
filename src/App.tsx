@@ -11,7 +11,7 @@ import AIAssistant from "@/components/AIAssistant";
 import PremiumModal from "@/components/PremiumModal";
 import PremiumGate from "@/components/PremiumGate";
 import { usePremium, PREMIUM_TABS } from "@/premium";
-import { Sparkles, UploadCloud } from "lucide-react";
+import { Sparkles, UploadCloud, Search } from "lucide-react";
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { t, getLang, setLang, LANGS, type Lang } from "@/i18n";
@@ -81,6 +81,9 @@ export default function App() {
   }, [mainTabConfig]);
 
   const [showMainTabSettings, setShowMainTabSettings] = useState(false);
+  const [showTabSearch, setShowTabSearch] = useState(false);
+  const [tabQuery, setTabQuery] = useState('');
+  const [tabSearchIndex, setTabSearchIndex] = useState(0);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(mainTabConfig.find(t => t.visible)?.id || 'downloads');
   // Tabs the user has opened at least once → their (lazy) component gets mounted
@@ -137,6 +140,8 @@ export default function App() {
   });
   const menuRef = useRef<HTMLDivElement>(null);
   const tabSettingsRef = useRef<HTMLDivElement>(null);
+  const tabSearchRef = useRef<HTMLDivElement>(null);
+  const tabSearchInputRef = useRef<HTMLInputElement>(null);
   // Always-fresh refs so the AI dispatch handler (registered once) reads latest state.
   const settingsRef = useRef(settings); settingsRef.current = settings;
   const saveSettingsRef = useRef<((s: any) => void) | null>(null);
@@ -149,6 +154,9 @@ export default function App() {
       }
       if (tabSettingsRef.current && !tabSettingsRef.current.contains(event.target as Node)) {
         setShowMainTabSettings(false);
+      }
+      if (tabSearchRef.current && !tabSearchRef.current.contains(event.target as Node)) {
+        setShowTabSearch(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -336,6 +344,10 @@ export default function App() {
         e.preventDefault();
         setShowImportModal(true);
       }
+      if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowTabSearch(v => !v);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -375,6 +387,27 @@ export default function App() {
   const toggleMainTab = (id: string) => {
     setMainTabConfig(prev => prev.map(t => t.id === id ? { ...t, visible: !t.visible } : t));
   };
+
+  // Tab search palette: filter all tabs (visible or not) by label.
+  const tabSearchResults = (() => {
+    const q = tabQuery.trim().toLowerCase();
+    if (!q) return mainTabConfig;
+    return mainTabConfig.filter(t => t.label.toLowerCase().includes(q));
+  })();
+
+  const openTab = (id: string) => {
+    // Reveal the tab if it was hidden, then switch to it.
+    setMainTabConfig(prev => prev.map(t => t.id === id ? { ...t, visible: true } : t));
+    setActiveTab(id);
+    setShowTabSearch(false);
+    setTabQuery('');
+    setTabSearchIndex(0);
+  };
+
+  useEffect(() => { setTabSearchIndex(0); }, [tabQuery]);
+  useEffect(() => {
+    if (showTabSearch) setTimeout(() => tabSearchInputRef.current?.focus(), 30);
+  }, [showTabSearch]);
 
   const dispatchAction = (action: string) => {
     setActiveMenu(null);
@@ -629,8 +662,76 @@ export default function App() {
             />
           </div>
 
+          {/* Tab search palette */}
+          <div className="relative ml-3 shrink-0" ref={tabSearchRef}>
+            <button
+              onClick={() => setShowTabSearch(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all border ${showTabSearch ? 'text-pink-300 bg-pink-500/10 border-pink-500/25' : 'text-gray-500 hover:text-gray-300 hover:bg-white/8 border-transparent hover:border-white/10'}`}
+              title={t("Rechercher un onglet (Ctrl+K)")}
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">{t("Rechercher")}</span>
+              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded bg-white/8 border border-white/10 text-[9px] font-semibold text-gray-500">Ctrl K</kbd>
+            </button>
+            <AnimatePresence>
+              {showTabSearch && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute right-0 top-full mt-2 z-50 w-80 flex flex-col rounded-2xl origin-top-right overflow-hidden"
+                  style={{
+                    background: "rgba(15,15,25,0.94)",
+                    backdropFilter: "blur(24px) saturate(180%)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.06) inset",
+                  }}
+                >
+                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/8">
+                    <Search className="w-4 h-4 text-gray-500 shrink-0" />
+                    <input
+                      ref={tabSearchInputRef}
+                      value={tabQuery}
+                      onChange={e => setTabQuery(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setTabSearchIndex(i => Math.min(i + 1, tabSearchResults.length - 1)); }
+                        else if (e.key === 'ArrowUp') { e.preventDefault(); setTabSearchIndex(i => Math.max(i - 1, 0)); }
+                        else if (e.key === 'Enter') { e.preventDefault(); const r = tabSearchResults[tabSearchIndex]; if (r) openTab(r.id); }
+                        else if (e.key === 'Escape') { e.preventDefault(); setShowTabSearch(false); setTabQuery(''); }
+                      }}
+                      placeholder={t("Rechercher un onglet…")}
+                      className="flex-1 min-w-0 bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none"
+                    />
+                    <button onClick={() => { setShowTabSearch(false); setTabQuery(''); }} className="text-gray-600 hover:text-gray-300 shrink-0 text-xs">✕</button>
+                  </div>
+                  <div className="max-h-[min(60vh,360px)] overflow-y-auto p-1.5">
+                    {tabSearchResults.length === 0 ? (
+                      <p className="text-center text-gray-600 text-xs py-6">{t("Aucun onglet trouvé")}</p>
+                    ) : tabSearchResults.map((tab, idx) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => openTab(tab.id)}
+                        onMouseEnter={() => setTabSearchIndex(idx)}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors ${idx === tabSearchIndex ? 'bg-pink-500/15 text-white' : 'text-gray-300 hover:bg-white/5'}`}
+                      >
+                        <span className="shrink-0 w-4 h-4 flex items-center justify-center" style={{ color: idx === tabSearchIndex ? '#e879f9' : undefined }}>{TAB_ICONS[tab.id]}</span>
+                        <span className="text-sm flex-1 truncate">{tab.label}</span>
+                        {tab.id === activeTab && <span className="text-[10px] text-pink-400 font-semibold shrink-0">{t("actif")}</span>}
+                        {!tab.visible && tab.id !== activeTab && <span className="text-[10px] text-gray-600 shrink-0">{t("masqué")}</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="px-3 py-2 border-t border-white/8 text-[10px] text-gray-600 flex items-center gap-3">
+                    <span>↑↓ {t("naviguer")}</span><span>↵ {t("ouvrir")}</span><span>esc {t("fermer")}</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Tab visibility settings */}
-          <div className="relative ml-3 shrink-0" ref={tabSettingsRef}>
+          <div className="relative ml-2 shrink-0" ref={tabSettingsRef}>
             <button
               onClick={() => setShowMainTabSettings(!showMainTabSettings)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:text-gray-300 transition-all hover:bg-white/8 border border-transparent hover:border-white/10"

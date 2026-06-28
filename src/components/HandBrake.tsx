@@ -39,6 +39,33 @@ const BUILTIN = [
 const fmtSize = (b: number) => !b ? '—' : b > 1e9 ? (b / 1e9).toFixed(2) + ' Go' : (b / 1e6).toFixed(1) + ' Mo';
 const fmtDur = (s: number) => { if (!s) return '—'; const m = Math.floor(s / 60), x = Math.floor(s % 60); return `${m}:${String(x).padStart(2, '0')}`; };
 
+// Rough output-size estimation. Quality (RF) mode has no exact size target, so we
+// approximate the video bitrate from output resolution × fps × a bits-per-pixel
+// reference, scaled by RF (each ±6 RF ≈ ×/÷2) and by codec efficiency vs x264.
+const CODEC_EFF: Record<string, number> = { x264: 1, nvenc_h264: 1.15, x265: 0.6, x265_10bit: 0.6, nvenc_h265: 0.65, svt_av1: 0.5, nvenc_av1: 0.55 };
+function estimateSize(s: S, meta?: Meta): { mb: number; biggerThanSource: boolean } | null {
+  if (!meta || !meta.duration || !meta.width || !meta.height) return null;
+  let w = meta.width, h = meta.height;
+  if (s.maxHeight > 0 && s.maxHeight < h) { const sc = s.maxHeight / h; h = s.maxHeight; w = Math.round(w * sc); }
+  let fps = meta.fps || 30;
+  if (s.fps !== 'same') { const f = Number(s.fps); if (Number.isFinite(f)) fps = Math.min(f, fps); }
+  let vKbps: number;
+  if (s.rateMode === 'bitrate') vKbps = s.bitrate || 0;
+  else {
+    const base = (w * h * fps * 0.075) / 1000;            // x264 @ ~RF 23 reference
+    const rfFactor = Math.pow(2, (23 - s.quality) / 6);   // lower RF → more bits
+    vKbps = base * rfFactor * (CODEC_EFF[s.encoder] ?? 1);
+  }
+  const aKbps = s.audioMode === 'none' ? 0 : s.audioMode === 'aac' ? (s.audioBitrate || 192) : 128;
+  const mb = ((vKbps + aKbps) * 1000 / 8 * meta.duration) / 1e6;
+  return { mb, biggerThanSource: meta.size > 0 && mb * 1e6 > meta.size * 1.02 };
+}
+function codecInefficiency(s: S, meta?: Meta): boolean {
+  if (!meta?.codec) return false;
+  const efficientSrc = /hevc|h\.?265|av1|vp9/i.test(meta.codec);
+  return efficientSrc && (s.encoder === 'x264' || s.encoder === 'nvenc_h264');
+}
+
 function Toggle({ on, onClick }: any) {
   return <button onClick={onClick} className="relative shrink-0 w-10 h-6 rounded-full transition-all duration-300" style={{ background: on ? 'linear-gradient(135deg,#f97316,#ef4444)' : 'rgba(255,255,255,0.12)', boxShadow: on ? '0 0 12px rgba(249,115,22,0.4)' : 'none' }}><span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300" style={{ left: on ? 'calc(100% - 22px)' : '2px' }} /></button>;
 }
@@ -194,6 +221,21 @@ export default function HandBrake() {
                 {selected.settings.rateMode === 'quality'
                   ? <Slider label={t("Qualité RF (bas = meilleur)")} value={selected.settings.quality} min={0} max={51} onChange={(v: number) => patch({ quality: v })} />
                   : <div className="flex items-center gap-3"><div className="flex-1"><label className={LABEL}>{t("Débit vidéo (kbit/s)")}</label><input type="number" className={INPUT + ' mt-1'} value={selected.settings.bitrate} onChange={e => patch({ bitrate: Number(e.target.value) })} /></div><label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mt-4"><Toggle on={selected.settings.twoPass} onClick={() => patch({ twoPass: !selected.settings.twoPass })} /> {t("2 passes")}</label></div>}
+                {(() => {
+                  const est = estimateSize(selected.settings, selected.meta);
+                  const ineff = codecInefficiency(selected.settings, selected.meta);
+                  if (!est && !ineff) return null;
+                  return (
+                    <div className="space-y-1.5">
+                      {est && <div className={`flex items-center justify-between text-[11px] px-3 py-2 rounded-lg border ${est.biggerThanSource ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                        <span className="flex items-center gap-1.5">{est.biggerThanSource && <AlertCircle className="w-3.5 h-3.5" />}{t("Taille estimée")}</span>
+                        <span className="font-mono">~{fmtSize(est.mb * 1e6)}{selected.meta?.size ? ` · ${t("source")} ${fmtSize(selected.meta.size)}` : ''}</span>
+                      </div>}
+                      {est?.biggerThanSource && <p className="text-[10px] text-amber-400/80 px-1">{t("⚠️ Le fichier sera plus gros que l'original. Augmentez le RF, baissez la résolution, ou passez en H.265 / AV1.")}</p>}
+                      {ineff && <p className="text-[10px] text-amber-400/80 px-1">{t("⚠️ Source déjà dans un codec efficace (HEVC/AV1) → une sortie H.264 risque de grossir. Préférez H.265 (x265) ou AV1.")}</p>}
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-3 gap-3">
                   <div><label className={LABEL}>{t("Résolution max")}</label><GlassSelect className="mt-1 w-full" value={String(selected.settings.maxHeight)} onChange={v => patch({ maxHeight: Number(v) })} ariaLabel={t("Résolution max")} options={HEIGHTS.map(h => ({ value: String(h.v), label: t(h.l) }))} /></div>
                   <div><label className={LABEL}>{t("Images / s")}</label><GlassSelect className="mt-1 w-full" value={selected.settings.fps} onChange={v => patch({ fps: v })} ariaLabel={t("Images par seconde")} options={FPSES.map(f => ({ value: f, label: f === 'same' ? t('Source') : f }))} /></div>

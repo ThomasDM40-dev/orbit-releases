@@ -47,7 +47,10 @@ export function usePremium() {
     const cb = () => force(x => x + 1);
     subs.add(cb);
     if (!loaded) { loaded = true; refreshLicense().then(autoClaimDevice); }
-    return () => { subs.delete(cb); };
+    // Kill-switch : le serveur a révoqué cette licence → l'état local est effacé,
+    // on rafraîchit pour reverrouiller les onglets Premium immédiatement.
+    const off = api()?.onLicenseRevoked?.(() => { refreshLicense(); });
+    return () => { subs.delete(cb); off?.(); };
   }, []);
 
   const activate = useCallback(async (key: string) => {

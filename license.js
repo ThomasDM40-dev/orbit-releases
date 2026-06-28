@@ -110,4 +110,38 @@ function isPremium() {
   return getStatus().active === true;
 }
 
-module.exports = { verifyKey, deviceFingerprint, getStatus, activate, clearLicense, isPremium, readLicense, writeLicense };
+// Kill-switch en ligne (révocation à distance). On demande au serveur si l'id de
+// notre clé a été révoqué (remboursement, abus, clé fuitée) et, le cas échéant,
+// on efface la licence locale. C'est *fail-open* : toute erreur réseau / réponse
+// ambiguë laisse la licence intacte, donc l'usage hors-ligne n'est jamais cassé.
+// Throttlé (1×/12 h) via lastRevalidate stocké dans le fichier de licence.
+const REVALIDATE_INTERVAL = 12 * 60 * 60 * 1000;
+async function revalidate(serverUrl, { force = false } = {}) {
+  try {
+    if (!serverUrl) return { ok: false };
+    const lic = readLicense();
+    if (!lic || !lic.key) return { ok: true, revoked: false };
+    const payload = verifyKey(lic.key);
+    if (!payload || !payload.id) return { ok: true, revoked: false };
+    if (!force && lic.lastRevalidate && (Date.now() - lic.lastRevalidate) < REVALIDATE_INTERVAL) return { ok: true, skipped: true };
+    const base = String(serverUrl).replace(/\/+$/, '');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    let res;
+    try {
+      res = await fetch(base + '/api/license/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: payload.id }), signal: ctrl.signal,
+      });
+    } finally { clearTimeout(timer); }
+    if (!res || !res.ok) return { ok: false };                 // fail-open
+    const data = await res.json().catch(() => null);
+    if (!data || data.ok !== true) return { ok: false };       // fail-open
+    if (data.revoked === true) { clearLicense(); return { ok: true, revoked: true }; }
+    // Toujours valide : on note la date pour throttler les prochains appels.
+    writeLicense({ ...lic, lastRevalidate: Date.now() });
+    return { ok: true, revoked: false };
+  } catch (e) { return { ok: false }; }                        // fail-open
+}
+
+module.exports = { verifyKey, deviceFingerprint, getStatus, activate, clearLicense, isPremium, readLicense, writeLicense, revalidate };

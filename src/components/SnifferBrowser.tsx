@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, RotateCw, Home, Search, X, Globe, Lock, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, RotateCw, Home, Search, X, Globe, Lock, Download, Loader2, MousePointerClick, Radar, Sparkles } from "lucide-react";
 import { t } from "@/i18n";
 
 // <webview> is an Electron custom element, unknown to React's JSX types.
@@ -14,14 +14,20 @@ interface SnifferBrowserProps {
 }
 
 const QUICK_LINKS = [
-  { ic: "▶", name: "YouTube", url: "https://www.youtube.com" },
-  { ic: "🎮", name: "Twitch", url: "https://www.twitch.tv" },
-  { ic: "🎁", name: "Patreon", url: "https://www.patreon.com" },
-  { ic: "🎥", name: "Vimeo", url: "https://vimeo.com" },
-  { ic: "🎵", name: "TikTok", url: "https://www.tiktok.com" },
-  { ic: "📹", name: "Dailymotion", url: "https://www.dailymotion.com" },
-  { ic: "📸", name: "Instagram", url: "https://www.instagram.com" },
-  { ic: "🐦", name: "X / Twitter", url: "https://x.com" },
+  { ic: "▶", name: "YouTube", url: "https://www.youtube.com", color: "#ff0000" },
+  { ic: "🎮", name: "Twitch", url: "https://www.twitch.tv", color: "#9146ff" },
+  { ic: "🎁", name: "Patreon", url: "https://www.patreon.com", color: "#ff424d" },
+  { ic: "🎥", name: "Vimeo", url: "https://vimeo.com", color: "#19b7ea" },
+  { ic: "🎵", name: "TikTok", url: "https://www.tiktok.com", color: "#ff0050" },
+  { ic: "📹", name: "Dailymotion", url: "https://www.dailymotion.com", color: "#0066dc" },
+  { ic: "📸", name: "Instagram", url: "https://www.instagram.com", color: "#e1306c" },
+  { ic: "🐦", name: "X / Twitter", url: "https://x.com", color: "#ffffff" },
+];
+
+const HOW_IT_WORKS = [
+  { icon: MousePointerClick, title: "1 · Navigue", desc: "Ouvre la page de la vidéo que tu veux récupérer." },
+  { icon: Radar, title: "2 · Détection", desc: "Orbit intercepte les flux cachés automatiquement." },
+  { icon: Download, title: "3 · Téléchargement", desc: "Le flux apparaît dans l'onglet Téléchargements." },
 ];
 
 const cleanTitle = (raw: string) =>
@@ -171,6 +177,7 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.3), rgba(168,85,247,0.3))", border: "1px solid rgba(236,72,153,0.25)" }}>
             <Globe className="w-3.5 h-3.5 text-pink-300" />
           </div>
+          <span className="text-xs font-semibold text-gray-300 hidden sm:inline ml-0.5">{t("Navigateur Orbit")}</span>
           <div className="w-px h-5 bg-white/10 mx-1" />
           <button onClick={goBack} disabled={!canBack} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 enabled:hover:bg-white/8 enabled:hover:text-white disabled:opacity-20 transition-colors"><ArrowLeft className="w-4 h-4" /></button>
           <button onClick={goFwd} disabled={!canFwd} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 enabled:hover:bg-white/8 enabled:hover:text-white disabled:opacity-20 transition-colors"><ArrowRight className="w-4 h-4" /></button>
@@ -210,34 +217,58 @@ export default function SnifferBrowser({ initialUrl, onClose }: SnifferBrowserPr
           />
 
           {showHome && (
-            <div className="absolute inset-0 z-[5] flex flex-col items-center gap-7 px-10 py-14 overflow-y-auto" style={{ background: "radial-gradient(1200px 600px at 50% -10%, rgba(168,85,247,0.10), transparent 60%), #060608" }}>
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3.5 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.25), rgba(168,85,247,0.25))", border: "1px solid rgba(236,72,153,0.3)", boxShadow: "0 8px 40px rgba(168,85,247,0.25)" }}>
-                  <Globe className="w-8 h-8 text-pink-300" />
-                </div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Navigateur Orbit</h1>
-                <p className="text-gray-500 text-sm mt-2">{t("Navigue vers une page vidéo — les flux détectés s'ajoutent")} <strong className="text-pink-400 font-semibold">{t("automatiquement à Téléchargements")}</strong></p>
+            <div className="absolute inset-0 z-[5] flex flex-col items-center gap-8 px-10 py-12 overflow-y-auto" style={{ background: "radial-gradient(900px 500px at 50% -5%, rgba(168,85,247,0.14), transparent 55%), radial-gradient(700px 400px at 85% 110%, rgba(236,72,153,0.08), transparent 60%), #060608" }}>
+              <div className="text-center mt-2">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                  className="w-[72px] h-[72px] mx-auto mb-4 rounded-[20px] flex items-center justify-center relative"
+                  style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.28), rgba(168,85,247,0.28))", border: "1px solid rgba(236,72,153,0.35)", boxShadow: "0 10px 50px rgba(168,85,247,0.3)" }}
+                >
+                  <Globe className="w-9 h-9 text-pink-200" />
+                  <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#060608] border border-pink-500/40 flex items-center justify-center">
+                    <Radar className="w-3.5 h-3.5 text-pink-300" />
+                  </span>
+                </motion.div>
+                <h1 className="text-[32px] leading-none font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400">Navigateur Orbit</h1>
+                <p className="text-gray-500 text-sm mt-2.5 max-w-md mx-auto">{t("Navigue vers une page vidéo — les flux détectés s'ajoutent")} <strong className="text-pink-400 font-semibold">{t("automatiquement à Téléchargements")}</strong></p>
               </div>
 
               <form
                 onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("q") as HTMLInputElement)?.value; if (v) navigate(v); }}
-                className="flex items-center gap-2 w-full max-w-xl rounded-2xl pl-4 pr-1.5 py-1.5 bg-white/5 border border-white/10 focus-within:border-pink-500/50 transition-colors"
+                className="flex items-center gap-2 w-full max-w-xl rounded-2xl pl-4 pr-1.5 py-1.5 bg-white/[0.06] border border-white/10 focus-within:border-pink-500/50 focus-within:bg-white/[0.08] transition-all shadow-lg shadow-black/20"
               >
-                <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                <input name="q" autoFocus spellCheck={false} placeholder={t("Rechercher sur Google ou saisir une adresse…")} className="flex-1 min-w-0 bg-transparent text-sm text-gray-200 placeholder-gray-700 outline-none py-1.5" />
-                <button type="submit" className="flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: "linear-gradient(135deg, #ec4899, #a855f7)" }}>Aller</button>
+                <Search className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <input name="q" autoFocus spellCheck={false} placeholder={t("Rechercher sur Google ou saisir une adresse…")} className="flex-1 min-w-0 bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none py-1.5" />
+                <button type="submit" className="flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold text-white hover:brightness-110 transition-all" style={{ background: "linear-gradient(135deg, #ec4899, #a855f7)" }}>{t("Aller")}</button>
               </form>
 
               <div className="w-full max-w-2xl">
-                <div className="text-[11px] font-bold tracking-wider uppercase text-gray-700 mb-2.5">{t("Accès rapides")}</div>
-                <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase text-gray-600 mb-3"><Sparkles className="w-3 h-3 text-pink-500/70" /> {t("Accès rapides")}</div>
+                <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(116px, 1fr))" }}>
                   {QUICK_LINKS.map((l) => (
-                    <button key={l.name} onClick={() => navigate(l.url)} className="flex flex-col items-center gap-2 px-3 py-4 rounded-2xl bg-white/[0.035] border border-white/8 text-gray-400 hover:bg-white/7 hover:border-pink-500/35 hover:text-gray-100 hover:-translate-y-0.5 transition-all">
-                      <span className="text-2xl">{l.ic}</span>
+                    <button
+                      key={l.name}
+                      onClick={() => navigate(l.url)}
+                      className="group/q flex flex-col items-center gap-2.5 px-3 py-4 rounded-2xl bg-white/[0.035] border border-white/8 text-gray-400 hover:bg-white/[0.07] hover:text-gray-100 hover:-translate-y-1 transition-all duration-200"
+                      style={{ ["--qc" as any]: l.color }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = l.color + "66"; e.currentTarget.style.boxShadow = `0 8px 24px ${l.color}22`; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = ""; e.currentTarget.style.boxShadow = ""; }}
+                    >
+                      <span className="text-[26px] leading-none transition-transform duration-200 group-hover/q:scale-110">{l.ic}</span>
                       <span className="text-xs font-medium">{l.name}</span>
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="w-full max-w-2xl grid gap-3 sm:grid-cols-3 mt-1">
+                {HOW_IT_WORKS.map((s) => (
+                  <div key={s.title} className="flex flex-col gap-2 p-4 rounded-2xl bg-white/[0.025] border border-white/8">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-pink-500/12 border border-pink-500/20"><s.icon className="w-4 h-4 text-pink-300" /></div>
+                    <div className="text-xs font-bold text-gray-200">{t(s.title)}</div>
+                    <div className="text-[11px] leading-relaxed text-gray-500">{t(s.desc)}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

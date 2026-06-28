@@ -422,7 +422,7 @@ export default function DownloadInterface({ globalSettings, setGlobalSettings }:
             className="flex-1 bg-transparent border-none px-2 py-1.5 text-white placeholder-gray-500 focus:outline-none text-sm relative z-10"
           />
           <div className="flex items-center gap-4 text-gray-400 px-3 border-r border-white/10 relative z-10">
-            <button type="button" onClick={() => setSnifferOpen('https://www.patreon.com')} className="transition-colors hover:text-white flex items-center gap-1 group/sniffer" title={tr("Ouvrir le navigateur intégré pour intercepter les flux cachés (Patreon, etc.)")}>
+            <button type="button" onClick={() => setSnifferOpen('')} className="transition-colors hover:text-white flex items-center gap-1 group/sniffer" title={tr("Ouvrir le navigateur intégré pour intercepter les flux cachés (Patreon, etc.)")}>
               <Globe className="w-4 h-4 text-pink-400 group-hover/sniffer:drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" />
               <span className="text-[10px] uppercase font-bold text-pink-400 opacity-80 group-hover/sniffer:opacity-100">Sniffer</span>
             </button>

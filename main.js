@@ -4212,7 +4212,14 @@ let discloudKey = null;
 const discloudCancelled = new Set();
 
 // ── Licence Premium ──────────────────────────────────────────────────────────
-ipcMain.handle('license-status', () => licensing.getStatus());
+ipcMain.handle('license-status', () => {
+  // Kill-switch : vérif de révocation en ligne, throttlée + *fail-open*, lancée en
+  // arrière-plan pour ne pas retarder la réponse. Si révoquée → on prévient l'UI.
+  licensing.revalidate(cloudBase()).then(r => {
+    if (r && r.revoked) uiWin()?.webContents.send('license-revoked');
+  }).catch(() => {});
+  return licensing.getStatus();
+});
 ipcMain.handle('license-activate', (e, { key } = {}) => licensing.activate(key));
 ipcMain.handle('license-deactivate', () => licensing.clearLicense());
 
@@ -4250,6 +4257,8 @@ ipcMain.handle('license-sync', async () => {
 ipcMain.handle('license-admin-list', async () => { try { return await cloudJson('/api/license/admin/list'); } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('license-admin-grant', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/grant', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-revoke', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/revoke', { email }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-revoke-key', async (e, { keyId } = {}) => { try { return await cloudPost('/api/license/admin/revoke-key', { keyId }); } catch (er) { return { ok: false, error: er.message }; } });
+ipcMain.handle('license-admin-unrevoke-key', async (e, { keyId } = {}) => { try { return await cloudPost('/api/license/admin/unrevoke-key', { keyId }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-reset-device', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/reset-device', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-genkey', async (e, { email } = {}) => { try { return await cloudPost('/api/license/admin/genkey', { email }); } catch (er) { return { ok: false, error: er.message }; } });
 ipcMain.handle('license-admin-payments', async () => { try { return await cloudJson('/api/license/admin/payments'); } catch (e) { return { ok: false, error: e.message }; } });

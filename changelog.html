@@ -335,7 +335,7 @@
     <p class="hero-sub">Historique des versions &amp; nouveautés</p>
     <div class="hero-badge">
       <span class="dot"></span>
-      Version actuelle : 0.34.4
+      Version actuelle : 0.34.5
     </div>
   </header>
 
@@ -343,12 +343,52 @@
   <main class="container">
     <div class="timeline">
 
-      <!-- v0.34.4 -->
+      <!-- v0.34.5 -->
       <div class="release">
         <div class="release-header">
           <div class="release-version latest">
-            <span>v0.34.4</span>
+            <span>v0.34.5</span>
             <span class="release-badge-latest">● LATEST</span>
+          </div>
+          <span class="release-date">27 Juin 2026</span>
+        </div>
+        <div class="release-card">
+          <div class="category feat">✦ HandBrake — estimation de taille &amp; garde-fous</div>
+          <div class="change">
+            <div class="change-icon feat">📐</div>
+            <div>L'onglet HandBrake affiche désormais une <strong>taille estimée</strong> du fichier de sortie (comparée à la source), pour voir <strong>avant d'encoder</strong> si la vidéo va grossir ou rétrécir.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">⚡</div>
+            <div>Nouveaux <strong>avertissements</strong> : quand le réglage produirait un fichier <strong>plus gros que l'original</strong>, ou quand on ré-encode une source déjà efficace (HEVC/AV1) vers du H.264 — avec les conseils pour corriger (RF, résolution, codec).</div>
+          </div>
+          <div class="category feat">✦ Recherche d'onglets (Ctrl + K)</div>
+          <div class="change">
+            <div class="change-icon feat">🔍</div>
+            <div>Une <strong>barre de recherche d'onglets</strong> (raccourci <strong>Ctrl + K</strong>) permet de retrouver et d'ouvrir n'importe quel onglet — même <strong>masqué</strong> — au clavier (↑ ↓ ↵ Échap).</div>
+          </div>
+          <div class="category fix">⚡ Sécurité des licences</div>
+          <div class="change">
+            <div class="change-icon fix">🛡️</div>
+            <div>Ajout d'un <strong>kill-switch de révocation</strong> : une licence remboursée, partagée abusivement ou fuitée peut désormais être <strong>coupée à distance</strong>, même hors-ligne. La vérification reste <strong>fail-open</strong> (aucun impact si le serveur est injoignable — l'usage hors-ligne légitime n'est jamais bloqué).</div>
+          </div>
+          <div class="category fix">⚡ Sniffer &amp; Drive</div>
+          <div class="change">
+            <div class="change-icon fix">🧭</div>
+            <div>Le <strong>Sniffer</strong> ouvre maintenant sur sa <strong>page d'accueil</strong> (et non plus directement sur un site), avec une <strong>interface repensée</strong>.</div>
+          </div>
+          <div class="change">
+            <div class="change-icon fix">🎛️</div>
+            <div>Correction de l'<strong>alignement de l'interface Drive</strong> : l'en-tête et les onglets de mode s'étendent désormais sur toute la largeur sur les écrans de connexion.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.34.4 -->
+      <div class="release">
+        <div class="release-header">
+          <div class="release-version">
+            <span>v0.34.4</span>
           </div>
           <span class="release-date">27 Juin 2026</span>
         </div>

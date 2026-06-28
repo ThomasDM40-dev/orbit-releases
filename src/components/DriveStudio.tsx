@@ -250,7 +250,13 @@ export default function DriveStudio() {
   );
 
   const card = (children: any, max = 'max-w-2xl') => (
-    <div className={`h-full overflow-y-auto p-6 ${max} mx-auto`}>{Header}{errorBar}<div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-5">{children}</div></div>
+    <div className="h-full overflow-y-auto p-6 flex flex-col">
+      {Header}
+      <div className={`w-full ${max} mx-auto`}>
+        {errorBar}
+        <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-5">{children}</div>
+      </div>
+    </div>
   );
   const primaryBtn = "w-full py-2.5 rounded-xl font-semibold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2";
   const grad = { background: 'linear-gradient(135deg, #e879f9, #a855f7)' };

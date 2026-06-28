@@ -186,6 +186,7 @@ orbit/
 ## 📄 Changelog
 Voir les [**Releases**](https://github.com/ThomasDM40-dev/orbit-releases/releases) pour le détail complet (changelog aussi consultable dans l'app : *Paramètres → À propos → Changelog*).
 
+- **v0.34.5** — HandBrake : **estimation de taille** + avertissements (fichier plus gros / codec inefficace) · **recherche d'onglets** (Ctrl + K) · Sniffer ouvre sur sa page d'accueil (interface repensée) · fix alignement Drive · licences : **kill-switch de révocation** à distance (fail-open)
 - **v0.26.0** — Drive Cloud : **mot de passe oublié** (code à 6 chiffres par e-mail) pour réinitialiser le mot de passe de connexion
 - **v0.25.2** — Correctif : erreurs HTTP 502 à l'envoi Cloud (cadence des transferts désormais fixée par le serveur, évite de saturer les petits serveurs)
 - **v0.25.1** — Drive Cloud : concurrence des transferts **adaptée au nombre de webhooks** (~3 par webhook) → plus de webhooks = plus rapide

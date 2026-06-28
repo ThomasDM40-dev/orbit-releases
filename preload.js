@@ -237,6 +237,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   licenseAdminList: () => ipcRenderer.invoke('license-admin-list'),
   licenseAdminGrant: (email) => ipcRenderer.invoke('license-admin-grant', { email }),
   licenseAdminRevoke: (email) => ipcRenderer.invoke('license-admin-revoke', { email }),
+  licenseAdminRevokeKey: (keyId) => ipcRenderer.invoke('license-admin-revoke-key', { keyId }),
+  licenseAdminUnrevokeKey: (keyId) => ipcRenderer.invoke('license-admin-unrevoke-key', { keyId }),
   licenseAdminResetDevice: (email) => ipcRenderer.invoke('license-admin-reset-device', { email }),
   licenseAdminGenKey: (email) => ipcRenderer.invoke('license-admin-genkey', { email }),
   licenseAdminPayments: () => ipcRenderer.invoke('license-admin-payments'),
@@ -245,6 +247,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   licenseAdminRevokeDevice: (device) => ipcRenderer.invoke('license-admin-revoke-device', { device }),
   licenseAdminDevices: () => ipcRenderer.invoke('license-admin-devices'),
   licenseDeviceId: () => ipcRenderer.invoke('license-device-id'),
+  onLicenseRevoked: (cb) => { const h = () => cb(); ipcRenderer.on('license-revoked', h); return () => ipcRenderer.removeListener('license-revoked', h); },
   licenseClaimDevice: () => ipcRenderer.invoke('license-claim-device'),
 
   // ── AI Assistant ──
