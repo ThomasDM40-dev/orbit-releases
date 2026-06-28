@@ -115,6 +115,8 @@ export default function App() {
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [droppedFile, setDroppedFile] = useState<string | null>(null);
+  const [clipUrl, setClipUrl] = useState<string | null>(null);
+  const clipDismissed = useRef<string>('');
 
   const SETTINGS_DEFAULTS: any = {
     outputDir: localStorage.getItem('app-output-dir') || "C:\\Users\\User\\Downloads",
@@ -249,6 +251,26 @@ export default function App() {
       window.removeEventListener('drop', handleDrop);
     };
   }, []);
+
+  // --- Clipboard URL detection: offer to download a copied link ---
+  useEffect(() => {
+    let lastSeen = '';
+    const check = async () => {
+      try {
+        const txt: string = await (window as any).electronAPI?.getClipboardText?.();
+        if (!txt) return;
+        const m = txt.trim().match(/^https?:\/\/[^\s]+$/);
+        if (!m) return;
+        const url = m[0];
+        if (url === lastSeen || url === clipUrl) return;
+        lastSeen = url;
+        if (url !== clipDismissed.current) setClipUrl(url);
+      } catch (e) { }
+    };
+    window.addEventListener('focus', check);
+    const id = setInterval(check, 4000);
+    return () => { window.removeEventListener('focus', check); clearInterval(id); };
+  }, [clipUrl]);
 
   // --- AI Actions Dispatch ---
   useEffect(() => {
@@ -860,6 +882,34 @@ export default function App() {
       >
         <Sparkles className="w-6 h-6 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
       </button>
+
+      {/* Clipboard URL → quick download suggestion */}
+      <AnimatePresence>
+        {clipUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2.5 rounded-2xl max-w-[90vw]"
+            style={{ background: 'rgba(20,20,30,0.92)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)' }}
+          >
+            <span className="text-sm text-gray-300 truncate max-w-[40vw]">🔗 {t("Lien copié :")} <span className="text-gray-400">{clipUrl}</span></span>
+            <button
+              onClick={() => {
+                setMainTabConfig(prev => prev.map(tb => tb.id === 'downloads' ? { ...tb, visible: true } : tb));
+                setActiveTab('downloads');
+                window.dispatchEvent(new CustomEvent('import-urls', { detail: [clipUrl] }));
+                clipDismissed.current = clipUrl; setClipUrl(null);
+              }}
+              className="shrink-0 text-xs font-semibold text-white px-3 py-1.5 rounded-lg"
+              style={{ background: 'linear-gradient(135deg,#e879f9,#a855f7)' }}
+            >
+              {t("Télécharger")}
+            </button>
+            <button onClick={() => { clipDismissed.current = clipUrl; setClipUrl(null); }} className="shrink-0 text-gray-500 hover:text-gray-200"><span className="text-sm">✕</span></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Global task center (queue) */}
       <TaskCenter />

@@ -1667,6 +1667,29 @@ function resolveFfmpeg() {
   return loc;
 }
 
+// Probe video pixel dimensions by parsing ffmpeg's stderr (ffprobe isn't bundled).
+function getDimensions(ffmpegPath, inputPath) {
+  return new Promise((resolve) => {
+    const proc = spawn(ffmpegPath, ['-i', inputPath]);
+    let err = '';
+    proc.stderr.on('data', d => err += d.toString());
+    proc.on('close', () => {
+      const m = err.match(/,\s*(\d{2,5})x(\d{2,5})[\s,]/);
+      resolve(m ? { w: parseInt(m[1], 10), h: parseInt(m[2], 10) } : null);
+    });
+  });
+}
+
+// atempo only accepts 0.5–2.0; chain factors to reach an arbitrary speed.
+function atempoChain(f) {
+  const parts = []; let r = f;
+  while (r > 2.0) { parts.push('atempo=2.0'); r /= 2; }
+  while (r < 0.5) { parts.push('atempo=0.5'); r /= 0.5; }
+  parts.push('atempo=' + r.toFixed(4));
+  return parts.join(',');
+}
+const even = (n) => Math.max(2, Math.round(n / 2) * 2);
+
 const TOOLBOX_FILTERS = {
   video: [{ name: 'Vidéos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'm4v', 'ts'] }],
   audio: [{ name: 'Audio', extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'opus', 'wma'] }],
@@ -1901,6 +1924,140 @@ ipcMain.handle('toolbox-run', async (event, job) => {
       return await runFfmpeg(args, 0, out, 'Conversion de l’image…');
     }
 
+    if (op === 'to-gif') {
+      const fps = Math.max(1, Number(opts.fps) || 12);
+      const width = Math.max(64, Number(opts.width) || 480);
+      const start = Math.max(0, Number(opts.start) || 0);
+      const dur = Number(opts.duration) || 0;
+      const out = path.join(dir, `${base}.gif`);
+      const seek = start > 0 ? ['-ss', String(start)] : [];
+      const limit = dur > 0 ? ['-t', String(dur)] : [];
+      const filter = `fps=${fps},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`;
+      return await runFfmpeg(['-y', ...seek, ...limit, '-i', inputPath, '-vf', filter, '-loop', '0', out], dur, out, 'Création du GIF…');
+    }
+
+    if (op === 'gif-to-mp4') {
+      const out = path.join(dir, `${base}.mp4`);
+      return await runFfmpeg(['-y', '-i', inputPath, '-movflags', 'faststart', '-pix_fmt', 'yuv420p', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', out], 0, out, 'Conversion GIF → MP4…');
+    }
+
+    if (op === 'reframe') {
+      const ar = Number(opts.ar) || (9 / 16); // target width/height ratio
+      const mode = opts.mode === 'pad' ? 'pad' : 'crop';
+      const dim = await getDimensions(ffmpeg, inputPath);
+      if (!dim) return { ok: false, error: 'Impossible de lire les dimensions.' };
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const cur = dim.w / dim.h;
+      let vf;
+      if (mode === 'crop') {
+        const cw = even(cur > ar ? dim.h * ar : dim.w);
+        const ch = even(cur > ar ? dim.h : dim.w / ar);
+        vf = `crop=${cw}:${ch}:${Math.round((dim.w - cw) / 2)}:${Math.round((dim.h - ch) / 2)}`;
+      } else {
+        const pw = even(cur > ar ? dim.w : dim.h * ar);
+        const ph = even(cur > ar ? dim.w / ar : dim.h);
+        vf = `pad=${pw}:${ph}:${Math.round((pw - dim.w) / 2)}:${Math.round((ph - dim.h) / 2)}:black`;
+      }
+      const out = path.join(dir, `${base}_reframe.mp4`);
+      return await runFfmpeg(['-y', '-i', inputPath, '-vf', vf, '-c:a', 'copy', out], dur || 0, out, 'Recadrage…');
+    }
+
+    if (op === 'transform') {
+      const chain = [];
+      const rot = parseInt(opts.rotate, 10) || 0;
+      if (rot === 90) chain.push('transpose=1');
+      else if (rot === 180) chain.push('transpose=1', 'transpose=1');
+      else if (rot === 270) chain.push('transpose=2');
+      if (opts.flipH) chain.push('hflip');
+      if (opts.flipV) chain.push('vflip');
+      if (!chain.length) return { ok: false, error: 'Choisis une rotation ou un miroir.' };
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const out = path.join(dir, `${base}_transforme.mp4`);
+      return await runFfmpeg(['-y', '-i', inputPath, '-vf', chain.join(','), '-c:a', 'copy', out], dur || 0, out, 'Transformation…');
+    }
+
+    if (op === 'speed') {
+      const factor = Math.min(8, Math.max(0.1, Number(opts.factor) || 2));
+      const keepAudio = opts.keepAudio !== false;
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const out = path.join(dir, `${base}_x${factor}.mp4`);
+      const args = ['-y', '-i', inputPath, '-filter:v', `setpts=${(1 / factor).toFixed(5)}*PTS`];
+      if (keepAudio) args.push('-filter:a', atempoChain(factor)); else args.push('-an');
+      args.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p', out);
+      return await runFfmpeg(args, dur ? dur / factor : 0, out, 'Changement de vitesse…');
+    }
+
+    if (op === 'audio-fx') {
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const fi = Math.max(0, Number(opts.fadeIn) || 0);
+      const fo = Math.max(0, Number(opts.fadeOut) || 0);
+      const chain = [];
+      if (opts.normalize) chain.push('loudnorm');
+      if (fi > 0) chain.push(`afade=t=in:st=0:d=${fi}`);
+      if (fo > 0 && dur) chain.push(`afade=t=out:st=${Math.max(0, dur - fo).toFixed(2)}:d=${fo}`);
+      if (!chain.length) return { ok: false, error: 'Active au moins une option (normaliser ou fondu).' };
+      const ext = path.extname(inputPath) || '.mp3';
+      const out = path.join(dir, `${base}_audiofx${ext}`);
+      return await runFfmpeg(['-y', '-i', inputPath, '-af', chain.join(','), out], dur || 0, out, 'Traitement audio…');
+    }
+
+    if (op === 'trim-silence') {
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const ext = path.extname(inputPath) || '.mp3';
+      const out = path.join(dir, `${base}_sansblancs${ext}`);
+      const af = 'silenceremove=start_periods=1:start_duration=0.3:start_threshold=-45dB:stop_periods=-1:stop_duration=0.6:stop_threshold=-45dB';
+      return await runFfmpeg(['-y', '-i', inputPath, '-af', af, out], dur || 0, out, 'Suppression des silences…');
+    }
+
+    if (op === 'contact-sheet') {
+      const cols = Math.max(1, parseInt(opts.cols, 10) || 4);
+      const rows = Math.max(1, parseInt(opts.rows, 10) || 4);
+      const count = cols * rows;
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      if (!dur) return { ok: false, error: 'Impossible de lire la durée.' };
+      const interval = dur / (count + 1);
+      const out = path.join(dir, `${base}_planche.png`);
+      const vf = `fps=1/${interval.toFixed(3)},scale=320:-1,tile=${cols}x${rows}`;
+      return await runFfmpeg(['-y', '-i', inputPath, '-vf', vf, '-frames:v', '1', out], 0, out, 'Génération de la planche-contact…');
+    }
+
+    if (op === 'frames-extract') {
+      const fps = Math.max(0.1, Number(opts.fps) || 1);
+      const outDir = path.join(dir, `${base}_frames`);
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const r = await runFfmpeg(['-y', '-i', inputPath, '-vf', `fps=${fps}`, path.join(outDir, 'frame%05d.png')], dur || 0, outDir, 'Extraction des images…');
+      // runFfmpeg checks the folder exists; also confirm it produced files.
+      if (r.ok) { try { if (!fs.readdirSync(outDir).length) return { ok: false, error: 'Aucune image extraite.' }; } catch (e) {} }
+      return r;
+    }
+
+    if (op === 'strip-exif') {
+      const ext = path.extname(inputPath) || '.jpg';
+      const out = path.join(dir, `${base}_propre${ext}`);
+      return await runFfmpeg(['-y', '-i', inputPath, '-map_metadata', '-1', out], 0, out, 'Nettoyage des métadonnées…');
+    }
+
+    if (op === 'watermark') {
+      const logo = opts.logoPath;
+      if (!logo || !fs.existsSync(logo)) return { ok: false, error: 'Choisis une image de filigrane.' };
+      const dur = await getVideoDuration(ffmpeg, inputPath);
+      const op2 = Math.min(1, Math.max(0.05, Number(opts.opacity) || 0.6));
+      const sc = Math.min(1, Math.max(0.02, Number(opts.scale) || 0.2)); // logo width as fraction of video width
+      const pos = {
+        'top-left': '10:10', 'top-right': 'main_w-overlay_w-10:10',
+        'bottom-left': '10:main_h-overlay_h-10', 'bottom-right': 'main_w-overlay_w-10:main_h-overlay_h-10',
+        'center': '(main_w-overlay_w)/2:(main_h-overlay_h)/2',
+      }[opts.position] || 'main_w-overlay_w-10:main_h-overlay_h-10';
+      const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v|ts)$/i.test(inputPath);
+      const out = path.join(dir, `${base}_filigrane${isVideo ? '.mp4' : path.extname(inputPath)}`);
+      const filter = `[1]format=rgba,colorchannelmixer=aa=${op2}[a];[a]scale=iw*${sc}:-1[wm];[0][wm]overlay=${pos}`;
+      const args = ['-y', '-i', inputPath, '-i', logo, '-filter_complex', filter];
+      if (isVideo) args.push('-c:a', 'copy'); else args.push('-frames:v', '1');
+      args.push(out);
+      return await runFfmpeg(args, dur || 0, out, 'Application du filigrane…');
+    }
+
     if (op === 'hardsub') {
       const subPath = opts.subPath;
       if (!subPath || !fs.existsSync(subPath)) return { ok: false, error: 'Fichier de sous-titres introuvable.' };
@@ -2058,6 +2215,44 @@ ipcMain.handle('toolbox-watch-stop', async () => {
 ipcMain.handle('toolbox-pick-folder', async () => {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('toolbox-pick-any', async () => {
+  const result = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'] });
+  return result.canceled ? [] : result.filePaths;
+});
+
+// Batch rename via a pattern. Tokens: {n} index, {name} original, {ext} extension,
+// {date} YYYY-MM-DD. {n} can be padded as {n:3}.
+ipcMain.handle('toolbox-rename-batch', async (event, { paths = [], pattern, start = 1 }) => {
+  if (!paths.length || !pattern) return { ok: false, error: 'Sélectionne des fichiers et un motif.' };
+  const date = new Date().toISOString().slice(0, 10);
+  const results = [];
+  let i = Number(start) || 1;
+  for (const p of paths) {
+    if (!fs.existsSync(p)) { results.push({ from: p, ok: false }); continue; }
+    const dir = path.dirname(p);
+    const ext = path.extname(p);
+    const name = path.basename(p, ext);
+    let out = pattern
+      .replace(/\{n:(\d+)\}/g, (_, w) => String(i).padStart(parseInt(w, 10), '0'))
+      .replace(/\{n\}/g, String(i))
+      .replace(/\{name\}/g, name)
+      .replace(/\{date\}/g, date)
+      .replace(/\{ext\}/g, ext.replace('.', ''));
+    if (!/\.[a-z0-9]+$/i.test(out)) out += ext; // keep extension if pattern omits it
+    out = out.replace(/[<>:"/\\|?*]+/g, '_');
+    const dest = path.join(dir, out);
+    try { fs.renameSync(p, dest); results.push({ from: p, to: dest, ok: true }); }
+    catch (e) { results.push({ from: p, ok: false, error: e.message }); }
+    i++;
+  }
+  return { ok: true, results };
+});
+
+ipcMain.handle('get-clipboard-text', async () => {
+  try { const { clipboard } = require('electron'); return clipboard.readText() || ''; }
+  catch (e) { return ''; }
 });
 
 ipcMain.handle('get-gpus', async () => {

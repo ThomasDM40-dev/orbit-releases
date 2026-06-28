@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Scissors, Music2, Minimize2, Image as ImageIcon, QrCode, FolderOpen, Loader2, CheckCircle2, AlertTriangle, FileUp, Download, X, Combine, Captions, GitCompareArrows, Eye, FolderSync, Play, Square, Languages, ScanText, Copy } from "lucide-react";
+import { Scissors, Music2, Minimize2, Image as ImageIcon, QrCode, FolderOpen, Loader2, CheckCircle2, AlertTriangle, FileUp, Download, X, Combine, Captions, GitCompareArrows, Eye, FolderSync, Play, Square, Languages, ScanText, Copy, Film, Clapperboard, Crop, RotateCw, Gauge, Volume2, VolumeX, Grid3x3, Images, Stamp, ShieldOff, Pencil } from "lucide-react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import GlassSelect from "./GlassSelect";
@@ -12,28 +12,61 @@ const api = () => (window as any).electronAPI;
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const INPUT = "bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-gray-200 outline-none focus:border-pink-500/50 transition-all w-full";
 
-type ToolId = "trim" | "audio" | "compress" | "image" | "merge" | "subtitles" | "translate" | "ocr" | "pdf" | "compare" | "watch" | "qr";
+type ToolId =
+  | "trim" | "audio" | "compress" | "image" | "gif" | "gif2mp4" | "reframe" | "transform" | "speed"
+  | "audiofx" | "trimsilence" | "contactsheet" | "frames" | "stripexif" | "watermark"
+  | "merge" | "subtitles" | "translate" | "ocr" | "pdf" | "compare" | "watch" | "rename" | "qr";
 
-const TOOLS: { id: ToolId; label: string; icon: any; desc: string }[] = [
-  { id: "trim", label: "Découper", icon: Scissors, desc: "Couper un extrait sans réencoder (instantané, sans perte)." },
-  { id: "audio", label: "Extraire l'audio", icon: Music2, desc: "Sortir la piste audio d'une vidéo (MP3, WAV, FLAC, M4A)." },
-  { id: "compress", label: "Compresser à une taille", icon: Minimize2, desc: "Viser une taille précise (ex. 8 Mo pour Discord)." },
-  { id: "image", label: "Convertir une image", icon: ImageIcon, desc: "PNG, JPG, WEBP, AVIF, ICO… + redimensionnement." },
-  { id: "merge", label: "Fusionner des vidéos", icon: Combine, desc: "Mettre plusieurs vidéos bout à bout en un seul fichier." },
-  { id: "subtitles", label: "Incruster sous-titres", icon: Captions, desc: "Graver un fichier .srt dans la vidéo (hardsub)." },
-  { id: "translate", label: "Traduire sous-titres", icon: Languages, desc: "Traduire un .srt dans une autre langue (IA Claude)." },
-  { id: "ocr", label: "OCR (texte d'image)", icon: ScanText, desc: "Extraire le texte d'une image ou capture (IA Claude)." },
-  { id: "pdf", label: "Images → PDF", icon: FileUp, desc: "Combiner plusieurs images en un seul PDF." },
-  { id: "compare", label: "Comparateur", icon: GitCompareArrows, desc: "Glisser pour comparer avant / après (upscale, etc.)." },
-  { id: "watch", label: "Dossier surveillé", icon: FolderSync, desc: "Convertir automatiquement tout fichier déposé dans un dossier." },
-  { id: "qr", label: "QR Code", icon: QrCode, desc: "Générer ou lire un QR code (URL, texte, code Drop)." },
+type Opt = { key: string; label: string; type: "time" | "number" | "select" | "bool"; def?: any; choices?: { value: string; label: string }[]; placeholder?: string; presets?: number[]; unit?: string };
+type ToolDef = {
+  id: ToolId; label: string; icon: any; desc: string; cat: string;
+  custom?: boolean; op?: string; kind?: "video" | "audio" | "image" | "media"; batch?: boolean; options?: Opt[];
+};
+
+const CATS = ["Vidéo", "Audio", "Image", "Sous-titres", "Utilitaires"];
+
+const TOOLS: ToolDef[] = [
+  // ── Vidéo ──
+  { id: "trim", label: "Découper", icon: Scissors, cat: "Vidéo", desc: "Couper un extrait sans réencoder (instantané, sans perte).", op: "trim", kind: "video", options: [{ key: "start", label: "Début (mm:ss)", type: "time", def: "00:00" }, { key: "end", label: "Fin (mm:ss)", type: "time", def: "" }] },
+  { id: "compress", label: "Compresser à une taille", icon: Minimize2, cat: "Vidéo", desc: "Viser une taille précise (ex. 8 Mo pour Discord).", op: "compress", kind: "video", batch: true, options: [{ key: "targetMB", label: "Taille cible (Mo)", type: "number", def: 8, presets: [8, 10, 25, 50] }] },
+  { id: "reframe", label: "Recadrer (réseaux)", icon: Crop, cat: "Vidéo", desc: "Recadrer en 9:16 / 1:1 / 16:9 pour TikTok, Reels, Shorts.", op: "reframe", kind: "video", batch: true, options: [{ key: "ar", label: "Format", type: "select", def: "0.5625", choices: [{ value: "0.5625", label: "9:16 (vertical)" }, { value: "1", label: "1:1 (carré)" }, { value: "1.7778", label: "16:9 (paysage)" }, { value: "0.8", label: "4:5 (portrait)" }] }, { key: "mode", label: "Méthode", type: "select", def: "crop", choices: [{ value: "crop", label: "Rogner (zoom)" }, { value: "pad", label: "Bandes noires" }] }] },
+  { id: "transform", label: "Pivoter / Miroir", icon: RotateCw, cat: "Vidéo", desc: "Rotation et effet miroir.", op: "transform", kind: "video", batch: true, options: [{ key: "rotate", label: "Rotation", type: "select", def: "0", choices: [{ value: "0", label: "Aucune" }, { value: "90", label: "90° ↻" }, { value: "180", label: "180°" }, { value: "270", label: "270° ↺" }] }, { key: "flipH", label: "Miroir horizontal", type: "bool", def: false }, { key: "flipV", label: "Miroir vertical", type: "bool", def: false }] },
+  { id: "speed", label: "Changer la vitesse", icon: Gauge, cat: "Vidéo", desc: "Accélérer ou ralentir (0.1×–8×).", op: "speed", kind: "video", batch: true, options: [{ key: "factor", label: "Vitesse (×)", type: "number", def: 2 }, { key: "keepAudio", label: "Garder le son", type: "bool", def: true }] },
+  { id: "gif", label: "Vidéo → GIF", icon: Film, cat: "Vidéo", desc: "Créer un GIF de qualité depuis une vidéo.", op: "to-gif", kind: "video", options: [{ key: "start", label: "Début (mm:ss)", type: "time", def: "00:00" }, { key: "duration", label: "Durée (s, 0 = tout)", type: "number", def: 0 }, { key: "fps", label: "Images/s", type: "number", def: 12 }, { key: "width", label: "Largeur (px)", type: "number", def: 480 }] },
+  { id: "gif2mp4", label: "GIF → MP4", icon: Clapperboard, cat: "Vidéo", desc: "Convertir un GIF en vidéo MP4 légère.", op: "gif-to-mp4", kind: "image", batch: true },
+  { id: "watermark", label: "Filigrane / logo", icon: Stamp, cat: "Vidéo", desc: "Superposer un logo sur une vidéo ou une image.", custom: true },
+  { id: "merge", label: "Fusionner des vidéos", icon: Combine, cat: "Vidéo", desc: "Mettre plusieurs vidéos bout à bout.", custom: true },
+  { id: "contactsheet", label: "Planche-contact", icon: Grid3x3, cat: "Vidéo", desc: "Grille de vignettes d'aperçu d'une vidéo.", op: "contact-sheet", kind: "video", options: [{ key: "cols", label: "Colonnes", type: "number", def: 4 }, { key: "rows", label: "Lignes", type: "number", def: 4 }] },
+  { id: "frames", label: "Extraire les images", icon: Images, cat: "Vidéo", desc: "Exporter les images d'une vidéo en PNG.", op: "frames-extract", kind: "video", options: [{ key: "fps", label: "Images/s à extraire", type: "number", def: 1 }] },
+
+  // ── Audio ──
+  { id: "audio", label: "Extraire l'audio", icon: Music2, cat: "Audio", desc: "Sortir la piste audio d'une vidéo.", op: "extract-audio", kind: "video", batch: true, options: [{ key: "format", label: "Format", type: "select", def: "mp3", choices: [{ value: "mp3", label: "MP3" }, { value: "m4a", label: "M4A (AAC)" }, { value: "wav", label: "WAV" }, { value: "flac", label: "FLAC" }] }] },
+  { id: "audiofx", label: "Normaliser / Fondu", icon: Volume2, cat: "Audio", desc: "Égaliser le volume + fondus d'entrée/sortie.", op: "audio-fx", kind: "audio", batch: true, options: [{ key: "normalize", label: "Normaliser le volume", type: "bool", def: true }, { key: "fadeIn", label: "Fondu entrée (s)", type: "number", def: 0 }, { key: "fadeOut", label: "Fondu sortie (s)", type: "number", def: 0 }] },
+  { id: "trimsilence", label: "Couper les silences", icon: VolumeX, cat: "Audio", desc: "Supprimer les blancs (podcast, voix).", op: "trim-silence", kind: "audio", batch: true },
+
+  // ── Image ──
+  { id: "image", label: "Convertir une image", icon: ImageIcon, cat: "Image", desc: "PNG, JPG, WEBP, AVIF, ICO… + redimensionnement.", op: "convert-image", kind: "image", batch: true, options: [{ key: "format", label: "Format", type: "select", def: "png", choices: [{ value: "png", label: "PNG" }, { value: "jpg", label: "JPG" }, { value: "webp", label: "WEBP" }, { value: "avif", label: "AVIF" }, { value: "bmp", label: "BMP" }, { value: "tiff", label: "TIFF" }, { value: "ico", label: "ICO" }] }, { key: "width", label: "Largeur (px, option.)", type: "number", def: "" }] },
+  { id: "stripexif", label: "Nettoyer métadonnées", icon: ShieldOff, cat: "Image", desc: "Effacer EXIF/GPS d'une image avant partage.", op: "strip-exif", kind: "image", batch: true },
+  { id: "pdf", label: "Images → PDF", icon: FileUp, cat: "Image", desc: "Combiner plusieurs images en un seul PDF.", custom: true },
+  { id: "compare", label: "Comparateur", icon: GitCompareArrows, cat: "Image", desc: "Glisser pour comparer avant / après.", custom: true },
+
+  // ── Sous-titres ──
+  { id: "subtitles", label: "Incruster sous-titres", icon: Captions, cat: "Sous-titres", desc: "Graver un .srt dans la vidéo (hardsub).", custom: true },
+  { id: "translate", label: "Traduire sous-titres", icon: Languages, cat: "Sous-titres", desc: "Traduire un .srt dans une autre langue (IA).", custom: true },
+
+  // ── Utilitaires ──
+  { id: "qr", label: "QR Code", icon: QrCode, cat: "Utilitaires", desc: "Générer ou lire un QR code.", custom: true },
+  { id: "ocr", label: "OCR (texte d'image)", icon: ScanText, cat: "Utilitaires", desc: "Extraire le texte d'une image (IA).", custom: true },
+  { id: "rename", label: "Renommer par lot", icon: Pencil, cat: "Utilitaires", desc: "Renommer plusieurs fichiers avec un motif.", custom: true },
+  { id: "watch", label: "Dossier surveillé", icon: FolderSync, cat: "Utilitaires", desc: "Convertir auto les fichiers déposés dans un dossier.", custom: true },
 ];
 
-function fmtSecInput(v: string) { return v; }
+const byId = (id: ToolId) => TOOLS.find(t => t.id === id)!;
+
 // Accept "mm:ss", "hh:mm:ss" or raw seconds → seconds (number).
 function parseTime(s: string): number {
   if (!s) return 0;
-  const parts = s.split(":").map(p => parseFloat(p.trim()) || 0);
+  const parts = String(s).split(":").map(p => parseFloat(p.trim()) || 0);
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   if (parts.length === 2) return parts[0] * 60 + parts[1];
   return parts[0] || 0;
@@ -41,6 +74,7 @@ function parseTime(s: string): number {
 
 export default function Toolbox() {
   const [tool, setTool] = useState<ToolId>("trim");
+  const def = byId(tool);
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -55,26 +89,33 @@ export default function Toolbox() {
           </div>
         </div>
 
-        {/* Tool picker */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
-          {TOOLS.map(tl => {
-            const Icon = tl.icon;
-            const active = tool === tl.id;
-            return (
-              <button
-                key={tl.id}
-                onClick={() => setTool(tl.id)}
-                className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-semibold transition-all ${active ? "text-pink-300" : "text-gray-400 hover:text-gray-200"}`}
-                style={{
-                  background: active ? "rgba(236,72,153,0.12)" : "rgba(255,255,255,0.04)",
-                  borderColor: active ? "rgba(236,72,153,0.4)" : "rgba(255,255,255,0.08)",
-                }}
-              >
-                <Icon className="w-5 h-5" />
-                {t(tl.label)}
-              </button>
-            );
-          })}
+        {/* Tool picker, grouped by category */}
+        <div className="space-y-3 mb-6">
+          {CATS.map(cat => (
+            <div key={cat}>
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5 px-1">{t(cat)}</p>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {TOOLS.filter(tl => tl.cat === cat).map(tl => {
+                  const Icon = tl.icon;
+                  const active = tool === tl.id;
+                  return (
+                    <button
+                      key={tl.id}
+                      onClick={() => setTool(tl.id)}
+                      className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border text-[11px] font-semibold text-center transition-all ${active ? "text-pink-300" : "text-gray-400 hover:text-gray-200"}`}
+                      style={{
+                        background: active ? "rgba(236,72,153,0.12)" : "rgba(255,255,255,0.04)",
+                        borderColor: active ? "rgba(236,72,153,0.4)" : "rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <Icon className="w-5 h-5" />
+                      {t(tl.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         <AnimatePresence mode="wait">
@@ -87,7 +128,9 @@ export default function Toolbox() {
               : tool === "pdf" ? <PdfTool />
               : tool === "compare" ? <CompareTool />
               : tool === "watch" ? <WatchTool />
-              : <FfmpegTool tool={tool as "trim" | "audio" | "compress" | "image"} />}
+              : tool === "watermark" ? <WatermarkTool />
+              : tool === "rename" ? <RenameTool />
+              : <FfmpegTool def={def} />}
           </motion.div>
         </AnimatePresence>
 
@@ -129,159 +172,144 @@ function RecentsPanel() {
   );
 }
 
-// ── ffmpeg-backed tools (trim / audio / compress / image) ────────────────────
-function FfmpegTool({ tool }: { tool: Exclude<ToolId, "qr"> }) {
-  const meta = TOOLS.find(t => t.id === tool)!;
-  const [input, setInput] = useState<string | null>(null);
+// ── Config-driven ffmpeg tool (single file or batch) ─────────────────────────
+function FfmpegTool({ def }: { def: ToolDef }) {
+  const [inputs, setInputs] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [percent, setPercent] = useState(0);
   const [label, setLabel] = useState("");
   const [result, setResult] = useState<{ ok: boolean; outputPath?: string; error?: string } | null>(null);
+  const [batchDone, setBatchDone] = useState<{ done: number; total: number; fail: number } | null>(null);
   const jobRef = useRef<string>("");
 
-  // options
-  const [start, setStart] = useState("00:00");
-  const [end, setEnd] = useState("");
-  const [audioFmt, setAudioFmt] = useState("mp3");
-  const [targetMB, setTargetMB] = useState("8");
-  const [imgFmt, setImgFmt] = useState("png");
-  const [imgWidth, setImgWidth] = useState("");
+  const initOpts = () => Object.fromEntries((def.options || []).map(o => [o.key, o.def ?? (o.type === "bool" ? false : "")]));
+  const [opts, setOpts] = useState<Record<string, any>>(initOpts);
 
   useEffect(() => {
     const off = api()?.onToolboxProgress?.((v: any) => {
       if (v.jobId !== jobRef.current) return;
-      setPercent(v.percent ?? 0);
-      if (v.label) setLabel(v.label);
+      setPercent(v.percent ?? 0); if (v.label) setLabel(v.label);
       updateTask(v.jobId, v.percent ?? 0, v.label);
     });
     return () => { off?.(); };
   }, []);
 
-  // Reset when switching tool.
-  useEffect(() => { setInput(null); setResult(null); setPercent(0); setBusy(false); }, [tool]);
+  // Reset state when the selected tool changes.
+  useEffect(() => { setInputs([]); setResult(null); setBatchDone(null); setPercent(0); setBusy(false); setOpts(initOpts()); }, [def.id]);
 
   const pick = async () => {
-    const kind = tool === "image" ? "image" : tool === "audio" || tool === "compress" || tool === "trim" ? "video" : "media";
-    const p = await api()?.toolboxPick?.(kind);
-    if (p) { setInput(p); setResult(null); }
+    if (def.batch) { const ps = await api()?.toolboxPickMany?.(def.kind); if (ps?.length) { setInputs(ps); setResult(null); setBatchDone(null); } }
+    else { const p = await api()?.toolboxPick?.(def.kind); if (p) { setInputs([p]); setResult(null); } }
+  };
+
+  const buildOpts = () => {
+    const o: any = {};
+    for (const opt of def.options || []) {
+      const v = opts[opt.key];
+      if (opt.type === "time") o[opt.key] = parseTime(v);
+      else if (opt.type === "number") o[opt.key] = v === "" ? "" : Number(v);
+      else if (opt.type === "bool") o[opt.key] = !!v;
+      else o[opt.key] = v;
+    }
+    return o;
+  };
+
+  const runOne = async (inputPath: string, o: any) => {
+    const jobId = uid(); jobRef.current = jobId;
+    setPercent(0); setLabel(t("Préparation…"));
+    startTask(jobId, inputPath.split(/[\\/]/).pop() || t(def.label), t(def.label));
+    const r = await api()?.toolboxRun?.({ jobId, op: def.op, inputPath, opts: o });
+    finishTask(jobId, !!r?.ok, r?.outputPath, r?.error);
+    if (r?.ok && r.outputPath) { addRecent(r.outputPath, t(def.label)); }
+    return r;
   };
 
   const run = async () => {
-    if (!input) return;
-    const opts: any = {};
-    if (tool === "trim") { opts.start = parseTime(start); opts.end = parseTime(end); if (opts.end <= opts.start) { setResult({ ok: false, error: t("La fin doit être après le début.") }); return; } }
-    if (tool === "audio") opts.format = audioFmt;
-    if (tool === "compress") opts.targetMB = parseFloat(targetMB) || 8;
-    if (tool === "image") { opts.format = imgFmt; opts.width = imgWidth; }
-    const jobId = uid(); jobRef.current = jobId;
-    setBusy(true); setResult(null); setPercent(0); setLabel(t("Préparation…"));
-    startTask(jobId, t(meta.label), t(meta.label));
+    if (!inputs.length) return;
+    const o = buildOpts();
+    if (def.op === "trim" && o.end <= o.start) { setResult({ ok: false, error: t("La fin doit être après le début.") }); return; }
+    setBusy(true); setResult(null); setBatchDone(null);
     try {
-      const r = await api()?.toolboxRun?.({ jobId, op: tool === "image" ? "convert-image" : tool === "audio" ? "extract-audio" : tool, inputPath: input, opts });
-      setResult(r || { ok: false, error: t("Aucune réponse.") });
-      finishTask(jobId, !!r?.ok, r?.outputPath, r?.error);
-      if (r?.ok && r.outputPath) {
-        addRecent(r.outputPath, t(meta.label));
-        notifyDone(t("Orbit — terminé"), `${t(meta.label)} : ${r.outputPath.split(/[\\/]/).pop()}`);
+      if (def.batch && inputs.length > 1) {
+        let fail = 0;
+        for (let i = 0; i < inputs.length; i++) {
+          setBatchDone({ done: i, total: inputs.length, fail });
+          const r = await runOne(inputs[i], o);
+          if (!r?.ok) fail++;
+        }
+        setBatchDone({ done: inputs.length, total: inputs.length, fail });
+        notifyDone(t("Orbit — terminé"), `${t(def.label)} — ${inputs.length - fail}/${inputs.length}`);
+      } else {
+        const r = await runOne(inputs[0], o);
+        setResult(r || { ok: false, error: t("Aucune réponse.") });
+        if (r?.ok && r.outputPath) notifyDone(t("Orbit — terminé"), `${t(def.label)} : ${r.outputPath.split(/[\\/]/).pop()}`);
       }
     } finally { setBusy(false); }
   };
 
   const cancel = () => { if (jobRef.current) api()?.toolboxCancel?.(jobRef.current); };
-  const fileName = input ? input.split(/[\\/]/).pop() : null;
+  const setOpt = (k: string, v: any) => setOpts(p => ({ ...p, [k]: v }));
 
   return (
     <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-5">
-      <p className="text-sm text-gray-400">{t(meta.desc)}</p>
+      <p className="text-sm text-gray-400">{t(def.desc)}{def.batch ? " " + t("(traitement par lot possible)") : ""}</p>
 
       {/* File picker */}
       <button onClick={pick} disabled={busy} className="w-full py-8 rounded-xl border-2 border-dashed border-white/15 hover:border-pink-500/40 hover:bg-white/[0.03] transition-all flex flex-col items-center gap-2 disabled:opacity-40">
         <FileUp className="w-7 h-7 text-gray-400" />
-        <span className="text-sm text-gray-300 font-medium">{fileName || t("Choisir un fichier")}</span>
-        {fileName && <span className="text-xs text-gray-600 truncate max-w-full px-4">{input}</span>}
+        <span className="text-sm text-gray-300 font-medium">
+          {inputs.length === 0 ? (def.batch ? t("Choisir un ou plusieurs fichiers") : t("Choisir un fichier"))
+            : inputs.length === 1 ? inputs[0].split(/[\\/]/).pop()
+            : t("%n fichiers sélectionnés").replace("%n", String(inputs.length))}
+        </span>
       </button>
 
       {/* Options */}
-      {input && !busy && (
+      {inputs.length > 0 && !busy && (
         <div className="space-y-3">
-          {tool === "trim" && (
+          {(def.options || []).length > 0 && (
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Début")} (mm:ss)</label>
-                <input value={start} onChange={e => setStart(fmtSecInput(e.target.value))} placeholder="00:00" className={INPUT + " font-mono mt-1"} />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Fin")} (mm:ss)</label>
-                <input value={end} onChange={e => setEnd(fmtSecInput(e.target.value))} placeholder="01:30" className={INPUT + " font-mono mt-1"} />
-              </div>
-            </div>
-          )}
-          {tool === "audio" && (
-            <div>
-              <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Format de sortie")}</label>
-              <GlassSelect value={audioFmt} onChange={setAudioFmt} className="mt-1" ariaLabel={t("Format audio")}
-                options={[{ value: "mp3", label: "MP3" }, { value: "m4a", label: "M4A (AAC)" }, { value: "wav", label: "WAV" }, { value: "flac", label: "FLAC" }]} />
-            </div>
-          )}
-          {tool === "compress" && (
-            <div>
-              <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Taille cible (Mo)")}</label>
-              <input type="number" min={1} value={targetMB} onChange={e => setTargetMB(e.target.value)} className={INPUT + " mt-1"} />
-              <div className="flex gap-2 mt-2">
-                {[8, 10, 25, 50].map(v => (
-                  <button key={v} onClick={() => setTargetMB(String(v))} className="px-2.5 py-1 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10">{v} Mo</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {tool === "image" && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Format")}</label>
-                <GlassSelect value={imgFmt} onChange={setImgFmt} className="mt-1" ariaLabel={t("Format image")}
-                  options={[{ value: "png", label: "PNG" }, { value: "jpg", label: "JPG" }, { value: "webp", label: "WEBP" }, { value: "avif", label: "AVIF" }, { value: "bmp", label: "BMP" }, { value: "tiff", label: "TIFF" }, { value: "ico", label: "ICO" }]} />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Largeur (px, option.)")}</label>
-                <input type="number" min={0} value={imgWidth} onChange={e => setImgWidth(e.target.value)} placeholder={t("auto")} className={INPUT + " mt-1"} />
-              </div>
+              {(def.options || []).map(opt => (
+                <div key={opt.key} className={opt.type === "bool" ? "col-span-2" : ""}>
+                  {opt.type === "bool" ? (
+                    <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                      <input type="checkbox" checked={!!opts[opt.key]} onChange={e => setOpt(opt.key, e.target.checked)} className="w-4 h-4 accent-pink-500" /> {t(opt.label)}
+                    </label>
+                  ) : opt.type === "select" ? (
+                    <>
+                      <label className="text-[10px] text-gray-500 uppercase font-semibold">{t(opt.label)}</label>
+                      <GlassSelect value={String(opts[opt.key])} onChange={v => setOpt(opt.key, v)} className="mt-1" ariaLabel={t(opt.label)} options={(opt.choices || []).map(c => ({ value: c.value, label: t(c.label) }))} />
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-[10px] text-gray-500 uppercase font-semibold">{t(opt.label)}</label>
+                      <input type={opt.type === "number" ? "number" : "text"} value={opts[opt.key]} onChange={e => setOpt(opt.key, e.target.value)} placeholder={opt.type === "time" ? "00:00" : t("auto")} className={INPUT + (opt.type === "time" ? " font-mono" : "") + " mt-1"} />
+                      {opt.presets && (
+                        <div className="flex gap-1.5 mt-1.5">
+                          {opt.presets.map(v => <button key={v} onClick={() => setOpt(opt.key, v)} className="px-2 py-0.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10">{v}</button>)}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
           <button onClick={run} className="w-full py-3 rounded-xl font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg,#e879f9,#a855f7)" }}>
-            {(() => { const Icon = meta.icon; return <Icon className="w-4 h-4" />; })()} {t("Lancer")}
+            {(() => { const Icon = def.icon; return <Icon className="w-4 h-4" />; })()} {inputs.length > 1 ? t("Lancer sur %n fichiers").replace("%n", String(inputs.length)) : t("Lancer")}
           </button>
         </div>
       )}
 
-      {/* Progress */}
-      {busy && (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="flex items-center justify-between text-xs text-gray-300 mb-1.5">
-            <span className="flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 text-pink-400 animate-spin" /> {label}</span>
-            <span className="flex items-center gap-2">{percent}% <button onClick={cancel} className="text-gray-500 hover:text-red-400"><X className="w-3.5 h-3.5" /></button></span>
-          </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: percent + "%", background: "linear-gradient(90deg,#e879f9,#a855f7)" }} /></div>
+      {busy && <ProgressBlock percent={percent} label={batchDone ? `${label} (${batchDone.done}/${batchDone.total})` : label} onCancel={cancel} />}
+
+      {batchDone && !busy && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-sm text-emerald-300 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4" /> {t("Lot terminé")} — {batchDone.total - batchDone.fail}/{batchDone.total} {batchDone.fail > 0 ? `(${batchDone.fail} ${t("échec(s)")})` : ""}
         </div>
       )}
-
-      {/* Result */}
-      {result && !busy && (
-        result.ok ? (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-emerald-300 text-sm font-medium"><CheckCircle2 className="w-4 h-4" /> {t("Terminé !")}</div>
-            <p className="text-xs text-gray-400 break-all">{result.outputPath}</p>
-            <div className="flex gap-2">
-              <button onClick={() => api()?.openFile?.(result.outputPath)} className="px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 flex items-center gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> {t("Ouvrir")}</button>
-              <button onClick={() => api()?.showItemInFolder?.(result.outputPath)} className="px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 flex items-center gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> {t("Dans le dossier")}</button>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-2 text-sm text-red-300">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> <span className="break-all">{result.error}</span>
-          </div>
-        )
-      )}
+      {result && !busy && <ResultBlock result={result} />}
     </div>
   );
 }
@@ -709,6 +737,106 @@ function WatchTool() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Filigrane / logo ─────────────────────────────────────────────────────────
+function WatermarkTool() {
+  const [input, setInput] = useState<string | null>(null);
+  const [logo, setLogo] = useState<string | null>(null);
+  const [position, setPosition] = useState("bottom-right");
+  const [opacity, setOpacity] = useState("0.6");
+  const [scale, setScale] = useState("0.2");
+  const job = useToolboxJob(t("Filigrane"));
+  return (
+    <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+      <p className="text-sm text-gray-400">{t("Superpose une image (logo PNG transparent conseillé) sur une vidéo ou une image.")}</p>
+      <button onClick={async () => { const p = await api()?.toolboxPick?.("media"); if (p) setInput(p); }} disabled={job.busy} className="w-full py-3 rounded-xl border-2 border-dashed border-white/15 hover:border-pink-500/40 transition-all flex items-center justify-center gap-2 text-sm text-gray-300 disabled:opacity-40"><FileUp className="w-4 h-4" /> {input ? input.split(/[\\/]/).pop() : t("Choisir la vidéo / l'image")}</button>
+      <button onClick={async () => { const p = await api()?.toolboxPick?.("image"); if (p) setLogo(p); }} disabled={job.busy} className="w-full py-3 rounded-xl border-2 border-dashed border-white/15 hover:border-pink-500/40 transition-all flex items-center justify-center gap-2 text-sm text-gray-300 disabled:opacity-40"><Stamp className="w-4 h-4" /> {logo ? logo.split(/[\\/]/).pop() : t("Choisir le logo (image)")}</button>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-3">
+          <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Position")}</label>
+          <GlassSelect value={position} onChange={setPosition} className="mt-1" ariaLabel={t("Position")} options={[{ value: "top-left", label: t("Haut gauche") }, { value: "top-right", label: t("Haut droite") }, { value: "bottom-left", label: t("Bas gauche") }, { value: "bottom-right", label: t("Bas droite") }, { value: "center", label: t("Centre") }]} />
+        </div>
+        <div>
+          <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Opacité")}</label>
+          <input type="number" step="0.1" min="0.05" max="1" value={opacity} onChange={e => setOpacity(e.target.value)} className={INPUT + " mt-1"} />
+        </div>
+        <div>
+          <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Taille")}</label>
+          <input type="number" step="0.05" min="0.02" max="1" value={scale} onChange={e => setScale(e.target.value)} className={INPUT + " mt-1"} />
+        </div>
+      </div>
+      {!job.busy && input && logo && <button onClick={() => job.run("watermark", input, { logoPath: logo, position, opacity: parseFloat(opacity), scale: parseFloat(scale) })} className="w-full py-3 rounded-xl font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg,#e879f9,#a855f7)" }}><Stamp className="w-4 h-4" /> {t("Appliquer")}</button>}
+      {job.busy && <ProgressBlock percent={job.percent} label={job.label} onCancel={job.cancel} />}
+      {job.result && !job.busy && <ResultBlock result={job.result} />}
+    </div>
+  );
+}
+
+// ── Renommage par lot ────────────────────────────────────────────────────────
+function RenameTool() {
+  const [paths, setPaths] = useState<string[]>([]);
+  const [pattern, setPattern] = useState("{name}");
+  const [start, setStart] = useState("1");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ ok: number; fail: number } | null>(null);
+
+  const preview = (p: string, i: number) => {
+    const name = (p.split(/[\\/]/).pop() || p).replace(/\.[^.]+$/, "");
+    const ext = (p.match(/\.[^.]+$/) || [""])[0];
+    const date = new Date().toISOString().slice(0, 10);
+    let out = pattern
+      .replace(/\{n:(\d+)\}/g, (_, w) => String(Number(start) + i).padStart(parseInt(w, 10), "0"))
+      .replace(/\{n\}/g, String(Number(start) + i))
+      .replace(/\{name\}/g, name)
+      .replace(/\{date\}/g, date)
+      .replace(/\{ext\}/g, ext.replace(".", ""));
+    if (!/\.[a-z0-9]+$/i.test(out)) out += ext;
+    return out;
+  };
+
+  const run = async () => {
+    if (!paths.length) return;
+    setBusy(true); setDone(null);
+    try {
+      const r = await api()?.toolboxRenameBatch?.({ paths, pattern, start: Number(start) || 1 });
+      if (r?.ok) {
+        const ok = r.results.filter((x: any) => x.ok).length;
+        setDone({ ok, fail: r.results.length - ok });
+        setPaths([]);
+      }
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+      <p className="text-sm text-gray-400">{t("Renomme plusieurs fichiers d'un coup. Motifs :")} <code className="text-pink-300">{"{name}"}</code> <code className="text-pink-300">{"{n}"}</code> <code className="text-pink-300">{"{n:3}"}</code> <code className="text-pink-300">{"{date}"}</code> <code className="text-pink-300">{"{ext}"}</code></p>
+      <button onClick={async () => { const ps = await api()?.toolboxPickAny?.(); if (ps?.length) { setPaths(ps); setDone(null); } }} disabled={busy} className="w-full py-3 rounded-xl border-2 border-dashed border-white/15 hover:border-pink-500/40 transition-all flex items-center justify-center gap-2 text-sm text-gray-300 disabled:opacity-40"><FileUp className="w-4 h-4" /> {paths.length ? t("%n fichiers sélectionnés").replace("%n", String(paths.length)) : t("Choisir des fichiers")}</button>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-2">
+          <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Motif")}</label>
+          <input value={pattern} onChange={e => setPattern(e.target.value)} placeholder="{name}_{n:2}" className={INPUT + " mt-1 font-mono"} />
+        </div>
+        <div>
+          <label className="text-[10px] text-gray-500 uppercase font-semibold">{t("Début n°")}</label>
+          <input type="number" value={start} onChange={e => setStart(e.target.value)} className={INPUT + " mt-1"} />
+        </div>
+      </div>
+      {paths.length > 0 && (
+        <div className="space-y-1 max-h-40 overflow-y-auto text-xs">
+          {paths.slice(0, 6).map((p, i) => (
+            <div key={i} className="flex items-center gap-2 text-gray-400 bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+              <span className="truncate flex-1">{p.split(/[\\/]/).pop()}</span><span className="text-gray-600">→</span><span className="truncate flex-1 text-pink-300">{preview(p, i)}</span>
+            </div>
+          ))}
+          {paths.length > 6 && <p className="text-gray-600 text-center">+{paths.length - 6}…</p>}
+        </div>
+      )}
+      {paths.length > 0 && !busy && <button onClick={run} className="w-full py-3 rounded-xl font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg,#e879f9,#a855f7)" }}><Pencil className="w-4 h-4" /> {t("Renommer")}</button>}
+      {busy && <div className="flex items-center gap-2 text-sm text-gray-300"><Loader2 className="w-4 h-4 text-pink-400 animate-spin" /> {t("Renommage…")}</div>}
+      {done && <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-sm text-emerald-300 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {done.ok} {t("renommé(s)")} {done.fail > 0 ? `· ${done.fail} ${t("échec(s)")}` : ""}</div>}
     </div>
   );
 }
