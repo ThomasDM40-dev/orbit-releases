@@ -42,6 +42,16 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 ### 🔃 Convertisseur & Tags
 - Conversion entre tous formats (MP4, MKV, AVI, MOV, MP3, FLAC, WAV, OGG…)
 - Éditeur de tags ID3 (titre, artiste, album, pochette), drag & drop
+- **Préréglages** de conversion + application d'un format à tous les fichiers en un clic
+
+### 🧰 Boîte à outils (utilitaires rapides)
+- **Découper** une vidéo sans réencoder (instantané, sans perte), **extraire l'audio** (MP3/M4A/WAV/FLAC), **compresser à une taille cible** (8/10/25/50 Mo)
+- **Convertir des images** (PNG/JPG/WEBP/AVIF/BMP/TIFF/ICO) + redimensionnement, et combiner des images en **PDF**
+- **Fusionner** plusieurs vidéos, **incruster des sous-titres** (.srt) en dur (hardsub)
+- **QR codes** : générateur (couleurs) + lecteur (scan depuis une image)
+- **Traduction de sous-titres** et **OCR** (texte depuis une image) propulsés par l'IA Claude (clé API perso)
+- **Dossier surveillé** (conversion automatique) + **comparateur avant/après** à curseur
+- **Centre de tâches** global, **notifications** de fin et historique des **fichiers récents**
 
 ### 🎬 Médiathèque (Anime Media Manager)
 - Gestionnaire de médias pour monteurs & artistes 3D : import drag & drop, **scan de dossiers**, organisation par **séries / saisons / épisodes** (détection auto)
