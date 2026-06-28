@@ -44,14 +44,13 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - Éditeur de tags ID3 (titre, artiste, album, pochette), drag & drop
 - **Préréglages** de conversion + application d'un format à tous les fichiers en un clic
 
-### 🧰 Boîte à outils (utilitaires rapides)
-- **Découper** une vidéo sans réencoder (instantané, sans perte), **extraire l'audio** (MP3/M4A/WAV/FLAC), **compresser à une taille cible** (8/10/25/50 Mo)
-- **Convertir des images** (PNG/JPG/WEBP/AVIF/BMP/TIFF/ICO) + redimensionnement, et combiner des images en **PDF**
-- **Fusionner** plusieurs vidéos, **incruster des sous-titres** (.srt) en dur (hardsub)
-- **QR codes** : générateur (couleurs) + lecteur (scan depuis une image)
-- **Traduction de sous-titres** et **OCR** (texte depuis une image) propulsés par l'IA Claude (clé API perso)
-- **Dossier surveillé** (conversion automatique) + **comparateur avant/après** à curseur
-- **Centre de tâches** global, **notifications** de fin et historique des **fichiers récents**
+### 🧰 Boîte à outils (utilitaires rapides, rangés par catégories)
+- **Vidéo** : découper sans réencoder, compresser à une taille cible (8/10/25/50 Mo), **recadrer réseaux** (9:16 / 1:1 / 16:9), pivoter/miroir, **changer la vitesse** (0.1×–8×), **vidéo→GIF** / GIF→MP4, **filigrane/logo**, fusionner, planche-contact, extraire les images
+- **Audio** : extraire l'audio (MP3/M4A/WAV/FLAC), **normaliser le volume** + fondus, **couper les silences**
+- **Image** : convertir (PNG/JPG/WEBP/AVIF/BMP/TIFF/ICO) + redimensionner, images → **PDF**, **nettoyer les métadonnées** (EXIF/GPS), comparateur avant/après
+- **Sous-titres** : incruster un .srt en dur (hardsub), **traduire** dans une autre langue (IA Claude)
+- **Utilitaires** : QR codes (générateur + lecteur), **OCR** (texte depuis une image, IA Claude), **renommage par lot** (motifs), **dossier surveillé** (conversion auto)
+- **Traitement par lot** sur la plupart des outils, **détection du presse-papier** (lien copié → téléchargement proposé), **Centre de tâches** global, notifications de fin et historique des fichiers récents
 
 ### 🎬 Médiathèque (Anime Media Manager)
 - Gestionnaire de médias pour monteurs & artistes 3D : import drag & drop, **scan de dossiers**, organisation par **séries / saisons / épisodes** (détection auto)
