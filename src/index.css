@@ -605,14 +605,22 @@ button:focus-visible {
   background: var(--accent-strong, #e879f9);
   box-shadow: 0 0 8px 1px var(--accent-glow, rgba(232,121,249,.6));
 }
-@keyframes osSpin { to { transform: rotate(360deg); } }
+@keyframes osSpin { from { transform: translateZ(0) rotate(0); } to { transform: translateZ(0) rotate(360deg); } }
 
-/* Indicateurs de chargement : on force l'animation sur le compositeur (GPU) pour
+/* Indicateurs de chargement : on force l'animation sur le COMPOSITEUR (GPU) pour
    qu'elle ne FIGE PLUS quand le thread JS est occupé (flux de progression d'un
-   outil, gros re-renders…). Sans ça, un `transform` anim sur un SVG (Loader2)
+   outil, gros re-renders…). Un simple `transform` animé sur un SVG (Loader2)
    tourne sur le thread principal et se bloque dès qu'un outil travaille.
-   `will-change` suffit à promouvoir la couche sans altérer le keyframe. */
-.animate-spin { will-change: transform; }
+   L'astuce : un `translateZ(0)` présent dans CHAQUE keyframe garantit une couche
+   GPU dédiée → l'animation tourne côté compositeur, jamais bloquée par le JS.
+   (Règle hors @layer → l'emporte sur l'utilitaire Tailwind `animate-spin`.) */
+.animate-spin {
+  animation: osSpinGpu 0.85s linear infinite;
+  transform-origin: center;
+  transform: translateZ(0);
+  will-change: transform;
+}
+@keyframes osSpinGpu { to { transform: translateZ(0) rotate(360deg); } }
 
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
