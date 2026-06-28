@@ -248,6 +248,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   licenseAdminDevices: () => ipcRenderer.invoke('license-admin-devices'),
   licenseDeviceId: () => ipcRenderer.invoke('license-device-id'),
   onLicenseRevoked: (cb) => { const h = () => cb(); ipcRenderer.on('license-revoked', h); return () => ipcRenderer.removeListener('license-revoked', h); },
+  reportBug: (description, context) => ipcRenderer.invoke('report-bug', { description, context }),
+  reportError: (payload) => ipcRenderer.send('report-error', payload),
   licenseClaimDevice: () => ipcRenderer.invoke('license-claim-device'),
 
   // ── AI Assistant ──

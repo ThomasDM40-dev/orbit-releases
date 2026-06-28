@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, Download, Palette, Monitor, Cpu, Globe, Info,
-  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot, Boxes, Crown
+  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot, Boxes, Crown, Bug
 } from 'lucide-react';
 import ChangelogModal from './ChangelogModal';
 import LicenseAdmin from './LicenseAdmin';
@@ -67,7 +67,18 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
   const [llmBusy, setLlmBusy] = useState(false);
   const [llmProg, setLlmProg] = useState<{ stage?: string; percent?: number } | null>(null);
 
+  const [bugText, setBugText] = useState('');
+  const [bugStatus, setBugStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
   const update = (key: string, value: any) => saveSettings({ ...settings, [key]: value });
+
+  const sendBug = async () => {
+    if (!bugText.trim()) return;
+    setBugStatus('sending');
+    const r = await electronAPI?.reportBug?.(bugText.trim()).catch(() => ({ ok: false }));
+    setBugStatus(r?.ok ? 'sent' : 'error');
+    if (r?.ok) { setBugText(''); setTimeout(() => setBugStatus('idle'), 3000); }
+  };
 
   useEffect(() => {
     electronAPI?.llmStatus?.().then((s: any) => s && setLlm(s)).catch(() => {});
@@ -208,6 +219,26 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
               <Row title={t("Assistant de démarrage")} desc={t("Reconfigurer les onglets selon ton profil (monteur, 3D, audio…)")}>
                 <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('orbit-onboarding')); }} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">{t("Relancer")}</button>
               </Row>
+            </Card>
+            <Card title={t("Aide & rapports")} icon={<Bug className="w-3.5 h-3.5" />}>
+              <Row title={t("Envoi automatique des erreurs")} desc={t("Aide à corriger les bugs plus vite. Aucune donnée perso (chemins masqués).")}>
+                <Toggle checked={settings.errorReports !== false} onChange={(c) => update('errorReports', c)} />
+              </Row>
+              <div className="px-3 py-2.5 space-y-2">
+                <p className="text-sm text-gray-200">{t("Signaler un bug")}</p>
+                <textarea value={bugText} onChange={e => setBugText(e.target.value)} rows={3}
+                  placeholder={t("Décris le problème : ce que tu faisais, ce qui s'est passé…")}
+                  className={INPUT + " w-full resize-none select-text"} />
+                <div className="flex items-center gap-2">
+                  <button onClick={sendBug} disabled={!bugText.trim() || bugStatus === 'sending'}
+                    className="px-3 py-1.5 rounded-lg text-sm border transition-all flex items-center gap-1.5 disabled:opacity-40"
+                    style={{ background: 'color-mix(in srgb, var(--accent) 18%, transparent)', borderColor: 'color-mix(in srgb, var(--accent) 40%, transparent)' }}>
+                    {bugStatus === 'sending' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}{t("Envoyer le rapport")}
+                  </button>
+                  {bugStatus === 'sent' && <span className="text-xs text-green-400">{t("Merci ! Rapport envoyé ✓")}</span>}
+                  {bugStatus === 'error' && <span className="text-xs text-red-400">{t("Échec de l'envoi (réessaie plus tard).")}</span>}
+                </div>
+              </div>
             </Card>
             <Card title={t("Couleur d'accent")} icon={<Palette className="w-3.5 h-3.5" />}>
               <div className="flex gap-3 p-3 flex-wrap">

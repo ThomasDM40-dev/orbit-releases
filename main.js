@@ -357,6 +357,12 @@ function createWindow() {
     }
   });
 
+  // Crash du process de rendu → rapport automatique (si activé).
+  mainWindow.webContents.on('render-process-gone', (e, details) => {
+    if (details && details.reason === 'clean-exit') return;
+    reportEvent({ type: 'crash', context: 'render-process-gone', message: `renderer ${details && details.reason} (exit ${details && details.exitCode})` });
+  });
+
   // Setup Auto-Updater Listeners
   autoUpdater.autoDownload = false; // We'll trigger manually so user sees progress
   autoUpdater.autoInstallOnAppQuit = true;
@@ -396,10 +402,12 @@ function createWindow() {
     // Silently ignore SIGINT (cancelled downloads) and GitHub update errors
     if (reason && (reason.signal === 'SIGINT' || (reason.message || '').includes('No published versions') || (reason.message || '').includes('latest.yml'))) return;
     console.error('UnhandledRejection:', reason);
+    reportEvent({ type: 'main', context: 'unhandledRejection', message: (reason && reason.message) || String(reason), stack: reason && reason.stack });
   });
   process.on('uncaughtException', (err) => {
     if ((err.message || '').includes('SIGINT') || (err.message || '').includes('No published versions')) return;
     console.error('UncaughtException:', err);
+    reportEvent({ type: 'main', context: 'uncaughtException', message: err && err.message, stack: err && err.stack });
   });
 
   ipcMain.handle('check-for-update', async () => {
@@ -4222,6 +4230,63 @@ ipcMain.handle('license-status', () => {
 });
 ipcMain.handle('license-activate', (e, { key } = {}) => licensing.activate(key));
 ipcMain.handle('license-deactivate', () => licensing.clearLicense());
+
+// ── Rapports de bug / erreurs → serveur → webhook Discord (côté serveur) ───────
+// Le webhook reste secret côté serveur (REPORT_WEBHOOK_URL) ; le client n'envoie
+// que le contenu du rapport. Anti-spam : dédoublonnage 5 min + plafond/session.
+// Les chemins du dossier personnel sont remplacés par « ~ ». Désactivable via le
+// réglage `errorReports:false` (sauf rapports manuels, toujours envoyés).
+const REPORT_DEDUPE = new Map();
+let reportCount = 0;
+function reportTelemetryEnabled() {
+  try { const gs = JSON.parse(fs.readFileSync(path.join(ORBIT_DIR, 'settings.json'), 'utf8')); return gs.errorReports !== false; } catch (e) { return true; }
+}
+function scrubReport(s) { if (s == null) return ''; try { return String(s).split(os.homedir()).join('~'); } catch (e) { return String(s); } }
+// Dernières lignes du journal de l'app → contexte « ce qui s'est passé juste avant ».
+function recentLog(maxLines = 25, maxChars = 1800) {
+  try {
+    const txt = fs.readFileSync(logPath, 'utf8');
+    const lines = txt.split(/\r?\n/).filter(Boolean).slice(-maxLines);
+    return scrubReport(lines.join('\n')).slice(-maxChars);
+  } catch (e) { return ''; }
+}
+async function reportEvent(payload = {}) {
+  try {
+    const manual = payload.type === 'manual';
+    if (!manual && !reportTelemetryEnabled()) return { ok: false, skipped: true };
+    const now = Date.now();
+    if (!manual) {
+      const sig = (payload.type || '') + '|' + (payload.message || '').slice(0, 200);
+      const last = REPORT_DEDUPE.get(sig);
+      if (last && now - last < 5 * 60 * 1000) return { ok: false, deduped: true };
+      if (reportCount > 50) return { ok: false, capped: true };
+      REPORT_DEDUPE.set(sig, now);
+    }
+    reportCount++;
+    const body = {
+      type: payload.type || 'error',
+      message: scrubReport(payload.message).slice(0, 500),
+      stack: scrubReport(payload.stack).slice(0, 3500),
+      description: scrubReport(payload.description).slice(0, 2000),
+      context: scrubReport(payload.context).slice(0, 300),
+      version: app.getVersion(),
+      os: `${process.platform} ${os.release()} ${process.arch}`,
+      email: (typeof cloud !== 'undefined' && cloud && cloud.email) || '',
+      device: (() => { try { return licensing.deviceFingerprint(); } catch (e) { return ''; } })(),
+      logTail: recentLog(),
+      ts: now,
+    };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    let res;
+    try { res = await fetch(cloudBase() + '/api/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal }); }
+    finally { clearTimeout(timer); }
+    const data = await res.json().catch(() => ({}));
+    return { ok: !!(data && data.ok), error: data && data.error };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+ipcMain.handle('report-bug', (e, { description, context } = {}) => reportEvent({ type: 'manual', description, context: context || 'bouton Signaler un bug' }));
+ipcMain.on('report-error', (e, payload = {}) => { reportEvent({ ...payload, type: payload.type || 'renderer' }); });
 
 // Achat : crée une session Stripe (lié au compte connecté) et ouvre le checkout.
 ipcMain.handle('license-checkout', async () => {
