@@ -58,7 +58,7 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - **LUT / Couleur** (.cube ↔ .3dl, conversion mathématique sans perte)
 - **Polices** (TTF/OTF → TTF/WOFF/WOFF2) et **3D** (OBJ/STL/PLY/GLTF/GLB/FBX… → GLB/OBJ/STL/PLY)
 - **Documents** (DOCX/XLSX/Markdown → PDF/HTML/CSV) via le moteur de rendu intégré, sans téléchargement externe
-- **After Effects** : analyse des presets .ffx/.aep (format RIFX) — type de fichier et **plugins tiers requis** (Magic Bullet, Sapphire, Red Giant…) ; conversion entre versions via le pipeline cloud (à venir)
+- **After Effects** : analyse des presets .ffx/.aep (format RIFX) — type de fichier et **plugins tiers requis** (Magic Bullet, Sapphire, Red Giant…). **Pont AE local** : Orbit détecte ton After Effects installé et le pilote via ExtendScript pour des conversions réelles — **mise à niveau d'un .aep** vers ta version et **application d'un preset .ffx** en projet
 
 ### 🎬 Médiathèque (Anime Media Manager)
 - Gestionnaire de médias pour monteurs & artistes 3D : import drag & drop, **scan de dossiers**, organisation par **séries / saisons / épisodes** (détection auto)
