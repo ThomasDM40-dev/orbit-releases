@@ -31,6 +31,17 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 
 <br/>
 
+## 🌌 Orbit Nova — nouvelle interface premium
+
+Depuis la **v0.40.0**, Orbit propose deux interfaces et bascule de l'une à l'autre **instantanément** (le choix est mémorisé) :
+
+- **Orbit Nova** *(par défaut)* — une expérience futuriste : fond vivant (orbes, particules, flèches lumineuses animées), page d'accueil spectaculaire, **recherche de commande `Ctrl+K`**, sidebar en verre, cartes d'outils animées (tilt 3D + glow), **retours tactiles** (animation de clic + petits bruitages mutables) et **interface responsive**.
+- **Orbit Classic** — l'interface d'origine, inchangée.
+
+> Les deux interfaces partagent exactement les **mêmes fonctionnalités** : changer d'interface ne change que l'habillage.
+
+<br/>
+
 ## 🎯 Fonctionnalités
 
 ### ⬇️ Téléchargeur multimédia

@@ -9,6 +9,8 @@ import LicenseAdmin from './LicenseAdmin';
 import ModulesPanel from './ModulesPanel';
 import GlassSelect from './GlassSelect';
 import { t, LANGS, type Lang } from '@/i18n';
+import { Volume2 } from 'lucide-react';
+import { isSfxEnabled, setSfxEnabled } from '@/nova/sfx';
 
 type SettingsModalProps = {
   onClose: () => void;
@@ -53,6 +55,7 @@ const INPUT = "bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm 
 
 export default function SettingsModal({ onClose, language, settings, saveSettings, handleLanguageChange, electronAPI }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState('general');
+  const [sfxOn, setSfxOn] = useState(isSfxEnabled());
   const [appVersion, setAppVersion] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLicenseAdmin, setShowLicenseAdmin] = useState(false);
@@ -230,6 +233,11 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
                   </button>
                 ))}
               </div>
+            </Card>
+            <Card title={t("Sons & retours")} icon={<Volume2 className="w-3.5 h-3.5" />}>
+              <Row title={t("Sons de l'interface")} desc={t("Petits bruitages au clic (interface Nova)")}>
+                <Toggle checked={sfxOn} onChange={(c) => { setSfxOn(c); setSfxEnabled(c); }} />
+              </Row>
             </Card>
           </div>
         );

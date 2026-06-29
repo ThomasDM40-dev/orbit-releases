@@ -4,6 +4,7 @@ import App from './App'
 import './index.css'
 import { useLangState } from './i18n/useLangState'
 import ErrorBoundary from './components/ErrorBoundary'
+import { ShellProvider } from './shell/ShellContext'
 
 const api = () => (window as any).electronAPI;
 
@@ -26,7 +27,13 @@ window.addEventListener('unhandledrejection', (e) => {
 // re-reads the active dictionary without per-component i18n plumbing.
 function Root() {
   const lang = useLangState()
-  return <App key={lang} />
+  // ShellProvider sits ABOVE the lang-keyed remount so the chosen shell
+  // (Classic / Nova) survives language switches.
+  return (
+    <ShellProvider>
+      <App key={lang} />
+    </ShellProvider>
+  )
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

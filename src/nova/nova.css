@@ -1,0 +1,301 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   ORBIT NOVA — futuristic shell stylesheet
+   Everything here is scoped under `.nova-shell` so it NEVER leaks into Orbit
+   Classic. Tokens, glow, glassmorphism, mesh gradients, particles and the
+   animated SVG "data-flow" arrows all live here.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.nova-shell {
+  /* Identity palette */
+  --nv-bg-0: #080B12;
+  --nv-bg-1: #0F172A;
+  --nv-bg-2: #111827;
+  --nv-violet: #7C3AED;
+  --nv-violet-2: #8B5CF6;
+  --nv-violet-3: #A855F7;
+  --nv-cyan: #00D4FF;
+  --nv-sky: #38BDF8;
+
+  --nv-grad: linear-gradient(135deg, var(--nv-violet-3), var(--nv-cyan));
+  --nv-grad-soft: linear-gradient(135deg, rgba(168,85,247,0.18), rgba(0,212,255,0.18));
+  --nv-text: #E5ECF5;
+  --nv-text-dim: #8A97AD;
+  --nv-hairline: rgba(255,255,255,0.07);
+  --nv-hairline-2: rgba(255,255,255,0.12);
+
+  --nv-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --nv-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  position: relative;
+  height: 100%;
+  width: 100%;
+  color: var(--nv-text);
+  background: var(--nv-bg-0);
+  overflow: hidden;
+  font-feature-settings: "ss01" on, "cv01" on;
+}
+
+.nova-shell ::selection { background: rgba(0,212,255,0.30); color: #fff; }
+
+/* ── Living background ──────────────────────────────────────────────────────
+   Layered, GPU-only, slow & subtle. Sits behind everything (pointer-events none).
+   ─────────────────────────────────────────────────────────────────────────── */
+.nv-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+
+/* mesh gradient base */
+.nv-bg__mesh {
+  position: absolute; inset: -20%;
+  background:
+    radial-gradient(40% 40% at 18% 22%, rgba(124,58,237,0.30), transparent 70%),
+    radial-gradient(38% 38% at 82% 18%, rgba(0,212,255,0.20), transparent 70%),
+    radial-gradient(46% 46% at 70% 82%, rgba(139,92,246,0.26), transparent 72%),
+    radial-gradient(40% 40% at 24% 84%, rgba(56,189,248,0.16), transparent 72%);
+  filter: blur(40px);
+  animation: nvMesh 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes nvMesh {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  50%  { transform: translate3d(2%, -1.5%, 0) scale(1.06); }
+  100% { transform: translate3d(-2%, 2%, 0) scale(1.02); }
+}
+
+/* big slow floating orbs */
+.nv-orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.5; will-change: transform; }
+.nv-orb--1 { width: 520px; height: 520px; left: -120px; top: -140px; background: radial-gradient(circle, rgba(124,58,237,0.55), transparent 68%); animation: nvFloat1 24s ease-in-out infinite alternate; }
+.nv-orb--2 { width: 460px; height: 460px; right: -120px; top: 10%; background: radial-gradient(circle, rgba(0,212,255,0.40), transparent 68%); animation: nvFloat2 30s ease-in-out infinite alternate; }
+.nv-orb--3 { width: 560px; height: 560px; left: 30%; bottom: -200px; background: radial-gradient(circle, rgba(139,92,246,0.42), transparent 68%); animation: nvFloat3 34s ease-in-out infinite alternate; }
+@keyframes nvFloat1 { to { transform: translate3d(120px, 80px, 0) scale(1.12); } }
+@keyframes nvFloat2 { to { transform: translate3d(-100px, 60px, 0) scale(0.92); } }
+@keyframes nvFloat3 { to { transform: translate3d(60px, -90px, 0) scale(1.08); } }
+
+/* subtle noise texture */
+.nv-bg__noise {
+  position: absolute; inset: 0; opacity: 0.04; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* vignette for depth */
+.nv-bg__vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 30%, transparent 50%, rgba(0,0,0,0.55) 100%); }
+
+/* floating particles */
+.nv-particle {
+  position: absolute; bottom: -10px; width: 3px; height: 3px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 8px 1px rgba(0,212,255,0.7);
+  opacity: 0; animation: nvRise linear infinite; will-change: transform, opacity;
+}
+@keyframes nvRise {
+  0%   { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { transform: translate3d(var(--dx, 20px), -102vh, 0) scale(1); opacity: 0; }
+}
+
+/* animated SVG "data-flow" arrows (dashes travelling along a path) */
+.nv-flow path { stroke-dasharray: 7 12; animation: nvDash 2.6s linear infinite; }
+.nv-flow .nv-flow--slow path { animation-duration: 4.2s; }
+@keyframes nvDash { to { stroke-dashoffset: -38; } }
+.nv-flow__head { animation: nvFlowHead 3.4s var(--nv-ease) infinite; }
+@keyframes nvFlowHead {
+  0%, 100% { opacity: 0.25; transform: translateX(0); }
+  50%      { opacity: 0.9;  transform: translateX(6px); }
+}
+
+/* ── Glass surfaces ─────────────────────────────────────────────────────────*/
+.nv-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--nv-hairline);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 50px -18px rgba(0,0,0,0.6);
+}
+.nv-glass-strong {
+  background: linear-gradient(180deg, rgba(17,24,39,0.85), rgba(8,11,18,0.85));
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  border: 1px solid var(--nv-hairline-2);
+  box-shadow: 0 30px 80px -24px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* gradient text */
+.nv-grad-text {
+  background: linear-gradient(110deg, #fff 10%, var(--nv-violet-3) 45%, var(--nv-cyan) 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* animated luminous border (conic sweep) */
+.nv-border-glow { position: relative; }
+.nv-border-glow::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: conic-gradient(from var(--a, 0deg), transparent 0deg, rgba(0,212,255,0.7) 60deg, rgba(168,85,247,0.7) 140deg, transparent 220deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity 0.3s ease; animation: nvSpinBorder 6s linear infinite;
+  will-change: transform;
+}
+.nv-border-glow:hover::before { opacity: 1; }
+@property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes nvSpinBorder { to { --a: 360deg; } }
+
+/* ── Sidebar ────────────────────────────────────────────────────────────────*/
+.nv-nav-item {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px; border-radius: 12px; color: var(--nv-text-dim);
+  font-size: 13.5px; font-weight: 500; cursor: pointer; user-select: none;
+  transition: color .2s var(--nv-ease), background-color .2s var(--nv-ease), transform .15s var(--nv-spring);
+  border: 1px solid transparent;
+}
+.nv-nav-item:hover { color: var(--nv-text); background: rgba(255,255,255,0.04); }
+.nv-nav-item:active { transform: scale(0.98); }
+.nv-nav-item.is-active {
+  color: #fff; background: var(--nv-grad-soft); border-color: rgba(168,85,247,0.28);
+  box-shadow: 0 6px 22px -10px rgba(124,58,237,0.8);
+}
+.nv-nav-item.is-active::before {
+  content: ""; position: absolute; left: -2px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 60%; border-radius: 3px; background: var(--nv-grad);
+  box-shadow: 0 0 12px 1px rgba(0,212,255,0.8);
+}
+.nv-nav-ico { width: 20px; height: 20px; display: grid; place-items: center; flex: none; }
+
+/* ── Tool cards ─────────────────────────────────────────────────────────────*/
+.nv-card {
+  position: relative; border-radius: 18px; padding: 18px; cursor: pointer; overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  border: 1px solid var(--nv-hairline);
+  transition: transform .3s var(--nv-ease), box-shadow .3s var(--nv-ease), border-color .3s var(--nv-ease);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.nv-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(0,212,255,0.16), transparent 60%);
+  transition: opacity .3s ease;
+}
+.nv-card:hover { transform: translateY(-6px); border-color: var(--nv-hairline-2); box-shadow: 0 26px 60px -24px rgba(0,0,0,0.85); }
+.nv-card:hover::after { opacity: 1; }
+.nv-card__ico {
+  width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; color: #fff;
+  box-shadow: 0 10px 26px -8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.nv-card__badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; color: #fff;
+  background: rgba(0,212,255,0.16); border: 1px solid rgba(0,212,255,0.35);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────────*/
+.nv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border-radius: 12px; font-weight: 600; font-size: 14px;
+  cursor: pointer; user-select: none; border: 1px solid transparent;
+  transition: transform .15s var(--nv-spring), box-shadow .25s var(--nv-ease), filter .15s ease, background-color .15s ease;
+}
+.nv-btn:active { transform: scale(0.97); }
+.nv-btn-primary {
+  color: #fff; background: var(--nv-grad);
+  box-shadow: 0 12px 30px -10px rgba(124,58,237,0.8), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.nv-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 18px 40px -10px rgba(0,212,255,0.6); }
+.nv-btn-ghost { color: var(--nv-text-dim); background: rgba(255,255,255,0.04); border-color: var(--nv-hairline); }
+.nv-btn-ghost:hover { color: #fff; background: rgba(255,255,255,0.08); border-color: var(--nv-hairline-2); }
+
+/* magnetic hover lift for chips */
+.nv-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; color: var(--nv-text-dim);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--nv-hairline);
+  transition: all .2s var(--nv-ease);
+}
+.nv-chip:hover { color: #fff; border-color: rgba(0,212,255,0.4); box-shadow: 0 0 18px -6px rgba(0,212,255,0.6); }
+
+/* ── Window controls ────────────────────────────────────────────────────────*/
+.nv-winctl {
+  display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 26px;
+  border-radius: 8px; color: var(--nv-text-dim);
+  transition: color .15s ease, background-color .15s ease, transform .15s var(--nv-spring);
+}
+.nv-winctl:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.nv-winctl:active { transform: scale(0.9); }
+.nv-winctl--close:hover { background: rgba(239,68,68,0.9); color: #fff; }
+
+/* ── Search palette ─────────────────────────────────────────────────────────*/
+.nv-search-trigger {
+  display: flex; align-items: center; gap: 10px; width: 100%; max-width: 440px;
+  padding: 9px 14px; border-radius: 14px; cursor: text; color: var(--nv-text-dim);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--nv-hairline);
+  transition: border-color .2s var(--nv-ease), box-shadow .2s var(--nv-ease), background-color .2s ease;
+}
+.nv-search-trigger:hover { background: rgba(255,255,255,0.06); border-color: var(--nv-hairline-2); }
+.nv-search-trigger:focus-within,
+.nv-search-trigger.is-focus { border-color: rgba(0,212,255,0.5); box-shadow: 0 0 0 4px rgba(0,212,255,0.12), 0 0 30px -8px rgba(0,212,255,0.5); }
+
+/* ── Scrollbar (Nova) ───────────────────────────────────────────────────────*/
+.nv-scroll::-webkit-scrollbar { width: 8px; }
+.nv-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(168,85,247,0.5), rgba(0,212,255,0.5)); border-radius: 8px; }
+.nv-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Entrance helpers ───────────────────────────────────────────────────────*/
+@keyframes nvUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes nvIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.nv-up { animation: nvUp .6s var(--nv-ease) both; }
+.nv-in { animation: nvIn .5s var(--nv-ease) both; }
+
+/* shimmering underline accent used in hero */
+.nv-shine {
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.9), transparent);
+  background-size: 200% 100%; animation: nvShine 3s linear infinite;
+}
+@keyframes nvShine { to { background-position: 200% 0; } }
+
+/* ── Click ripple (global tap feedback) ─────────────────────────────────────*/
+.nv-ripple {
+  position: fixed; z-index: 9999; pointer-events: none; border-radius: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  background: radial-gradient(circle, rgba(0,212,255,0.55), rgba(168,85,247,0.28) 60%, transparent 72%);
+  transform: scale(0); opacity: 0.9; will-change: transform, opacity;
+  animation: nvRipple 0.5s var(--nv-ease, cubic-bezier(0.16,1,0.3,1)) forwards;
+}
+@keyframes nvRipple {
+  0%   { transform: scale(0); opacity: 0.85; }
+  100% { transform: scale(7); opacity: 0; }
+}
+
+/* press feedback shared by interactive Nova elements */
+.nv-card:active { transform: translateY(-2px) scale(0.985) !important; }
+
+/* ── Responsive: collapsible sidebar drawer ─────────────────────────────────*/
+.nv-hamburger { display: none; }
+.nv-nav-backdrop { display: none; }
+
+@media (max-width: 860px) {
+  .nv-hamburger { display: inline-flex; }
+  /* sidebar becomes an off-canvas drawer */
+  .nv-sidebar {
+    position: fixed !important; top: 0; left: 0; bottom: 0; z-index: 60;
+    transform: translateX(-105%);
+    transition: transform 0.32s var(--nv-ease);
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+  .nv-sidebar.is-open { transform: translateX(0); }
+  .nv-nav-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 55;
+    background: rgba(4,6,12,0.55); backdrop-filter: blur(3px);
+    animation: nvFade 0.25s ease both;
+  }
+  @keyframes nvFade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* tighter paddings on small screens */
+@media (max-width: 640px) {
+  .nv-home-wrap { padding-left: 16px !important; padding-right: 16px !important; }
+  .nv-search-trigger { max-width: 100% !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-shell *, .nova-shell *::before, .nova-shell *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .nv-ripple { display: none !important; }
+}

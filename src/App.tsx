@@ -12,7 +12,11 @@ import TaskCenter from "@/components/TaskCenter";
 import PremiumModal from "@/components/PremiumModal";
 import PremiumGate from "@/components/PremiumGate";
 import { usePremium, PREMIUM_TABS } from "@/premium";
+import { useShell } from "@/shell/ShellContext";
+import { NOVA_HOME } from "@/nova/catalog";
 import { Sparkles, UploadCloud, Search } from "lucide-react";
+
+const NovaLayout = lazy(() => import("@/nova/NovaLayout"));
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { t, getLang, setLang, LANGS, type Lang } from "@/i18n";
@@ -111,6 +115,7 @@ export default function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const { premium } = usePremium();
+  const { shell, setShell } = useShell();
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('orbit-onboarded'));
   
   // AI Assistant & Drag & Drop State
@@ -542,6 +547,173 @@ export default function App() {
     );
   };
 
+  // ── Shell switching (Classic ⇄ Nova) ──────────────────────────────────────
+  // Switching is instant; the SAME tab components render inside whichever shell.
+  const visibleIds = new Set(mainTabConfig.filter(t => t.visible).map(t => t.id));
+
+  const novaOpenTab = (id: string) => {
+    setMainTabConfig(prev => prev.map(t => t.id === id ? { ...t, visible: true } : t));
+    setActiveTab(id);
+  };
+  const novaHome = () => setActiveTab(NOVA_HOME);
+
+  const switchToNova = () => { setActiveTab(NOVA_HOME); setShell('nova'); };
+  const switchToClassic = () => {
+    setActiveTab(cur => cur === NOVA_HOME ? (mainTabConfig.find(t => t.visible)?.id || 'downloads') : cur);
+    setShell('classic');
+  };
+
+  // If launched straight into Nova (persisted), land on the home, not a raw tab.
+  const novaLanded = useRef(false);
+  useEffect(() => {
+    if (shell === 'nova' && !novaLanded.current) { novaLanded.current = true; setActiveTab(NOVA_HOME); }
+  }, [shell]);
+
+  // The tab content — rendered once and reused by BOTH shells so every feature
+  // works identically in Classic and Nova (state preserved, mounted once).
+  const tabContent = (
+    <div className="flex-1 overflow-y-auto relative h-full">
+      <div className={activeTab === 'downloads' ? 'os-anim-fade' : 'hidden'} style={{ height: '100%' }}>
+        <DownloadInterface language={language} globalSettings={settings} setGlobalSettings={saveSettings} />
+      </div>
+      {renderLazyTab('converter', <Converter language={language} globalSettings={settings} />)}
+      {renderLazyTab('toolbox', <Toolbox />)}
+      {renderLazyTab('convertpro', <ConverterPro />)}
+      {renderLazyTab('interpolator', <AIInterpolator />)}
+      {renderLazyTab('subscriptions', <Subscriptions />)}
+      {renderLazyTab('enhance', <OrbitEnhance />)}
+      {renderLazyTab('imagegen', <ImageGen />)}
+      {renderLazyTab('inpaint', <InpaintStudio />)}
+      {renderLazyTab('library', <MediaLibrary />)}
+      {renderLazyTab('matting', <MattingStudio />)}
+      {renderLazyTab('handbrake', <HandBrake />)}
+      {renderLazyTab('topaz', <TopazVideoAI />)}
+      {renderLazyTab('transcription', <Transcription />)}
+      {renderLazyTab('drive', <DriveStudio />)}
+    </div>
+  );
+
+  // Floating overlays / modals shared by both shells (settings, AI, queue, …).
+  const sharedOverlays = (
+    <>
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          language={language}
+          settings={settings}
+          saveSettings={saveSettings}
+          handleLanguageChange={handleLanguageChange}
+          electronAPI={typeof window !== "undefined" ? (window as any).electronAPI : undefined}
+        />
+      )}
+      {showImportModal && (<ImportModal onClose={() => setShowImportModal(false)} language={language} />)}
+      {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
+      {showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
+
+      {/* Floating AI Button */}
+      <button
+        data-ai-toggle
+        onClick={() => setShowAIAssistant(!showAIAssistant)}
+        aria-label={t("Assistant IA")}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-2xl transition-all duration-200 flex items-center justify-center text-white z-40 group hover:scale-105 active:scale-95 ${showMainTabSettings ? 'opacity-0 pointer-events-none scale-90' : ''}`}
+        style={{
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent,#ec4899) 88%, white), var(--accent,#ec4899))',
+          border: '1px solid rgba(255,255,255,0.18)',
+          boxShadow: '0 10px 30px color-mix(in srgb, var(--accent,#ec4899) 45%, transparent), 0 1px 0 rgba(255,255,255,0.25) inset',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <Sparkles className="w-6 h-6 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
+      </button>
+
+      {/* Clipboard URL → quick download suggestion */}
+      <AnimatePresence>
+        {clipUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2.5 rounded-2xl max-w-[90vw]"
+            style={{ background: 'rgba(20,20,30,0.92)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)' }}
+          >
+            <span className="text-sm text-gray-300 truncate max-w-[40vw]">🔗 {t("Lien copié :")} <span className="text-gray-400">{clipUrl}</span></span>
+            <button
+              onClick={() => {
+                setMainTabConfig(prev => prev.map(tb => tb.id === 'downloads' ? { ...tb, visible: true } : tb));
+                setActiveTab('downloads');
+                window.dispatchEvent(new CustomEvent('import-urls', { detail: [clipUrl] }));
+                clipDismissed.current = clipUrl; setClipUrl(null);
+              }}
+              className="shrink-0 text-xs font-semibold text-white px-3 py-1.5 rounded-lg"
+              style={{ background: 'linear-gradient(135deg,#e879f9,#a855f7)' }}
+            >
+              {t("Télécharger")}
+            </button>
+            <button onClick={() => { clipDismissed.current = clipUrl; setClipUrl(null); }} className="shrink-0 text-gray-500 hover:text-gray-200"><span className="text-sm">✕</span></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global task center (queue) */}
+      <TaskCenter />
+
+      {/* AI Assistant */}
+      <AnimatePresence>
+        {showAIAssistant && (
+          <AIAssistant
+            onClose={() => { setShowAIAssistant(false); setDroppedFile(null); }}
+            droppedFile={droppedFile}
+            activeTab={activeTab}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Drag & Drop Overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center border-[4px] border-dashed border-pink-500/50 pointer-events-none"
+          >
+            <div className="bg-pink-500/20 p-8 rounded-full mb-6">
+              <UploadCloud className="w-20 h-20 text-pink-500" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2">{t("Déposez votre fichier ici")}</h2>
+            <p className="text-gray-300 text-lg">{t("Orbit IA l'analysera et vous proposera des outils adaptés")}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Launch update prompt (Orbit + bundled tools) */}
+      <UpdatePrompt />
+    </>
+  );
+
+  // ── Orbit Nova shell ──────────────────────────────────────────────────────
+  if (shell === 'nova') {
+    return (
+      <main className="h-screen w-screen overflow-hidden font-sans select-none text-gray-200">
+        <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-[#080B12]"><OrbitSpinner size={40} /></div>}>
+          <NovaLayout
+            activeTab={activeTab}
+            visibleIds={visibleIds}
+            onOpenTab={novaOpenTab}
+            onHome={novaHome}
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenPremium={() => setShowPremium(true)}
+            onToggleShell={switchToClassic}
+            premium={premium}
+          >
+            {tabContent}
+          </NovaLayout>
+        </Suspense>
+        {sharedOverlays}
+      </main>
+    );
+  }
+
   return (
     <main className="h-screen w-screen space-bg text-gray-300 flex flex-col overflow-hidden font-sans selection:bg-pink-500/30 select-none">
       {/* Custom Title Bar */}
@@ -626,6 +798,16 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center text-gray-500" style={{ WebkitAppRegion: 'no-drag' } as any}>
+          {/* Discover Orbit Nova — the new premium shell (instant, reversible) */}
+          <button
+            onClick={switchToNova}
+            title={t("Essayer Orbit Nova")}
+            className="group mr-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white transition-all hover:scale-[1.03] active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#A855F7,#00D4FF)', boxShadow: '0 4px 16px -4px rgba(0,212,255,0.6), inset 0 1px 0 rgba(255,255,255,0.35)' }}
+          >
+            <Sparkles className="w-3 h-3 group-hover:rotate-12 transition-transform" />
+            <span>Nova</span>
+          </button>
           <button onClick={() => setShowSettings(true)} title={t("Réglages")} className="winctl group mr-3 text-gray-400 hover:text-[var(--accent-strong)] hover:bg-[var(--accent-soft)] hover:shadow-[0_0_14px_-2px_var(--accent-glow)]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300 group-hover:rotate-90"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
           <div className="winctl-tray">
           <button onClick={handleMinimize} title={t("Réduire")} className="winctl text-gray-400 hover:text-amber-200 hover:bg-amber-400/15 hover:shadow-[0_0_14px_-2px_rgba(251,191,36,0.5)]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
@@ -825,132 +1007,12 @@ export default function App() {
             </AnimatePresence>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto relative">
-          <div className={activeTab === 'downloads' ? 'os-anim-fade' : 'hidden'} style={{ height: '100%' }}>
-            <DownloadInterface language={language} globalSettings={settings} setGlobalSettings={saveSettings} />
-          </div>
-          {renderLazyTab('converter', <Converter language={language} globalSettings={settings} />)}
-          {renderLazyTab('toolbox', <Toolbox />)}
-          {renderLazyTab('convertpro', <ConverterPro />)}
-          {renderLazyTab('interpolator', <AIInterpolator />)}
-          {renderLazyTab('subscriptions', <Subscriptions />)}
-          {renderLazyTab('enhance', <OrbitEnhance />)}
-          {renderLazyTab('imagegen', <ImageGen />)}
-          {renderLazyTab('inpaint', <InpaintStudio />)}
-          {renderLazyTab('library', <MediaLibrary />)}
-          {renderLazyTab('matting', <MattingStudio />)}
-          {renderLazyTab('handbrake', <HandBrake />)}
-          {renderLazyTab('topaz', <TopazVideoAI />)}
-          {renderLazyTab('transcription', <Transcription />)}
-          {renderLazyTab('drive', <DriveStudio />)}
-        </div>
+        {tabContent}
       </div>
 
 
 
-      {/* Settings Modal */}
-      {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-          language={language}
-          settings={settings}
-          saveSettings={saveSettings}
-          handleLanguageChange={handleLanguageChange}
-          electronAPI={typeof window !== "undefined" ? (window as any).electronAPI : undefined}
-        />
-      )}
-      {/* Import Modal */}
-      {showImportModal && (
-        <ImportModal onClose={() => setShowImportModal(false)} language={language} />
-      )}
-
-      {/* Premium Modal */}
-      {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
-
-      {/* First-run onboarding wizard (tailors visible tabs to the user's profile) */}
-      {showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
-
-      {/* Floating AI Button */}
-      <button
-        data-ai-toggle
-        onClick={() => setShowAIAssistant(!showAIAssistant)}
-        aria-label={t("Assistant IA")}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-2xl transition-all duration-200 flex items-center justify-center text-white z-40 group hover:scale-105 active:scale-95 ${showMainTabSettings ? 'opacity-0 pointer-events-none scale-90' : ''}`}
-        style={{
-          background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent,#ec4899) 88%, white), var(--accent,#ec4899))',
-          border: '1px solid rgba(255,255,255,0.18)',
-          boxShadow: '0 10px 30px color-mix(in srgb, var(--accent,#ec4899) 45%, transparent), 0 1px 0 rgba(255,255,255,0.25) inset',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <Sparkles className="w-6 h-6 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
-      </button>
-
-      {/* Clipboard URL → quick download suggestion */}
-      <AnimatePresence>
-        {clipUrl && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2.5 rounded-2xl max-w-[90vw]"
-            style={{ background: 'rgba(20,20,30,0.92)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)' }}
-          >
-            <span className="text-sm text-gray-300 truncate max-w-[40vw]">🔗 {t("Lien copié :")} <span className="text-gray-400">{clipUrl}</span></span>
-            <button
-              onClick={() => {
-                setMainTabConfig(prev => prev.map(tb => tb.id === 'downloads' ? { ...tb, visible: true } : tb));
-                setActiveTab('downloads');
-                window.dispatchEvent(new CustomEvent('import-urls', { detail: [clipUrl] }));
-                clipDismissed.current = clipUrl; setClipUrl(null);
-              }}
-              className="shrink-0 text-xs font-semibold text-white px-3 py-1.5 rounded-lg"
-              style={{ background: 'linear-gradient(135deg,#e879f9,#a855f7)' }}
-            >
-              {t("Télécharger")}
-            </button>
-            <button onClick={() => { clipDismissed.current = clipUrl; setClipUrl(null); }} className="shrink-0 text-gray-500 hover:text-gray-200"><span className="text-sm">✕</span></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Global task center (queue) */}
-      <TaskCenter />
-
-      {/* AI Assistant */}
-      <AnimatePresence>
-        {showAIAssistant && (
-          <AIAssistant
-            onClose={() => {
-              setShowAIAssistant(false);
-              setDroppedFile(null);
-            }}
-            droppedFile={droppedFile}
-            activeTab={activeTab}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Drag & Drop Overlay */}
-      <AnimatePresence>
-        {isDragging && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center border-[4px] border-dashed border-pink-500/50 pointer-events-none"
-          >
-            <div className="bg-pink-500/20 p-8 rounded-full mb-6">
-              <UploadCloud className="w-20 h-20 text-pink-500" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">{t("Déposez votre fichier ici")}</h2>
-            <p className="text-gray-300 text-lg">{t("Orbit IA l'analysera et vous proposera des outils adaptés")}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Launch update prompt (Orbit + bundled tools) */}
-      <UpdatePrompt />
+      {sharedOverlays}
 
     </main>
   );
