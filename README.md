@@ -52,6 +52,14 @@ Un mélange de **JDownloader + HandBrake + Flowframes + Topaz Video AI + Whisper
 - **Utilitaires** : QR codes (générateur + lecteur), **OCR** (texte depuis une image, IA Claude), **renommage par lot** (motifs), **dossier surveillé** (conversion auto)
 - **Traitement par lot** sur la plupart des outils, **détection du presse-papier** (lien copié → téléchargement proposé), **Centre de tâches** global, notifications de fin et historique des fichiers récents
 
+### 🔄 Convertisseur Pro (convertisseur universel)
+- Glissez **fichiers ou dossiers entiers** : détection automatique du type, qualité adaptative, **conversion par lot** suivie dans le Centre de tâches
+- **Vidéo** (MP4/MOV/MKV/WebM/AVI/GIF), **Audio** (WAV/MP3/FLAC/AAC/OGG/Opus/M4A), **Image** (PNG/JPG/WebP/AVIF/TIFF/BMP)
+- **LUT / Couleur** (.cube ↔ .3dl, conversion mathématique sans perte)
+- **Polices** (TTF/OTF → TTF/WOFF/WOFF2) et **3D** (OBJ/STL/PLY/GLTF/GLB/FBX… → GLB/OBJ/STL/PLY)
+- **Documents** (DOCX/XLSX/Markdown → PDF/HTML/CSV) via le moteur de rendu intégré, sans téléchargement externe
+- **After Effects** : analyse des presets .ffx/.aep (format RIFX) — type de fichier et **plugins tiers requis** (Magic Bullet, Sapphire, Red Giant…) ; conversion entre versions via le pipeline cloud (à venir)
+
 ### 🎬 Médiathèque (Anime Media Manager)
 - Gestionnaire de médias pour monteurs & artistes 3D : import drag & drop, **scan de dossiers**, organisation par **séries / saisons / épisodes** (détection auto)
 - Recherche instantanée + filtres (résolution, codec, tri), sections **Récemment ajoutés / Favoris / Reprendre la lecture**
