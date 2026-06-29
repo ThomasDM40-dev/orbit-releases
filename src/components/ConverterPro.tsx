@@ -21,13 +21,41 @@ export default function ConverterPro() {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [outputDir, setOutputDir] = useState<string>("");
-  const [aeList, setAeList] = useState<{ name: string; version: string; exe: string }[]>([]);
+  const [aeList, setAeList] = useState<{ name: string; version: string; exe: string; versionCode?: number }[]>([]);
   const [aeExe, setAeExe] = useState<string>("");
+  const [yearCodes, setYearCodes] = useState<Record<string, number>>({});
+  const [compatSel, setCompatSel] = useState<Record<string, number>>({});
   const curRef = useRef<string>("");
 
   useEffect(() => {
     api()?.aeDetect?.().then((l: any) => { setAeList(l || []); if (l && l.length) setAeExe(l[0].exe); }).catch(() => {});
+    api()?.aeYearCodes?.().then((m: any) => setYearCodes(m || {})).catch(() => {});
   }, []);
+
+  // Compatibility targets: installed AE (exact codes) + static year map fallback.
+  const compatTargets = (() => {
+    const m = new Map<string, { label: string; code: number }>();
+    aeList.forEach(a => { if (a.versionCode) m.set("AE " + a.version, { label: "AE " + a.version, code: a.versionCode }); });
+    Object.entries(yearCodes).forEach(([y, c]) => { const label = "AE " + y; if (![...m.keys()].some(k => k.includes(y))) m.set(label, { label, code: c as number }); });
+    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label));
+  })();
+
+  const runCompat = async (row: Row) => {
+    const code = compatSel[row.id] ?? compatTargets[0]?.code;
+    if (code == null) return;
+    const tgt = compatTargets.find(t => t.code === code);
+    const dir = outputDir || row.path.replace(/[\\/][^\\/]*$/, "");
+    const baseName = row.name.replace(/\.[^.]+$/, "");
+    const ext = (row.name.match(/\.[^.]+$/) || [".ffx"])[0];
+    const out = `${dir}\\${baseName}_${(tgt?.label || "compat").replace(/\s/g, "")}${ext}`;
+    const jobId = row.id; curRef.current = jobId;
+    setRows(prev => prev.map(r => r.id === jobId ? { ...r, status: "running", percent: 50 } : r));
+    startTask(jobId, `${baseName} → ${tgt?.label || "compat"}`, t("Compatibilité AE"));
+    const r = await api()?.aeConvertVersion?.({ inputPath: row.path, outputPath: out, code });
+    finishTask(jobId, !!r?.ok, r?.outputPath, r?.error);
+    if (r?.ok && r.outputPath) addRecent(r.outputPath, t("Compatibilité AE"));
+    setRows(prev => prev.map(x => x.id === jobId ? { ...x, status: r?.ok ? "done" : "error", percent: 100, outputPath: r?.outputPath, error: r?.error } : x));
+  };
 
   const runAe = async (row: Row, op: string) => {
     if (!aeExe) return;
@@ -175,7 +203,7 @@ export default function ConverterPro() {
                   <Sparkles className="w-3.5 h-3.5 text-pink-400" />
                   <span className="text-gray-500">{t("After Effects :")}</span>
                   <div className="w-40"><GlassSelect value={aeExe} onChange={setAeExe} className="py-1 text-xs" ariaLabel="After Effects" options={aeList.map(a => ({ value: a.exe, label: "AE " + a.version }))} /></div>
-                  <span className="text-gray-600">{t("(AE va s'ouvrir pour convertir)")}</span>
+                  <span className="text-gray-600">{t("(« Compatible » est instantané ; « Maj AE » ouvre After Effects)")}</span>
                 </div>
               ) : (
                 <p className="text-xs text-amber-400/80 mb-2">{t("After Effects non détecté — seule l'analyse des presets est disponible.")}</p>
@@ -209,13 +237,19 @@ export default function ConverterPro() {
                       </div>
 
                       {row.category === "ae" ? (
-                        aeExe && row.status !== "done" && row.status !== "error" ? (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/\.aep$/i.test(row.name) && <button onClick={() => runAe(row, "upgrade-aep")} disabled={row.status === "running"} className="px-2.5 py-1 rounded-lg text-[11px] bg-pink-500/15 text-pink-300 border border-pink-500/20 hover:bg-pink-500/25 disabled:opacity-40">{t("Mettre à niveau")}</button>}
-                            {/\.ffx$/i.test(row.name) && <button onClick={() => runAe(row, "apply-ffx")} disabled={row.status === "running"} className="px-2.5 py-1 rounded-lg text-[11px] bg-pink-500/15 text-pink-300 border border-pink-500/20 hover:bg-pink-500/25 disabled:opacity-40">{t("Appliquer → projet")}</button>}
-                          </div>
-                        ) : (
+                        row.status === "done" || row.status === "error" ? (
                           <span className="text-[10px] text-cyan-400/80 shrink-0 text-right">{t("analyse ✓")}</span>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-1.5 shrink-0 justify-end max-w-[55%]">
+                            {compatTargets.length > 0 && (
+                              <>
+                                <span className="text-[10px] text-gray-500">{t("compatible")}</span>
+                                <div className="w-24"><GlassSelect value={String(compatSel[row.id] ?? compatTargets[0]?.code)} onChange={v => setCompatSel(p => ({ ...p, [row.id]: Number(v) }))} disabled={row.status === "running"} className="py-1 text-xs" ariaLabel={t("Version cible")} options={compatTargets.map(tg => ({ value: String(tg.code), label: tg.label }))} /></div>
+                                <button onClick={() => runCompat(row)} disabled={row.status === "running"} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white border border-white/10 disabled:opacity-40" style={{ background: "linear-gradient(135deg,#e879f9,#a855f7)" }}>{t("Convertir")}</button>
+                              </>
+                            )}
+                            {aeExe && /\.aep$/i.test(row.name) && <button onClick={() => runAe(row, "upgrade-aep")} disabled={row.status === "running"} className="px-2 py-1 rounded-lg text-[11px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 disabled:opacity-40" title={t("Ouvre After Effects pour normaliser le projet")}>{t("Maj AE")}</button>}
+                          </div>
                         )
                       ) : row.enabled ? (
                         <>

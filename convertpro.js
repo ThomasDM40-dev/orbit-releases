@@ -436,6 +436,70 @@ function detectAfterEffects() {
   return found;
 }
 
+// --- .ffx/.aep version compatibility (Helix-style local RIFX rewrite) ---
+// The AE "preset/project format version" is the 2nd uint32 of the `head` chunk
+// (verified empirically: AE2023=94, AE2025/26=95, older packs=93). Making a file
+// open in an older/newer AE = rewriting THAT single field. Non-destructive: we
+// copy the bytes and overwrite 4 bytes; everything else stays identical.
+function aeVersionInfo(buf) {
+  if (buf.toString('latin1', 0, 4) !== 'RIFX') return null;
+  let off = 12;
+  while (off + 8 <= buf.length) {
+    const id = buf.toString('latin1', off, off + 4);
+    const size = buf.readUInt32BE(off + 4);
+    const dataStart = off + 8;
+    if (id === 'head') {
+      if (dataStart + 8 > buf.length) return null;
+      return { offset: dataStart + 4, code: buf.readUInt32BE(dataStart + 4), formType: buf.toString('latin1', 8, 12) };
+    }
+    off = dataStart + size + (size & 1);
+  }
+  return null;
+}
+function firstFfxIn(dir, depth) {
+  if (!dir || depth > 5 || !fs.existsSync(dir)) return null;
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return null; }
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isFile() && /\.ffx$/i.test(e.name)) return full;
+    if (e.isDirectory()) { const f = firstFfxIn(full, depth + 1); if (f) return f; }
+  }
+  return null;
+}
+// Read the format version code an installed AE writes (from its factory presets).
+function aeInstallVersionCode(aeExe) {
+  try {
+    const presets = path.join(path.dirname(aeExe), 'Presets');
+    const sample = firstFfxIn(presets, 0);
+    if (sample) { const i = aeVersionInfo(fs.readFileSync(sample)); return i ? i.code : null; }
+  } catch (e) {}
+  return null;
+}
+// Marketing year → format code, for AE versions the user doesn't have installed.
+// (Codes read from an installed AE always win over this best-effort table.)
+const AE_YEAR_CODES = { 2022: 0x5d, 2023: 0x5e, 2024: 0x5f, 2025: 0x60, 2026: 0x61 };
+
+function convertAeVersion(inputPath, outputPath, code) {
+  const buf = fs.readFileSync(inputPath);
+  if (buf.toString('latin1', 0, 4) !== 'RIFX') throw new Error('Pas un conteneur After Effects (.ffx/.aep).');
+  const out = Buffer.from(buf);
+  const info = aeVersionInfo(buf);
+  if (info) {
+    out.writeUInt32BE(code >>> 0, info.offset);
+  } else {
+    // Fallback (FFX-Downgrader heuristic): patch the first byte in the known
+    // version range. Less precise but covers files where `head` isn't first.
+    let patched = false;
+    for (let i = 12; i < out.length; i++) {
+      if (out[i] >= 0x5d && out[i] <= 0x62) { out[i] = code & 0xff; patched = true; break; }
+    }
+    if (!patched) throw new Error('Champ de version introuvable.');
+  }
+  fs.writeFileSync(outputPath, out);
+  return outputPath;
+}
+
 function jsxPath(p) { return String(p).replace(/\\/g, '/').replace(/'/g, "\\'"); }
 
 // op: 'upgrade-aep' (open + save in the chosen AE version) | 'apply-ffx' (apply
@@ -477,4 +541,5 @@ module.exports = {
   convertFont, convert3d, parseGlb, extractGeometry,
   docToHtml, docToCsv, analyzeAe, walkRifx,
   detectAfterEffects, buildAeScript,
+  aeVersionInfo, aeInstallVersionCode, convertAeVersion, AE_YEAR_CODES,
 };

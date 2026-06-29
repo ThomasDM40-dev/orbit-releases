@@ -2288,9 +2288,20 @@ ipcMain.handle('convertpro-scan', async (event, folder) => {
   return out;
 });
 
-// List After Effects installs found on the machine.
+// List After Effects installs found on the machine (+ their preset format code).
 ipcMain.handle('ae-detect', async () => {
-  try { return convertpro.detectAfterEffects(); } catch (e) { return []; }
+  try { return convertpro.detectAfterEffects().map(a => ({ ...a, versionCode: convertpro.aeInstallVersionCode(a.exe) })); }
+  catch (e) { return []; }
+});
+ipcMain.handle('ae-year-codes', async () => convertpro.AE_YEAR_CODES);
+
+// Instant local version compatibility rewrite (Helix / FFX-Downgrader method).
+ipcMain.handle('ae-convert-version', async (event, { inputPath, outputPath, code }) => {
+  try {
+    if (!inputPath || !fs.existsSync(inputPath)) return { ok: false, error: 'Fichier introuvable.' };
+    const r = convertpro.convertAeVersion(inputPath, outputPath, code);
+    return { ok: true, outputPath: r };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 });
 
 // Drive the user's installed AE via ExtendScript (real conversions AE supports).
