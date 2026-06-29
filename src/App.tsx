@@ -32,6 +32,7 @@ const MediaLibrary = lazy(() => import("@/components/MediaLibrary"));
 const MattingStudio = lazy(() => import("@/components/MattingStudio"));
 const DriveStudio = lazy(() => import("@/components/DriveStudio"));
 const Toolbox = lazy(() => import("@/components/Toolbox"));
+const ConverterPro = lazy(() => import("@/components/ConverterPro"));
 
 // Fires only once per real process launch. The whole tree is remounted when the
 // language changes (<App key={lang}/>), so without this guard the launch update
@@ -44,6 +45,7 @@ export default function App() {
     { id: 'downloads', label: t('Téléchargements') },
     { id: 'converter', label: t('Convertisseur & Tags') },
     { id: 'toolbox', label: t('Boîte à outils') },
+    { id: 'convertpro', label: t('Convertisseur Pro') },
     { id: 'subscriptions', label: t('Abonnements') },
     { id: 'interpolator', label: t('Interpolateur IA') },
     { id: 'library', label: t('Médiathèque') },
@@ -829,6 +831,7 @@ export default function App() {
           </div>
           {renderLazyTab('converter', <Converter language={language} globalSettings={settings} />)}
           {renderLazyTab('toolbox', <Toolbox />)}
+          {renderLazyTab('convertpro', <ConverterPro />)}
           {renderLazyTab('interpolator', <AIInterpolator />)}
           {renderLazyTab('subscriptions', <Subscriptions />)}
           {renderLazyTab('enhance', <OrbitEnhance />)}

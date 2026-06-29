@@ -14,6 +14,7 @@ const isDev = !app.isPackaged;
 const https = require('https');
 const { execFile, exec } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const convertpro = require('./convertpro');
 const ytDlpPath = require('youtube-dl-exec/src/constants').YOUTUBE_DL_PATH;
 
 // Resolve the correct yt-dlp path: prefer manually updated local copy,
@@ -2253,6 +2254,115 @@ ipcMain.handle('toolbox-rename-batch', async (event, { paths = [], pattern, star
 ipcMain.handle('get-clipboard-text', async () => {
   try { const { clipboard } = require('electron'); return clipboard.readText() || ''; }
   catch (e) { return ''; }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONVERTISSEUR PRO — universal converter (video/audio/image/LUT…), drag-drop + batch
+// ─────────────────────────────────────────────────────────────────────────────
+ipcMain.handle('convertpro-detect', async (event, paths) => {
+  return (paths || []).map(p => {
+    const cat = convertpro.classify(p);
+    const base = { path: p, name: path.basename(p), category: cat, label: cat ? (convertpro.CATEGORY_LABELS[cat] || cat) : null, targets: convertpro.targetsFor(p), enabled: !!(cat && convertpro.ENABLED[cat]) };
+    if (cat === 'ae') {
+      try { const a = convertpro.analyzeAe(p); base.ae = { kind: a.kind, effectCount: a.effectCount, thirdParty: a.thirdParty.slice(0, 8) }; } catch (e) { base.ae = { error: String(e.message || e) }; }
+    }
+    return base;
+  });
+});
+
+// Recursively list convertible files in a dropped/selected folder (depth-capped).
+ipcMain.handle('convertpro-scan', async (event, folder) => {
+  const out = [];
+  const walk = (d, depth) => {
+    if (depth > 4 || out.length > 2000) return;
+    let entries = [];
+    try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const en of entries) {
+      const full = path.join(d, en.name);
+      if (en.isDirectory()) walk(full, depth + 1);
+      else if (convertpro.classify(full)) out.push(full);
+      if (out.length > 2000) return;
+    }
+  };
+  if (folder && fs.existsSync(folder)) { try { if (fs.statSync(folder).isDirectory()) walk(folder, 0); } catch (e) {} }
+  return out;
+});
+
+// Render an HTML string to PDF using Electron's bundled Chromium (no LibreOffice).
+async function htmlToPdf(html, outPath) {
+  const tmpHtml = path.join(os.tmpdir(), `orbit-doc-${Date.now()}.html`);
+  fs.writeFileSync(tmpHtml, html, 'utf8');
+  const win = new BrowserWindow({ show: false, webPreferences: { offscreen: true, sandbox: false } });
+  try {
+    await win.loadFile(tmpHtml);
+    const pdf = await win.webContents.printToPDF({ printBackground: true });
+    fs.writeFileSync(outPath, pdf);
+  } finally {
+    win.destroy();
+    try { fs.unlinkSync(tmpHtml); } catch (e) {}
+  }
+}
+
+ipcMain.handle('convertpro-run', async (event, { jobId, inputPath, target, outputDir }) => {
+  if (!inputPath || !fs.existsSync(inputPath)) return { ok: false, error: 'Fichier introuvable.' };
+  const cat = convertpro.classify(inputPath);
+  if (!cat) return { ok: false, error: 'Type de fichier non reconnu.' };
+  if (!convertpro.ENABLED[cat]) return { ok: false, error: 'Catégorie pas encore disponible (bientôt).' };
+  const dir = outputDir && fs.existsSync(outputDir) ? outputDir : path.dirname(inputPath);
+  const base = path.basename(inputPath, path.extname(inputPath)).replace(/[<>:"/\\|?*]+/g, '_');
+  const out = path.join(dir, `${base}.${String(target).toLowerCase()}`);
+  const win = uiWin();
+  const send = (percent, label) => win?.webContents.send('convertpro-progress', { jobId, percent, label });
+
+  try {
+    if (cat === 'lut') {
+      send(20, 'Conversion LUT…');
+      convertpro.convertLut(inputPath, out, target);
+      send(100, 'Terminé');
+      return { ok: true, outputPath: out };
+    }
+    if (cat === 'font') {
+      send(20, 'Conversion de la police…');
+      await convertpro.convertFont(inputPath, out, target);
+      send(100, 'Terminé');
+      return { ok: true, outputPath: out };
+    }
+    if (cat === 'model') {
+      send(20, 'Conversion du modèle 3D…');
+      const r = await convertpro.convert3d(inputPath, out, target);
+      send(100, 'Terminé');
+      return { ok: true, outputPath: r };
+    }
+    if (cat === 'doc') {
+      const tgt = String(target).toLowerCase();
+      if (tgt === 'csv') { send(40, 'Lecture du tableur…'); fs.writeFileSync(out, convertpro.docToCsv(inputPath), 'utf8'); send(100, 'Terminé'); return { ok: true, outputPath: out }; }
+      send(30, 'Lecture du document…');
+      const html = await convertpro.docToHtml(inputPath);
+      if (tgt === 'html') { fs.writeFileSync(out, html, 'utf8'); send(100, 'Terminé'); return { ok: true, outputPath: out }; }
+      if (tgt === 'pdf') { send(60, 'Génération du PDF…'); await htmlToPdf(html, out); send(100, 'Terminé'); return { ok: true, outputPath: out }; }
+      return { ok: false, error: 'Cible document non supportée.' };
+    }
+    if (cat === 'video' || cat === 'audio' || cat === 'image') {
+      const ffmpeg = resolveFfmpeg();
+      const info = {};
+      if (cat === 'video' || cat === 'image') { const d = await getDimensions(ffmpeg, inputPath); if (d) { info.width = d.w; info.height = d.h; } }
+      const dur = (cat === 'video' || cat === 'audio') ? await getVideoDuration(ffmpeg, inputPath) : 0;
+      const args = convertpro.buildFfmpegArgs(cat, inputPath, out, target, info);
+      if (!args) return { ok: false, error: 'Conversion non supportée.' };
+      return await new Promise((resolve) => {
+        send(0, 'Conversion…');
+        const proc = spawn(ffmpeg, args);
+        let err = ''; activeDownloads.set(jobId, { kill: () => proc.kill('SIGINT') });
+        proc.stderr.on('data', d => {
+          err += d; const m = d.toString().match(/time=(\d+):(\d+):([\d.]+)/);
+          if (m && dur) { const t = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]); send(Math.min(99, Math.round((t / dur) * 100)), 'Conversion…'); }
+        });
+        proc.on('error', e => resolve({ ok: false, error: e.message }));
+        proc.on('close', c => { activeDownloads.delete(jobId); resolve(c === 0 && fs.existsSync(out) ? { ok: true, outputPath: out } : { ok: false, error: (err.split('\n').filter(Boolean).pop() || 'Échec ffmpeg').slice(0, 240) }); });
+      });
+    }
+    return { ok: false, error: 'Catégorie non disponible.' };
+  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
 });
 
 ipcMain.handle('get-gpus', async () => {

@@ -35,4 +35,6 @@ export const TAB_ICONS: Record<string, React.ReactNode> = {
   drive: ic(<><path d="M7 18a4 4 0 0 1-.5-7.97A5 5 0 0 1 16 9.5a3.5 3.5 0 0 1 1 6.86" /><rect x="9" y="13" width="6" height="5" rx="1" /><path d="M10.5 13v-1.2a1.5 1.5 0 0 1 3 0V13" /></>),
   // 🧰 toolbox / wrench (quick utilities)
   toolbox: ic(<><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6z" /></>),
+  // ⇄ universal converter (two arrows in a loop)
+  convertpro: ic(<><path d="M17 2.1 21 6l-4 3.9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 21.9 3 18l4-3.9" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>),
 };
