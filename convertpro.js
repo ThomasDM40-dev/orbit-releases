@@ -412,9 +412,69 @@ function analyzeAe(inputPath) {
   return { formType, kind, effectCount: effects.length, effects, thirdParty };
 }
 
+// ── Local After Effects bridge (drives the user's OWN installed AE) ───────────
+// Real fidelity for what AE actually supports, via ExtendScript (.jsx) run by
+// AfterFX.exe -r. No server, no Adobe licensing to host.
+function detectAfterEffects() {
+  const bases = ['C:/Program Files/Adobe', 'C:/Program Files (x86)/Adobe'];
+  const found = [];
+  for (const b of bases) {
+    if (!fs.existsSync(b)) continue;
+    let dirs = [];
+    try { dirs = fs.readdirSync(b); } catch (e) { continue; }
+    for (const d of dirs) {
+      if (!/After Effects/i.test(d)) continue;
+      const exe = path.join(b, d, 'Support Files', 'AfterFX.exe');
+      if (fs.existsSync(exe)) {
+        const version = (d.match(/After Effects\s*(.+)$/i) || [])[1] || d;
+        found.push({ name: d, version: version.trim(), exe });
+      }
+    }
+  }
+  // Newest first (year desc).
+  found.sort((a, b) => (parseInt((b.version.match(/\d{4}/) || [0])[0], 10)) - (parseInt((a.version.match(/\d{4}/) || [0])[0], 10)));
+  return found;
+}
+
+function jsxPath(p) { return String(p).replace(/\\/g, '/').replace(/'/g, "\\'"); }
+
+// op: 'upgrade-aep' (open + save in the chosen AE version) | 'apply-ffx' (apply
+// the preset onto a fresh comp and save a project).
+function buildAeScript(op, input, output, logFile) {
+  const I = jsxPath(input), O = jsxPath(output), L = jsxPath(logFile);
+  let body;
+  if (op === 'upgrade-aep') {
+    body = `app.open(new File('${I}')); app.project.save(new File('${O}'));`;
+  } else if (op === 'apply-ffx') {
+    body = `app.newProject();
+    var comp = app.project.items.addComp('Preset Orbit', 1920, 1080, 1.0, 5, 30);
+    var solid = comp.layers.addSolid([0,0,0], 'Preset Layer', 1920, 1080, 1.0);
+    solid.selected = true;
+    solid.applyPreset(new File('${I}'));
+    app.project.save(new File('${O}'));`;
+  } else {
+    body = `throw new Error('Opération inconnue.');`;
+  }
+  return `#target aftereffects
+(function () {
+  var log = new File('${L}');
+  function w(s){ try { log.open('w'); log.write(s); log.close(); } catch (e) {} }
+  try {
+    app.beginSuppressDialogs();
+    ${body}
+    app.endSuppressDialogs(false);
+    w('OK:${O}');
+  } catch (e) {
+    w('ERR:' + (e && e.toString ? e.toString() : e));
+  }
+  try { app.quit(); } catch (e) {}
+})();`;
+}
+
 module.exports = {
   classify, targetsFor, extOf, TARGETS, ENABLED, CATEGORY_LABELS,
   buildFfmpegArgs, parseLut, convertLut, parseCube, writeCube, parse3dl, write3dl,
   convertFont, convert3d, parseGlb, extractGeometry,
   docToHtml, docToCsv, analyzeAe, walkRifx,
+  detectAfterEffects, buildAeScript,
 };

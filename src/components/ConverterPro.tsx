@@ -21,7 +21,27 @@ export default function ConverterPro() {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [outputDir, setOutputDir] = useState<string>("");
+  const [aeList, setAeList] = useState<{ name: string; version: string; exe: string }[]>([]);
+  const [aeExe, setAeExe] = useState<string>("");
   const curRef = useRef<string>("");
+
+  useEffect(() => {
+    api()?.aeDetect?.().then((l: any) => { setAeList(l || []); if (l && l.length) setAeExe(l[0].exe); }).catch(() => {});
+  }, []);
+
+  const runAe = async (row: Row, op: string) => {
+    if (!aeExe) return;
+    const dir = outputDir || row.path.replace(/[\\/][^\\/]*$/, "");
+    const baseName = row.name.replace(/\.[^.]+$/, "");
+    const out = `${dir}\\${baseName}${op === "upgrade-aep" ? "_maj" : "_applique"}.aep`;
+    const jobId = row.id; curRef.current = jobId;
+    setRows(prev => prev.map(r => r.id === jobId ? { ...r, status: "running", percent: 10 } : r));
+    startTask(jobId, `${baseName} (After Effects)`, t("After Effects"));
+    const r = await api()?.aeRun?.({ jobId, aeExe, op, inputPath: row.path, outputPath: out });
+    finishTask(jobId, !!r?.ok, r?.outputPath, r?.error);
+    if (r?.ok && r.outputPath) addRecent(r.outputPath, t("After Effects"));
+    setRows(prev => prev.map(x => x.id === jobId ? { ...x, status: r?.ok ? "done" : "error", percent: 100, outputPath: r?.outputPath, error: r?.error } : x));
+  };
 
   useEffect(() => {
     const off = api()?.onConvertproProgress?.((v: any) => {
@@ -148,6 +168,20 @@ export default function ConverterPro() {
               );
             })}
 
+            {/* After Effects bridge bar */}
+            {rows.some(r => r.category === "ae") && (
+              aeList.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                  <span className="text-gray-500">{t("After Effects :")}</span>
+                  <div className="w-40"><GlassSelect value={aeExe} onChange={setAeExe} className="py-1 text-xs" ariaLabel="After Effects" options={aeList.map(a => ({ value: a.exe, label: "AE " + a.version }))} /></div>
+                  <span className="text-gray-600">{t("(AE va s'ouvrir pour convertir)")}</span>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-400/80 mb-2">{t("After Effects non détecté — seule l'analyse des presets est disponible.")}</p>
+              )
+            )}
+
             {/* Rows */}
             <div className="space-y-2 mt-3">
               <AnimatePresence>
@@ -175,7 +209,14 @@ export default function ConverterPro() {
                       </div>
 
                       {row.category === "ae" ? (
-                        <span className="text-[10px] text-cyan-400/80 shrink-0 text-right">{t("analyse ✓")}<br />{t("conversion cloud bientôt")}</span>
+                        aeExe && row.status !== "done" && row.status !== "error" ? (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/\.aep$/i.test(row.name) && <button onClick={() => runAe(row, "upgrade-aep")} disabled={row.status === "running"} className="px-2.5 py-1 rounded-lg text-[11px] bg-pink-500/15 text-pink-300 border border-pink-500/20 hover:bg-pink-500/25 disabled:opacity-40">{t("Mettre à niveau")}</button>}
+                            {/\.ffx$/i.test(row.name) && <button onClick={() => runAe(row, "apply-ffx")} disabled={row.status === "running"} className="px-2.5 py-1 rounded-lg text-[11px] bg-pink-500/15 text-pink-300 border border-pink-500/20 hover:bg-pink-500/25 disabled:opacity-40">{t("Appliquer → projet")}</button>}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-cyan-400/80 shrink-0 text-right">{t("analyse ✓")}</span>
+                        )
                       ) : row.enabled ? (
                         <>
                           <div className="flex items-center gap-1.5 shrink-0">

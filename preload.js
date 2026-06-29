@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   convertproScan: (folder) => ipcRenderer.invoke('convertpro-scan', folder),
   convertproRun: (args) => ipcRenderer.invoke('convertpro-run', args),
   onConvertproProgress: (cb) => { const h = (_e, v) => cb(v); ipcRenderer.on('convertpro-progress', h); return () => ipcRenderer.removeListener('convertpro-progress', h); },
+  aeDetect: () => ipcRenderer.invoke('ae-detect'),
+  aeRun: (args) => ipcRenderer.invoke('ae-run', args),
   toolboxRun: (job) => ipcRenderer.invoke('toolbox-run', job),
   toolboxCancel: (jobId) => ipcRenderer.invoke('toolbox-cancel', jobId),
   toolboxWatchStart: (args) => ipcRenderer.invoke('toolbox-watch-start', args),

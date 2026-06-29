@@ -2288,6 +2288,46 @@ ipcMain.handle('convertpro-scan', async (event, folder) => {
   return out;
 });
 
+// List After Effects installs found on the machine.
+ipcMain.handle('ae-detect', async () => {
+  try { return convertpro.detectAfterEffects(); } catch (e) { return []; }
+});
+
+// Drive the user's installed AE via ExtendScript (real conversions AE supports).
+ipcMain.handle('ae-run', async (event, { jobId, aeExe, op, inputPath, outputPath }) => {
+  if (!aeExe || !fs.existsSync(aeExe)) return { ok: false, error: 'After Effects introuvable.' };
+  if (!inputPath || !fs.existsSync(inputPath)) return { ok: false, error: 'Fichier source introuvable.' };
+  const stamp = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const logFile = path.join(os.tmpdir(), `orbit-ae-${stamp}.log`);
+  const jsxFile = path.join(os.tmpdir(), `orbit-ae-${stamp}.jsx`);
+  try { if (fs.existsSync(logFile)) fs.unlinkSync(logFile); } catch (e) {}
+  fs.writeFileSync(jsxFile, convertpro.buildAeScript(op, inputPath, outputPath, logFile), 'utf8');
+  const win = uiWin();
+  win?.webContents.send('convertpro-progress', { jobId, percent: 10, label: 'After Effects s’ouvre…' });
+  return await new Promise((resolve) => {
+    let proc;
+    try { proc = spawn(aeExe, ['-r', jsxFile]); } catch (e) { return resolve({ ok: false, error: e.message }); }
+    if (jobId) activeDownloads.set(jobId, { kill: () => { try { proc.kill(); } catch (e) {} } });
+    const t0 = Date.now();
+    const poll = setInterval(() => {
+      let result = null;
+      if (fs.existsSync(logFile)) { try { result = fs.readFileSync(logFile, 'utf8'); } catch (e) {} }
+      if (result != null) {
+        clearInterval(poll);
+        try { fs.unlinkSync(jsxFile); fs.unlinkSync(logFile); } catch (e) {}
+        try { proc.kill(); } catch (e) {}
+        if (jobId) activeDownloads.delete(jobId);
+        if (result.startsWith('OK:')) resolve({ ok: true, outputPath: result.slice(3).trim() });
+        else resolve({ ok: false, error: (result.replace(/^ERR:/, '').trim() || 'Échec After Effects.') });
+      } else if (Date.now() - t0 > 240000) {
+        clearInterval(poll); try { proc.kill(); } catch (e) {} if (jobId) activeDownloads.delete(jobId);
+        resolve({ ok: false, error: "After Effects n'a pas répondu. Active « Autoriser les scripts à écrire des fichiers et accéder au réseau » dans Préférences → Scripts et expressions, puis réessaie." });
+      }
+    }, 1000);
+    proc.on('error', (err) => { clearInterval(poll); if (jobId) activeDownloads.delete(jobId); resolve({ ok: false, error: err.message }); });
+  });
+});
+
 // Render an HTML string to PDF using Electron's bundled Chromium (no LibreOffice).
 async function htmlToPdf(html, outPath) {
   const tmpHtml = path.join(os.tmpdir(), `orbit-doc-${Date.now()}.html`);
