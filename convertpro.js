@@ -33,7 +33,7 @@ function classify(p) { return EXT_CATEGORY[extOf(p)] || null; }
 
 // ── Output targets per category (Phase 1 enables: video, audio, image, lut) ──
 const TARGETS = {
-  video: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'gif'],
+  video: ['mp4', 'mov', 'prores', 'mkv', 'webm', 'avi', 'gif'],
   audio: ['wav', 'mp3', 'flac', 'aac', 'ogg', 'opus', 'm4a'],
   image: ['png', 'jpg', 'webp', 'avif', 'tiff', 'bmp'],
   lut: ['cube', '3dl'],
@@ -51,6 +51,11 @@ const ENABLED = { video: true, audio: true, image: true, lut: true, font: true, 
 
 // Documents have per-source targets (a spreadsheet can become CSV, a doc can't).
 const DOC_TARGETS = { md: ['html', 'pdf'], markdown: ['html', 'pdf'], docx: ['pdf', 'html'], xlsx: ['pdf', 'html', 'csv'], xls: ['pdf', 'html', 'csv'] };
+
+// Some "targets" are codec presets inside a standard container (ProRes → .mov).
+// Map those pseudo-targets to the real file extension used for the output.
+const TARGET_EXT = { prores: 'mov' };
+function outputExtFor(target) { const t = String(target).toLowerCase(); return TARGET_EXT[t] || t; }
 
 function targetsFor(p) {
   const cat = classify(p);
@@ -72,6 +77,11 @@ function buildFfmpegArgs(category, inputPath, outputPath, target, info = {}) {
     if (tgt === 'gif') {
       const w = Math.min(640, info.width || 480);
       return [...base, '-vf', `fps=15,scale=${w}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`, '-loop', '0', outputPath];
+    }
+    if (tgt === 'prores') {
+      // ProRes 422 HQ in a .mov — the editor-friendly intermediate that After
+      // Effects / Premiere / Resolve import natively. 10-bit 4:2:2 + PCM audio.
+      return [...base, '-c:v', 'prores_ks', '-profile:v', '3', '-vendor', 'apl0', '-pix_fmt', 'yuv422p10le', '-c:a', 'pcm_s16le', outputPath];
     }
     if (tgt === 'webm') return [...base, '-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-row-mt', '1', '-c:a', 'libopus', '-b:a', '160k', outputPath];
     if (tgt === 'avi') return [...base, '-c:v', 'mpeg4', '-qscale:v', '3', '-c:a', 'libmp3lame', '-qscale:a', '4', outputPath];
@@ -536,7 +546,7 @@ function buildAeScript(op, input, output, logFile) {
 }
 
 module.exports = {
-  classify, targetsFor, extOf, TARGETS, ENABLED, CATEGORY_LABELS,
+  classify, targetsFor, outputExtFor, extOf, TARGETS, ENABLED, CATEGORY_LABELS,
   buildFfmpegArgs, parseLut, convertLut, parseCube, writeCube, parse3dl, write3dl,
   convertFont, convert3d, parseGlb, extractGeometry,
   docToHtml, docToCsv, analyzeAe, walkRifx,

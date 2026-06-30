@@ -7,13 +7,15 @@ import { t as tr } from '@/i18n';
 // (10 tabs is a lot). Also a quick look (theme + accent) for ergonomics.
 
 const ROLES = [
-  { id: 'monteur', emoji: '🎬', label: 'Monteur vidéo', desc: 'Montage classique, YouTube, réseaux', tabs: ['downloads', 'converter', 'library', 'transcription', 'handbrake', 'matting'] },
-  { id: 'motion', emoji: '🌀', label: 'Motion / After Effects', desc: 'Motion design, compositing 2D', tabs: ['library', 'matting', 'enhance', 'transcription', 'converter', 'handbrake'] },
-  { id: '3d', emoji: '🧊', label: 'Artiste 3D / VFX', desc: 'Blender, rendu, séquences d\'images', tabs: ['library', 'enhance', 'matting', 'converter', 'handbrake', 'interpolator'] },
-  { id: 'audio', emoji: '🎵', label: 'Compositeur / Audio', desc: 'Musique, podcast, sound design', tabs: ['downloads', 'converter', 'transcription'] },
-  { id: 'download', emoji: '⬇️', label: 'Téléchargeur / Archiviste', desc: 'Récupérer & organiser des vidéos', tabs: ['downloads', 'subscriptions', 'converter', 'library'] },
+  { id: 'monteur', emoji: '🎬', label: 'Monteur vidéo', desc: 'Montage classique, YouTube, réseaux', tabs: ['downloads', 'converter', 'convertpro', 'library', 'transcription', 'handbrake', 'toolbox'] },
+  { id: 'motion', emoji: '🌀', label: 'Motion / After Effects', desc: 'Motion design, compositing 2D', tabs: ['library', 'matting', 'enhance', 'inpaint', 'interpolator', 'transcription', 'convertpro', 'handbrake'] },
+  { id: '3d', emoji: '🧊', label: 'Artiste 3D / VFX', desc: 'Blender, rendu, séquences d\'images', tabs: ['library', 'enhance', 'matting', 'convertpro', 'handbrake', 'interpolator', 'topaz'] },
+  { id: 'ia', emoji: '🎨', label: 'Créateur IA / Image', desc: 'Génération, retouche & détourage IA', tabs: ['imagegen', 'inpaint', 'matting', 'enhance', 'convertpro', 'library'] },
+  { id: 'audio', emoji: '🎵', label: 'Compositeur / Audio', desc: 'Musique, podcast, sound design', tabs: ['downloads', 'converter', 'transcription', 'library'] },
+  { id: 'download', emoji: '⬇️', label: 'Téléchargeur / Archiviste', desc: 'Récupérer & organiser des vidéos', tabs: ['downloads', 'subscriptions', 'converter', 'library', 'drive', 'toolbox'] },
 ];
-const ALL_TABS = ['downloads', 'converter', 'subscriptions', 'interpolator', 'library', 'enhance', 'matting', 'handbrake', 'topaz', 'transcription'];
+// Canonical tab order — mirrors defaultMainTabs in App.tsx. Keep in sync when tabs are added/removed.
+const ALL_TABS = ['downloads', 'converter', 'toolbox', 'convertpro', 'subscriptions', 'interpolator', 'library', 'enhance', 'imagegen', 'inpaint', 'matting', 'handbrake', 'topaz', 'transcription', 'drive'];
 const CORE = ['downloads', 'converter'];
 const ACCENTS = [{ id: 'pink', c: '#ec4899' }, { id: 'purple', c: '#a855f7' }, { id: 'blue', c: '#3b82f6' }, { id: 'cyan', c: '#22d3ee' }, { id: 'green', c: '#22c55e' }, { id: 'orange', c: '#f97316' }];
 const THEMES = [{ id: 'dark', name: 'Sombre' }, { id: 'amoled', name: 'AMOLED' }, { id: 'midnight', name: 'Minuit' }, { id: 'light', name: 'Clair' }];

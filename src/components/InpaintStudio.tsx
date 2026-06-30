@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import { t } from '@/i18n';
+import DropZone from './DropZone';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -74,11 +75,6 @@ export default function InpaintStudio() {
   }, [resetMask]);
 
   const handleBrowse = async () => { const p = await electron.selectImage?.(); if (p) loadImage(p); };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const f = Array.from(e.dataTransfer.files).find(x => /image/.test(x.type));
-    const p = (f as any)?.path; if (p) loadImage(p);
-  };
 
   // ── pointer → natural-coordinate mapping ──
   const toCanvas = (e: React.PointerEvent) => {
@@ -319,12 +315,16 @@ export default function InpaintStudio() {
         {/* ── Canvas ── */}
         <div className="flex-1 overflow-hidden p-5 flex items-center justify-center" ref={wrapRef}>
           {!img ? (
-            <div onDragOver={e => e.preventDefault()} onDrop={handleDrop} onClick={handleBrowse}
-              className="w-full h-full max-w-2xl rounded-3xl border-2 border-dashed border-white/12 hover:border-rose-500/40 bg-white/[0.02] flex flex-col items-center justify-center gap-3 cursor-pointer transition-all">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500/15 to-fuchsia-500/15 flex items-center justify-center border border-white/10"><ImagePlus className="w-7 h-7 text-rose-400/70" /></div>
-              <p className="text-sm text-gray-300 font-medium">{t("Glisse une photo ici, ou clique pour choisir")}</p>
-              <p className="text-xs text-gray-600">{t("JPG · PNG — peins une zone, puis efface ou génère avec un prompt")}</p>
-            </div>
+            <DropZone
+              className="w-full h-full max-w-2xl"
+              accent="#f43f5e"
+              icon={<ImagePlus className="w-7 h-7" />}
+              title={t("Glisse une photo ici, ou clique pour choisir")}
+              hint={t("JPG · PNG — peins une zone, puis efface ou génère avec un prompt")}
+              onClick={handleBrowse}
+              filter={(f) => /image/.test(f.type)}
+              onFiles={(paths) => loadImage(paths[0])}
+            />
           ) : (
             <div className="relative max-w-full max-h-full inline-block" style={{ lineHeight: 0 }}
               onPointerLeave={() => setCursor(c => ({ ...c, show: false }))}>

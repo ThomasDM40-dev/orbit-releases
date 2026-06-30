@@ -1,8 +1,10 @@
 {
     "name": "frontend",
-    "version": "0.40.0",
+    "version": "0.43.0",
     "private": true,
     "main": "main.js",
+    "author": "Orbit",
+    "description": "Orbit — convertisseur et boîte à outils vidéo / audio tout-en-un.",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
@@ -16,6 +18,7 @@
     "build": {
         "appId": "com.orbit.app",
         "productName": "Orbit",
+        "npmRebuild": false,
         "directories": {
             "output": "release"
         },
@@ -65,6 +68,11 @@
             "installerSidebar": "build/installerSidebar.bmp",
             "uninstallerSidebar": "build/installerSidebar.bmp",
             "installerHeader": "build/installerHeader.bmp",
+            "installerHeaderIcon": "public/icon.ico",
+            "installerIcon": "public/icon.ico",
+            "uninstallerIcon": "public/icon.ico",
+            "uninstallDisplayName": "Orbit Nova",
+            "include": "build/installer.nsh",
             "unicode": true,
             "warningsAsErrors": false
         },

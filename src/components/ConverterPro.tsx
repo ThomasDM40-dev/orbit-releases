@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Repeat, FileVideo, FileAudio, Image as ImageIcon, Palette, Type, FileText, Box, Sparkles, UploadCloud, FolderOpen, Loader2, CheckCircle2, AlertTriangle, X, ArrowRight, FolderInput } from "lucide-react";
+import { Repeat, FileVideo, FileAudio, Image as ImageIcon, Palette, Type, FileText, Box, Sparkles, FolderOpen, Loader2, CheckCircle2, AlertTriangle, X, ArrowRight, FolderInput } from "lucide-react";
 import GlassSelect from "./GlassSelect";
+import DropZone from "./DropZone";
 import { t } from "@/i18n";
 import { addRecent, notifyDone } from "@/recents";
 import { startTask, updateTask, finishTask } from "@/tasks";
@@ -13,12 +14,16 @@ type AeInfo = { kind?: string; effectCount?: number; thirdParty?: string[]; erro
 type Detected = { path: string; name: string; category: string | null; label: string | null; targets: string[]; enabled: boolean; ae?: AeInfo };
 type Row = Detected & { id: string; target: string; status: "idle" | "running" | "done" | "error"; percent: number; outputPath?: string; error?: string };
 
+// Most targets show as their bare extension; a few are codec presets that
+// deserve a clearer label (ProRes lives in a .mov, ideal for After Effects).
+const TARGET_LABELS: Record<string, string> = { prores: "ProRes (MOV)" };
+const fmtTarget = (x: string) => TARGET_LABELS[x] || x.toUpperCase();
+
 const CAT_ICON: Record<string, any> = { video: FileVideo, audio: FileAudio, image: ImageIcon, lut: Palette, font: Type, doc: FileText, model: Box, ae: Sparkles };
 const CAT_COLOR: Record<string, string> = { video: "#60a5fa", audio: "#f472b6", image: "#a78bfa", lut: "#34d399", font: "#fbbf24", doc: "#fb923c", model: "#22d3ee", ae: "#e879f9" };
 
 export default function ConverterPro() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [outputDir, setOutputDir] = useState<string>("");
   const [aeList, setAeList] = useState<{ name: string; version: string; exe: string; versionCode?: number }[]>([]);
@@ -91,24 +96,6 @@ export default function ConverterPro() {
     });
   };
 
-  // Drag & drop (self-contained: stop propagation so the global AI overlay doesn't grab it).
-  const onDrop = async (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setDragging(false);
-    const items = Array.from(e.dataTransfer.items || []);
-    const files = Array.from(e.dataTransfer.files || []);
-    const direct: string[] = [];
-    const folderPromises: Promise<string[]>[] = [];
-    items.forEach((it, i) => {
-      const entry = (it as any).webkitGetAsEntry?.();
-      const p = (files[i] as any)?.path;
-      if (!p) return;
-      if (entry?.isDirectory) folderPromises.push(api()?.convertproScan?.(p));
-      else direct.push(p);
-    });
-    const scanned = (await Promise.all(folderPromises)).flat().filter(Boolean);
-    await addPaths([...direct, ...scanned]);
-  };
-
   const browseFiles = async () => { const ps = await api()?.toolboxPickAny?.(); if (ps?.length) addPaths(ps); };
   const browseFolder = async () => { const f = await api()?.toolboxPickFolder?.(); if (f) { const ps = await api()?.convertproScan?.(f); addPaths(ps || []); } };
   const pickOut = async () => { const d = await api()?.selectDirectory?.(); if (d) setOutputDir(d); };
@@ -134,7 +121,6 @@ export default function ConverterPro() {
       setRows(prev => prev.map(x => x.id === jobId ? { ...x, status: r?.ok ? "done" : "error", percent: 100, outputPath: r?.outputPath, error: r?.error } : x));
     }
     setBusy(false);
-    const ok = rows.filter(r => r.status === "done").length;
     notifyDone(t("Orbit — conversions terminées"), `${todo.length} ${t("fichier(s)")}`);
   };
 
@@ -155,24 +141,19 @@ export default function ConverterPro() {
         </div>
 
         {/* Drop zone */}
-        <div
-          onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragging(true); }}
-          onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setDragging(false); }}
-          onDrop={onDrop}
-          className="rounded-2xl p-8 flex flex-col items-center justify-center transition-all mb-4"
-          style={{
-            background: dragging ? "rgba(236,72,153,0.1)" : "rgba(255,255,255,0.03)",
-            border: dragging ? "2px dashed rgba(236,72,153,0.6)" : "2px dashed rgba(255,255,255,0.15)",
-          }}
+        <DropZone
+          className="mb-4"
+          accent="#ec4899"
+          title={t("Glissez-déposez des fichiers ou des dossiers")}
+          hint={t("Vidéo · Audio · Image · LUT — détection automatique")}
+          onFiles={addPaths}
+          scanFolders={(f) => api()?.convertproScan?.(f) ?? Promise.resolve([])}
         >
-          <UploadCloud className={`w-10 h-10 mb-3 ${dragging ? "text-pink-400" : "text-gray-400"}`} />
-          <p className="text-sm text-gray-200 font-semibold">{t("Glissez-déposez des fichiers ou des dossiers")}</p>
-          <p className="text-xs text-gray-500 mt-1">{t("Vidéo · Audio · Image · LUT — détection automatique")}</p>
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2">
             <button onClick={browseFiles} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 hover:text-white transition-all" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)" }}><FolderOpen className="w-4 h-4" /> {t("Fichiers")}</button>
             <button onClick={browseFolder} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 hover:text-white transition-all" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)" }}><FolderInput className="w-4 h-4" /> {t("Dossier")}</button>
           </div>
-        </div>
+        </DropZone>
 
         {rows.length > 0 && (
           <>
@@ -191,7 +172,7 @@ export default function ConverterPro() {
               return (
                 <div key={cat} className="flex items-center gap-2 mb-2 text-xs">
                   <span className="text-gray-500">{t("Tous les")} {t(sample.label || cat)} →</span>
-                  <div className="w-40"><GlassSelect value={sample.target} onChange={v => applyToCategory(cat, v)} className="py-1 text-xs" ariaLabel={t("Format")} options={sample.targets.map(x => ({ value: x, label: x.toUpperCase() }))} /></div>
+                  <div className="w-40"><GlassSelect value={sample.target} onChange={v => applyToCategory(cat, v)} className="py-1 text-xs" ariaLabel={t("Format")} options={sample.targets.map(x => ({ value: x, label: fmtTarget(x) }))} /></div>
                 </div>
               );
             })}
@@ -256,7 +237,7 @@ export default function ConverterPro() {
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-[10px] text-gray-600 uppercase">{row.target ? "" : ""}</span>
                             <ArrowRight className="w-3.5 h-3.5 text-gray-600" />
-                            <div className="w-28"><GlassSelect value={row.target} onChange={v => setTarget(row.id, v)} disabled={row.status === "running"} className="py-1 text-xs" ariaLabel={t("Format de sortie")} options={row.targets.map(x => ({ value: x, label: x.toUpperCase() }))} /></div>
+                            <div className="w-28"><GlassSelect value={row.target} onChange={v => setTarget(row.id, v)} disabled={row.status === "running"} className="py-1 text-xs" ariaLabel={t("Format de sortie")} options={row.targets.map(x => ({ value: x, label: fmtTarget(x) }))} /></div>
                           </div>
                         </>
                       ) : (

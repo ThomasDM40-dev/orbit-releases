@@ -29,6 +29,16 @@ function getYtDlpBin() {
   return ytDlpPath;
 }
 
+// Optional JS runtime for yt-dlp. Recent yt-dlp needs one (Deno) to solve
+// YouTube's player challenge; without it extraction is deprecated and "some
+// formats may be missing". We ship nothing by default (AV-friendly) and use a
+// Deno installed on demand into ~/.orbit. Returns its path, or null if absent.
+function getDenoBin() {
+  const deno = path.join(os.homedir(), '.orbit', 'deno.exe');
+  try { if (fs.existsSync(deno) && fs.statSync(deno).size > 5000000) return deno; } catch (e) {}
+  return null;
+}
+
 // Resolve ffmpeg: prefer local copy, then bundled unpacked binary.
 function getFfmpegBin() {
   const localFfmpeg = path.join(os.homedir(), '.orbit', 'ffmpeg', 'ffmpeg.exe');
@@ -213,7 +223,11 @@ function startLocalLlm(onLog) {
   llmState.starting = (async () => {
     const { exe, modelPath } = await ensureLocalLlm(onLog);
     onLog && onLog({ stage: 'Démarrage de l\'IA locale…', percent: 99 });
-    const srv = spawn(exe, ['-m', modelPath, '--port', String(LLM_PORT), '-c', '4096', '-ngl', '0', '--no-webui'], { cwd: path.dirname(exe), windowsHide: true });
+    // Tuned for weak/CPU-only laptops: smaller context = faster prefill + less
+    // RAM, threads pinned to physical cores (over-subscribing hyperthreads slows
+    // llama.cpp), and a cap so generation stays snappy.
+    const cores = Math.max(2, Math.min(8, Math.floor((os.cpus()?.length || 4) / 2) || 4));
+    const srv = spawn(exe, ['-m', modelPath, '--port', String(LLM_PORT), '-c', '2048', '-ngl', '0', '-t', String(cores), '--no-webui'], { cwd: path.dirname(exe), windowsHide: true });
     srv.stderr.on('data', () => {}); srv.stdout.on('data', () => {});
     srv.on('exit', () => { llmState.ready = false; if (llmState.proc === srv) llmState.proc = null; });
     llmState.proc = srv;
@@ -227,7 +241,7 @@ function startLocalLlm(onLog) {
 
 async function localChat(messages, systemPrompt, onLog) {
   await startLocalLlm(onLog);
-  const body = JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, ...messages], max_tokens: 512, temperature: 0.7, stream: false });
+  const body = JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, ...messages], max_tokens: 384, temperature: 0.7, stream: false });
   const text = await new Promise((resolve, reject) => {
     const req = require('http').request({ host: '127.0.0.1', port: LLM_PORT, path: '/v1/chat/completions', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, x => {
       let b = ''; x.on('data', d => b += d); x.on('end', () => { try { const j = JSON.parse(b); resolve((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').trim()); } catch (e) { reject(new Error('Réponse IA locale illisible.')); } });
@@ -537,6 +551,40 @@ function downloadYtDlp(dest) {
 
   https.get(url, handleResponse).on('error', handleError);
 }
+
+// On-demand install of the Deno JS runtime for yt-dlp (~40 MB). Downloaded only
+// when the user asks (AV-friendly), extracted to ~/.orbit/deno.exe. Mirrors the
+// curl-download → Expand-Archive pattern used for the other optional engines.
+ipcMain.handle('install-deno', async () => {
+  const existing = getDenoBin();
+  if (existing) return { ok: true, path: existing, already: true };
+  try {
+    fs.mkdirSync(ORBIT_DIR, { recursive: true });
+    const zip = path.join(ORBIT_DIR, 'deno.zip');
+    const url = 'https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip';
+    await new Promise((resolve, reject) => {
+      const curlProc = spawn('curl', ['-L', '--output', zip, '--progress-bar', '--retry', '3', url]);
+      curlProc.on('error', (e) => reject(new Error('curl indisponible : ' + e.message)));
+      curlProc.on('close', (code) => {
+        if (code !== 0) return reject(new Error('Téléchargement échoué (code ' + code + ')'));
+        try {
+          const stat = fs.statSync(zip);
+          if (stat.size < 5 * 1024 * 1024) { fs.unlinkSync(zip); return reject(new Error('Fichier trop petit — réessayez')); }
+          resolve();
+        } catch (e) { reject(e); }
+      });
+    });
+    require('child_process').execSync(`powershell -Command "Expand-Archive -Path '${zip}' -DestinationPath '${ORBIT_DIR}' -Force"`, { timeout: 120000 });
+    try { fs.unlinkSync(zip); } catch (e) {}
+    const got = getDenoBin();
+    if (!got) return { ok: false, error: 'deno.exe introuvable après extraction.' };
+    return { ok: true, path: got };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message || e) };
+  }
+});
+
+ipcMain.handle('get-deno-status', () => ({ installed: !!getDenoBin() }));
 
 ipcMain.handle('get-global-settings', () => {
   const settingsPath = path.join(ORBIT_DIR, 'settings.json');
@@ -1398,6 +1446,27 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
     }
   }
 
+  // Force H.264 (AVC) for editor compatibility — After Effects / Premiere reject
+  // the VP9/AV1 that YouTube serves for 4K+ (even inside an .mp4 container). We
+  // bias yt-dlp toward an avc1 video + m4a audio rendition; H.264 tops out around
+  // 1080p on YouTube, so the fallbacks let it degrade gracefully when no true
+  // H.264 stream exists at the requested height. `--recode-video mp4` guarantees
+  // an H.264 result by re-encoding only when the picked stream isn't already AVC.
+  if (globalSettings.forceH264 && !options.audioOnly && !globalSettings.extractAudio &&
+      format !== 'WEBM' && !isDirectStream) {
+    const heightMap = { '8K': 4320, '4K': 2160, '2K': 1440, '1080p': 1080, '720p': 720, '480p': 480, '360p': 360, '144p': 144 };
+    const h = heightMap[format];
+    const cap = h ? `[height<=${h}]` : '';
+    args.format = `bestvideo${cap}[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo${cap}[vcodec^=avc1]+bestaudio/best${cap}/best`;
+    args.mergeOutputFormat = 'mp4';
+    args.recodeVideo = 'mp4';
+  }
+
+  // If a Deno runtime was installed on demand, hand it to yt-dlp so YouTube
+  // extraction is complete (no "no supported JavaScript runtime" warning).
+  const denoBin = getDenoBin();
+  if (denoBin) args.jsRuntimes = `deno:${denoBin}`;
+
   // Toggles
   if (options.embedSubtitles || options.embedSubs) args.embedSubs = true;
   if (options.embedThumbnail) args.embedThumbnail = true;
@@ -1498,7 +1567,13 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
   }
 
   youtubedl = require('youtube-dl-exec').create(getYtDlpBin());
-  const subprocess = youtubedl.exec(url, args);
+
+  // Run yt-dlp with `runArgs`. On the cookie-copy failure (yt-dlp #7271, raised
+  // when Chrome/Edge is open and locks its cookie DB) we retry ONCE without any
+  // browser cookies — public videos don't need them, so the download still works
+  // instead of dying with code 1. `isRetry` guards against an infinite loop.
+  const runAttempt = (runArgs, isRetry) => {
+  const subprocess = youtubedl.exec(url, runArgs);
   if (subprocess.catch) {
     subprocess.catch(err => {
       console.log(`yt-dlp exec rejected for ${url}:`, err.message);
@@ -1577,6 +1652,18 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
   subprocess.on('close', (code) => {
     activeDownloads.delete(id);
     const success = code === 0;
+    // Browser cookies unusable → retry once without them. Covers both yt-dlp
+    // failure modes: the DB is locked while Chrome/Edge is open ("could not copy
+    // … cookie database", #7271) AND the DB can't be located ("could not find …
+    // cookies database"). Public videos don't need cookies, so the retry works.
+    if (!success && !isRetry && runArgs.cookiesFromBrowser &&
+        /could not (copy|find|read).*cookies?\s+database|cookies?\s+database.*(used by|locked)/i.test(stderrLog.join('\n'))) {
+      mainWindow.webContents.send('download-log', { id, line: `⚠️ Cookies du navigateur inaccessibles (navigateur ouvert ou profil introuvable). Nouvel essai sans cookies…`, level: 'warn' });
+      const retryArgs = { ...runArgs };
+      delete retryArgs.cookiesFromBrowser;
+      runAttempt(retryArgs, true);
+      return;
+    }
     if (success) {
       // Make sure the path we report to the UI is a file that exists (handles
       // extension changes from merge/remux and any parsing gaps).
@@ -1605,6 +1692,9 @@ ipcMain.on('start-download', (event, { id, url, format, options }) => {
     mainWindow.webContents.send('download-log', { id, line: `SPAWN ERROR: ${err.message}`, level: 'error' });
     mainWindow.webContents.send('download-error', { id, error: err.message });
   });
+  };
+
+  runAttempt(args, false);
 });
 
 ipcMain.on('cancel-download', (event, id) => {
@@ -2361,7 +2451,7 @@ ipcMain.handle('convertpro-run', async (event, { jobId, inputPath, target, outpu
   if (!convertpro.ENABLED[cat]) return { ok: false, error: 'Catégorie pas encore disponible (bientôt).' };
   const dir = outputDir && fs.existsSync(outputDir) ? outputDir : path.dirname(inputPath);
   const base = path.basename(inputPath, path.extname(inputPath)).replace(/[<>:"/\\|?*]+/g, '_');
-  const out = path.join(dir, `${base}.${String(target).toLowerCase()}`);
+  const out = path.join(dir, `${base}.${convertpro.outputExtFor(target)}`);
   const win = uiWin();
   const send = (percent, label) => win?.webContents.send('convertpro-progress', { jobId, percent, label });
 

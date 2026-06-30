@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, FolderOpen, Play, Terminal, Info, AlertCircle, CheckCircle2, Loader2, Square } from 'lucide-react';
+import { Zap, FolderOpen, Play, Terminal, Info, CheckCircle2, Loader2 } from 'lucide-react';
 import SegmentedTabs from './SegmentedTabs';
 import GlassSelect from './GlassSelect';
 import { t } from '@/i18n';
@@ -203,17 +203,6 @@ export default function AIInterpolator() {
     } else {
       addLog('error', t('API Electron non disponible.'));
       setStatus('error');
-    }
-  };
-
-  const moveTab = (index: number, direction: -1 | 1) => {
-    const newConfig = [...tabConfig];
-    const targetIndex = index + direction;
-    if (targetIndex >= 0 && targetIndex < newConfig.length) {
-      const temp = newConfig[index];
-      newConfig[index] = newConfig[targetIndex];
-      newConfig[targetIndex] = temp;
-      setTabConfig(newConfig);
     }
   };
 

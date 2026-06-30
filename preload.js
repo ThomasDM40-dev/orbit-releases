@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   appQuit: () => ipcRenderer.send('app-quit'),
   checkUpdates: () => ipcRenderer.invoke('check-updates'),
   updateYtdlp: () => ipcRenderer.invoke('update-ytdlp'),
+  installDeno: () => ipcRenderer.invoke('install-deno'),
+  getDenoStatus: () => ipcRenderer.invoke('get-deno-status'),
   openHomeDir: () => ipcRenderer.invoke('open-home-dir'),
   openFile: (path) => ipcRenderer.invoke('open-file', path),
   deleteFile: (path) => ipcRenderer.invoke('delete-file', path),

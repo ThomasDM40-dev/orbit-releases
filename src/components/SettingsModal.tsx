@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, Download, Palette, Monitor, Cpu, Globe, Info,
-  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Bot, Boxes, Crown, Bug
+  Folder, FolderOpen, Check, Loader2, Trash2, Bell, Rocket, X, FileText, ExternalLink, Boxes, Crown, Bug
 } from 'lucide-react';
 import ChangelogModal from './ChangelogModal';
 import LicenseAdmin from './LicenseAdmin';
@@ -69,6 +69,16 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
   const [llm, setLlm] = useState<{ installed?: boolean }>({});
   const [llmBusy, setLlmBusy] = useState(false);
   const [llmProg, setLlmProg] = useState<{ stage?: string; percent?: number } | null>(null);
+  const [denoInstalled, setDenoInstalled] = useState<boolean | null>(null);
+  const [denoBusy, setDenoBusy] = useState(false);
+
+  useEffect(() => { electronAPI?.getDenoStatus?.().then((s: any) => setDenoInstalled(!!s?.installed)).catch(() => {}); }, []);
+  const installDeno = async () => {
+    setDenoBusy(true);
+    const r = await electronAPI?.installDeno?.().catch(() => ({ ok: false }));
+    setDenoBusy(false);
+    if (r?.ok) setDenoInstalled(true);
+  };
 
   const [bugText, setBugText] = useState('');
   const [bugStatus, setBugStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -167,6 +177,7 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
         return (
           <div>
             <Card title={t("Contenu intégré")} icon={<Download className="w-3.5 h-3.5" />}>
+              <Row title={t("Forcer H.264 (compatible montage)")} desc={t("H.264/AAC pour After Effects & Premiere (évite VP9/AV1)")}><Toggle checked={!!settings.forceH264} onChange={c => update('forceH264', c)} /></Row>
               <Row title={t("Audio uniquement")} desc={t("Extrait la piste audio (MP3/FLAC/…)")}><Toggle checked={!!settings.extractAudio} onChange={c => update('extractAudio', c)} /></Row>
               <Row title={t("Intégrer la miniature")} desc={t("Pochette dans le fichier")}><Toggle checked={!!settings.embedThumbnail} onChange={c => update('embedThumbnail', c)} /></Row>
               <Row title={t("Intégrer les métadonnées")} desc={t("Titre, auteur, date…")}><Toggle checked={!!settings.embedMetadata} onChange={c => update('embedMetadata', c)} /></Row>
@@ -348,6 +359,13 @@ export default function SettingsModal({ onClose, language, settings, saveSetting
             </Card>
             <Card title={t("Maintenance")} icon={<SettingsIcon className="w-3.5 h-3.5" />}>
               <Row title={t("Réinstaller yt-dlp")} desc={t("Si les téléchargements échouent")}><button onClick={() => electronAPI?.updateYtdlp?.()} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">{t("Réinstaller")}</button></Row>
+              <Row title={t("Moteur JS pour YouTube (Deno)")} desc={t("Évite « no supported JavaScript runtime » et les formats manquants")}>
+                {denoInstalled ? (
+                  <span className="text-xs text-green-400 flex items-center gap-1.5"><Bell className="w-3.5 h-3.5" /> {t("Installé")}</span>
+                ) : (
+                  <button onClick={installDeno} disabled={denoBusy} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm disabled:opacity-50">{denoBusy ? t("Installation…") : t("Installer")}</button>
+                )}
+              </Row>
               <Row title={t("Voir les journaux")}><button onClick={() => electronAPI?.openLogs?.()} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-1.5"><FileText className="w-4 h-4" /> Logs</button></Row>
             </Card>
           </div>

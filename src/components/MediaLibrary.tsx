@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Library, Search, Plus, FolderSearch, LayoutGrid, List, Star, Clock, Sparkles,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import GlassSelect from './GlassSelect';
 import { t } from '@/i18n';
+import { useFileDrop } from './DropZone';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -77,7 +78,7 @@ export default function MediaLibrary() {
 
   const addFiles = async () => { setBusy(true); const f = await electron.libAddFiles?.().catch(() => []); setBusy(false); if (f?.length) await enrich(f); };
   const scanFolder = async () => { setBusy(true); const f = await electron.libScanFolder?.().catch(() => []); setBusy(false); if (f?.length) { await enrich(f); showToast('info', t('{n} fichier(s) trouvé(s).', { n: f.length })); } };
-  const onDrop = (e: React.DragEvent) => { e.preventDefault(); const ps: string[] = []; for (const f of Array.from(e.dataTransfer.files)) { const p = (f as any).path; if (p) ps.push(p); } if (ps.length) enrich(ps); };
+  const { dropProps: libDrop } = useFileDrop({ onFiles: (ps) => { enrich(ps); } });
   const toggleFav = (id: string) => setItems(prev => prev.map(i => i.id === id ? { ...i, favorite: !i.favorite } : i));
   const removeItem = (id: string) => { setItems(prev => prev.filter(i => i.id !== id)); if (selected?.id === id) setSelected(null); };
 
@@ -124,7 +125,7 @@ export default function MediaLibrary() {
   ];
 
   return (
-    <div className="h-full flex flex-col text-gray-300 overflow-hidden" onDragOver={e => e.preventDefault()} onDrop={onDrop}>
+    <div className="h-full flex flex-col text-gray-300 overflow-hidden" {...libDrop}>
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-white/5">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/30 to-violet-500/30 flex items-center justify-center border border-white/10"><Library className="w-5 h-5 text-indigo-400" /></div>

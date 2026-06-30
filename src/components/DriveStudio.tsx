@@ -6,6 +6,7 @@ import {
   Cloud, Monitor, LogOut, Server, Mail, User as UserIcon, FolderCog,
 } from 'lucide-react';
 import { t } from '@/i18n';
+import { orbitPrompt } from './orbitPrompt';
 import { useEta } from '@/eta';
 import DriveAdmin from './DriveAdmin';
 import DriveTelegram from './DriveTelegram';
@@ -63,7 +64,6 @@ export default function DriveStudio() {
   // Shared passphrase / password field
   const [pass, setPass] = useState('');
 
-  const unlocked = mode === 'local' ? !!localStatus?.unlocked : !!cloud?.unlocked;
   const eta = useEta(prog);
 
   const backend = mode === 'local'
@@ -177,7 +177,7 @@ export default function DriveStudio() {
 
   // ── Shared drive actions ────────────────────────────────────────────────────
   const handleNewFolder = async () => {
-    const name = window.prompt(t('Nom du dossier'));
+    const name = await orbitPrompt(t('Nom du dossier'));
     if (!name) return;
     setNodes((await backend.mkdir({ name, parent: folder })) || []);
   };

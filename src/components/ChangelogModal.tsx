@@ -1,8 +1,38 @@
-import React from 'react';
 import { X, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { t } from '@/i18n';
 
 const changelog = [
+  {
+    version: '0.43.0',
+    date: '30 Juin 2026',
+    changes: [
+      { type: 'feat', text: "Toute nouvelle expérience d'installation premium au premier lancement : écran animé Welcome → Installing → Success, avec logo orbital, fond vivant, particules, flèches lumineuses, barre de progression à glow et animation de succès." }
+    ]
+  },
+  {
+    version: '0.42.0',
+    date: '30 Juin 2026',
+    changes: [
+      { type: 'feat', text: "Nouvel installateur Orbit Nova : page de bienvenue, panneau spatial avec anneaux orbitaux et cœur lumineux violet→cyan, en-tête et icônes assortis." },
+      { type: 'feat', text: "Orbit IA accepte le glisser-déposer : dépose un fichier directement sur le panneau de l'assistant pour qu'il te propose quoi en faire." },
+      { type: 'feat', text: "Assistant IA plus rapide sur les PC modestes, avec une barre de progression au premier lancement (téléchargement et démarrage du modèle) au lieu d'un « Réflexion… » figé." },
+      { type: 'fix', text: "Déposer un fichier n'importe où n'ouvre plus l'assistant IA par erreur — seules les vraies zones de dépôt réagissent." }
+    ]
+  },
+  {
+    version: '0.41.0',
+    date: '30 Juin 2026',
+    changes: [
+      { type: 'feat', text: "Convertisseur Pro : nouvelle sortie ProRes (.mov), l'intermédiaire idéal pour After Effects, Premiere et Resolve." },
+      { type: 'feat', text: "Téléchargements : option « Forcer H.264 (compatible montage) » dans les réglages — évite le VP9/AV1 que les logiciels de montage refusent." },
+      { type: 'feat', text: "Moteur JS pour YouTube (Deno) installable en un clic, pour une extraction complète sans formats manquants." },
+      { type: 'feat', text: "Glisser-déposer repensé et unifié sur toute l'application : retour visuel cohérent et déposes plus fiables." },
+      { type: 'fix', text: "Déposer un fichier sur un outil le charge maintenant dans cet outil au lieu d'ouvrir l'assistant IA par erreur." },
+      { type: 'fix', text: "Cookies du navigateur : réessai automatique sans cookies quand Chrome/Edge verrouille sa base — fini les téléchargements qui plantent avec le code 1." },
+      { type: 'fix', text: "Correction du plantage « prompt() is not supported » lors de l'enregistrement d'un préréglage ou de la création d'un dossier." },
+      { type: 'fix', text: "After Effects : la conversion vidéo produit désormais un H.264 réellement importable." }
+    ]
+  },
   {
     version: '0.7.1',
     date: '8 Juin 2026',

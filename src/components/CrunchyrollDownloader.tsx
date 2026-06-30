@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, Download, CheckCircle2, X, FolderOpen, AlertCircle, Loader2 } from "lucide-react";
+import { Globe, Download, CheckCircle2, X, FolderOpen, AlertCircle } from "lucide-react";
 import GlassSelect from "./GlassSelect";
 
 type Quality = '1080p' | '720p' | '480p' | '360p';

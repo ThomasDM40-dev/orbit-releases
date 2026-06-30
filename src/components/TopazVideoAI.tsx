@@ -8,6 +8,8 @@ import {
 import SegmentedTabs from './SegmentedTabs';
 import GlassSelect from './GlassSelect';
 import { t } from '@/i18n';
+import { orbitPrompt } from './orbitPrompt';
+import DropZone from './DropZone';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -101,7 +103,6 @@ export default function TopazVideoAI() {
     { id: 'perf', label: t('Performance GPU'), visible: true },
   ]);
   const [presets, setPresets] = useState<any[]>([]);
-  const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ type: 'error' | 'info'; msg: string } | null>(null);
   const listenersRef = useRef(false);
   const jobsRef = useRef<Job[]>([]);
@@ -202,14 +203,6 @@ export default function TopazVideoAI() {
     if (files?.length) addFiles(files);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
-    const paths: string[] = [];
-    for (const f of Array.from(e.dataTransfer.files)) {
-      const p = (f as any).path; if (p) paths.push(p);
-    }
-    if (paths.length) addFiles(paths);
-  };
 
   const removeJob = (id: string) => {
     setJobs(prev => prev.filter(j => j.id !== id));
@@ -314,7 +307,7 @@ export default function TopazVideoAI() {
 
   const savePreset = async () => {
     if (!selected) return;
-    const name = prompt(t('Nom du préréglage :'));
+    const name = await orbitPrompt(t('Nom du préréglage :'));
     if (!name) return;
     const np = [...presets, { name, settings: selected.settings }];
     setPresets(np);
@@ -386,16 +379,9 @@ export default function TopazVideoAI() {
         <div className="flex-1 overflow-hidden flex">
           {/* Left: import + queue */}
           <div className="w-[340px] shrink-0 border-r border-white/5 flex flex-col">
-            <div
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              className={`m-3 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 py-6 cursor-pointer ${dragOver ? 'border-fuchsia-500/60 bg-fuchsia-500/10' : 'border-white/10 hover:border-white/20 bg-white/[0.02]'}`}
-              onClick={handleBrowse}>
-              <Plus className="w-6 h-6 text-fuchsia-400" />
-              <p className="text-sm text-gray-300 font-medium">{t("Glissez vos vidéos ici")}</p>
-              <p className="text-[11px] text-gray-500">{t("ou cliquez pour parcourir · sélection multiple")}</p>
-            </div>
+            <DropZone compact className="m-3" accent="#d946ef" icon={<Plus className="w-5 h-5" />}
+              title={t("Glissez vos vidéos ici")} hint={t("ou cliquez pour parcourir · sélection multiple")}
+              onClick={handleBrowse} onFiles={addFiles} />
             <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
               {jobs.length === 0 && <p className="text-center text-gray-600 text-xs mt-6">{t("File d'attente vide")}</p>}
               {jobs.map(job => (

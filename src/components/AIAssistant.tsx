@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, Send, X, Loader2, Play, Copy, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Send, X, Loader2, Play, Copy, Check, UploadCloud } from 'lucide-react';
 import { AIMessage, sendChatCompletion } from '../services/aiService';
+import { useFileDrop } from './DropZone';
 import { t as tr } from '@/i18n';
 
 interface AIAssistantProps {
@@ -187,11 +188,22 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
   const [messages, setMessages] = useState<AIMessage[]>([welcomeMessage()]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // First-run local AI setup (downloads/loads a ~2 GB model). Without this the
+  // panel just sat on "Réflexion…" for minutes — looking frozen, not slow.
+  const [llmStage, setLlmStage] = useState<{ stage: string; percent: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const processedDropRef = useRef<string | null>(null);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading, llmStage]);
+
+  // Local AI install/boot progress → shown inside the thinking bubble.
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api?.onLlmProgress) return;
+    const off = api.onLlmProgress((v: { stage: string; percent: number }) => setLlmStage(v));
+    return () => { try { off?.(); } catch (e) {} };
+  }, []);
 
   // Close when clicking outside the panel (ignoring the floating toggle button).
   useEffect(() => {
@@ -220,15 +232,27 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
       setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${err.message}` }]);
     } finally {
       setIsLoading(false);
+      setLlmStage(null);
     }
   }, [messages]);
 
+  // Hand a dropped file to the AI: announce it and ask what to do with it.
+  const submitDroppedFile = useCallback((filePath: string) => {
+    if (!filePath || filePath === processedDropRef.current) return;
+    processedDropRef.current = filePath;
+    sendMessage({ role: 'user', content: tr('Un fichier vient d\'être déposé : "{file}". L\'onglet actif est "{tab}". Propose-moi ce que je peux faire avec ce fichier.', { file: filePath, tab: activeTab }) });
+  }, [sendMessage, activeTab]);
+
+  // Files dropped from elsewhere (legacy prop path).
   useEffect(() => {
-    if (droppedFile && droppedFile !== processedDropRef.current) {
-      processedDropRef.current = droppedFile;
-      sendMessage({ role: 'user', content: tr('Un fichier vient d\'être déposé : "{file}". L\'onglet actif est "{tab}". Propose-moi ce que je peux faire avec ce fichier.', { file: droppedFile, tab: activeTab }) });
-    }
+    if (droppedFile) submitDroppedFile(droppedFile);
   }, [droppedFile]); // eslint-disable-line
+
+  // Drop a file directly onto the panel — the headless dropzone gives absolute
+  // paths and tags itself [data-orbit-dropzone] so the global guard stays out.
+  const { isOver, dropProps } = useFileDrop({
+    onFiles: (paths) => { if (paths[0]) submitDroppedFile(paths[0]); },
+  });
 
   // Run a command: if it matches a known interface action, do it instantly
   // (offline, no AI needed); otherwise hand it to the AI for a conversational reply.
@@ -254,6 +278,7 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
   return (
     <motion.div
       ref={panelRef}
+      {...dropProps}
       initial={{ opacity: 0, y: 24, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -263,10 +288,27 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
         background: 'rgba(16,16,24,0.80)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.12)',
+        border: isOver ? '1px solid var(--accent,#ec4899)' : '1px solid rgba(255,255,255,0.12)',
         boxShadow: '0 30px 90px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.10) inset, 0 0 40px color-mix(in srgb, var(--accent,#ec4899) 12%, transparent)',
       }}
     >
+      {/* Drop overlay — drag a file anywhere over the panel */}
+      <AnimatePresence>
+        {isOver && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[60] flex flex-col items-center justify-center gap-3 pointer-events-none rounded-3xl"
+            style={{ background: 'color-mix(in srgb, var(--accent,#ec4899) 18%, rgba(10,10,16,0.86))', border: '2px dashed var(--accent,#ec4899)' }}
+          >
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'color-mix(in srgb, var(--accent,#ec4899) 30%, transparent)' }}>
+              <UploadCloud className="w-8 h-8 text-white" />
+            </div>
+            <p className="font-semibold text-white text-sm">{tr('Déposez le fichier ici')}</p>
+            <p className="text-[12px] text-gray-300">{tr("Orbit IA vous proposera quoi en faire")}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0 relative"
         style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent,#ec4899) 14%, transparent), transparent)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -315,9 +357,16 @@ export default function AIAssistant({ onClose, droppedFile, activeTab }: AIAssis
           </div>
         )}
         {isLoading && (
-          <div className="self-start px-3.5 py-2.5 rounded-2xl rounded-bl-md text-[13px] flex items-center gap-2 border border-white/8" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent,#ec4899)' }} />
-            <span className="text-gray-400">{tr("Réflexion…")}</span>
+          <div className="self-start px-3.5 py-2.5 rounded-2xl rounded-bl-md text-[13px] flex flex-col gap-1.5 border border-white/8 min-w-[180px]" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: 'var(--accent,#ec4899)' }} />
+              <span className="text-gray-400">{llmStage ? llmStage.stage : tr("Réflexion…")}</span>
+            </div>
+            {llmStage && llmStage.percent > 0 && llmStage.percent < 100 && (
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                <div className="h-full rounded-full transition-all" style={{ width: `${llmStage.percent}%`, background: 'var(--accent,#ec4899)' }} />
+              </div>
+            )}
           </div>
         )}
         <div ref={messagesEndRef} />

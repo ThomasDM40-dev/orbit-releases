@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, FileVideo, FileAudio, Settings, Music, Play, X, Image as ImageIcon, Loader2, CheckCircle2, FolderOpen, FolderInput } from "lucide-react";
+import { FileVideo, FileAudio, Settings, Play, X, Image as ImageIcon, Loader2, CheckCircle2, FolderOpen, FolderInput } from "lucide-react";
 import GlassSelect from "./GlassSelect";
 import { t } from "@/i18n";
+import { orbitPrompt } from "./orbitPrompt";
+import DropZone from "./DropZone";
 import { addRecent, notifyDone } from "@/recents";
 import { startTask, finishTask } from "@/tasks";
 
@@ -35,7 +37,6 @@ const METADATA_FORMATS = ['MP3', 'MP4', 'WAV', 'FLAC'];
 export default function Converter({ globalSettings }: { language?: string, globalSettings: any }) {
   const [items, setItems] = useState<ConvertItem[]>([]);
   const [outputDir, setOutputDir] = useState(globalSettings?.outputDir || "");
-  const [isDragging, setIsDragging] = useState(false);
   const [bulkFormat, setBulkFormat] = useState<ConvertItem['targetFormat']>('MP3');
   const [presets, setPresets] = useState<{ name: string; format: string }[]>(() => {
     try { return JSON.parse(localStorage.getItem('orbit-convert-presets') || '[]'); } catch { return []; }
@@ -80,13 +81,6 @@ export default function Converter({ globalSettings }: { language?: string, globa
       }
     }));
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setItems(prev => [...makeItems(Array.from(e.dataTransfer.files) as any), ...prev]);
-    }
-  };
 
   const handleSelectOutputDir = async () => {
     if (typeof window !== "undefined" && (window as any).electronAPI) {
@@ -95,27 +89,23 @@ export default function Converter({ globalSettings }: { language?: string, globa
     }
   };
 
+  // Build queue items from absolute paths (drag-drop and the file picker share this).
+  const addPaths = (paths: string[]) => {
+    const mapped = paths.map((p: string) => ({
+      name: p.split(/[\\/]/).pop() ?? p,
+      path: p,
+      size: 0,
+      type: /\.(mp4|mkv|avi|mov|webm|flv|wmv)$/i.test(p) ? 'video/mp4' : 'audio/mpeg'
+    }));
+    setItems(prev => [...makeItems(mapped), ...prev]);
+  };
+
   const handleBrowse = async () => {
     if (typeof window !== "undefined" && (window as any).electronAPI) {
       const files = await (window as any).electronAPI.selectFiles();
-      if (files?.length) {
-        const mapped = files.map((p: string) => ({
-          name: p.split(/[\\/]/).pop() ?? p,
-          path: p,
-          size: 0,
-          type: /\.(mp4|mkv|avi|mov|webm|flv|wmv)$/i.test(p) ? 'video/mp4' : 'audio/mpeg'
-        }));
-        setItems(prev => [...makeItems(mapped), ...prev]);
-      }
+      if (files?.length) addPaths(files);
     }
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => setIsDragging(false);
 
   const handleSelectCover = async (id: string) => {
     if (typeof window !== "undefined" && (window as any).electronAPI) {
@@ -229,7 +219,7 @@ export default function Converter({ globalSettings }: { language?: string, globa
             ]}
           />
           <button onClick={() => applyFormatToAll(bulkFormat)} className="px-3 py-1.5 rounded-lg bg-pink-500/15 text-pink-300 border border-pink-500/20 hover:bg-pink-500/25 transition-colors">{t("Appliquer à tout")}</button>
-          <button onClick={() => { const name = window.prompt(t("Nom du préréglage ?")); if (name) savePresets([...presets.filter(p => p.name !== name), { name, format: bulkFormat }]); }} className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors">{t("Enregistrer préréglage")}</button>
+          <button onClick={async () => { const name = await orbitPrompt(t("Nom du préréglage ?")); if (name) savePresets([...presets.filter(p => p.name !== name), { name, format: bulkFormat }]); }} className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors">{t("Enregistrer préréglage")}</button>
           {presets.map(p => (
             <span key={p.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300">
               <button onClick={() => { setBulkFormat(p.format as any); applyFormatToAll(p.format); }} className="hover:text-pink-300 transition-colors">{p.name}</button>
@@ -240,35 +230,21 @@ export default function Converter({ globalSettings }: { language?: string, globa
       )}
 
       {/* Drag & Drop Zone */}
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`rounded-2xl p-10 flex flex-col items-center justify-center transition-all duration-300 relative overflow-hidden group ${isDragging ? 'scale-[1.02]' : ''}`}
-        style={{
-          background: isDragging ? "rgba(236,72,153,0.1)" : "rgba(255,255,255,0.03)",
-          border: isDragging ? "2px dashed rgba(236,72,153,0.6)" : "2px dashed rgba(255,255,255,0.15)",
-          backdropFilter: "blur(20px)",
-          boxShadow: isDragging ? "0 0 40px rgba(236,72,153,0.2) inset, 0 8px 32px rgba(0,0,0,0.4)" : "0 8px 32px rgba(0,0,0,0.2)",
-        }}
+      <DropZone
+        accent="#ec4899"
+        title={t("Glissez-déposez vos fichiers multimédias ici")}
+        hint={t("Vidéos (MP4, MKV, AVI) ou Musiques (MP3, FLAC, WAV)")}
+        onFiles={addPaths}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${isDragging ? 'text-pink-400' : 'text-gray-400 group-hover:text-gray-300'}`} />
-        <p className="text-base text-gray-200 font-semibold relative z-10">{t("Glissez-déposez vos fichiers multimédias ici")}</p>
-        <p className="text-sm text-gray-500 mt-2 relative z-10">{t("Vidéos (MP4, MKV, AVI) ou Musiques (MP3, FLAC, WAV)")}</p>
         <button
           onClick={handleBrowse}
-          className="mt-4 relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 hover:text-white transition-all hover:scale-105 active:scale-95"
-          style={{
-            background: "rgba(255,255,255,0.07)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            backdropFilter: "blur(12px)",
-          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 hover:text-white transition-all hover:scale-105 active:scale-95"
+          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)" }}
         >
           <FolderOpen className="w-4 h-4" />
           {t("Parcourir les fichiers")}
         </button>
-      </div>
+      </DropZone>
 
       {/* Items List */}
       <div className="flex-1 overflow-y-auto pr-2 space-y-4 pb-10">

@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { X, Terminal, AlertCircle, Info, AlertTriangle, Copy, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { t } from "@/i18n";
 

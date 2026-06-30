@@ -38,6 +38,8 @@ Depuis la **v0.40.0**, Orbit propose deux interfaces et bascule de l'une à l'au
 - **Orbit Nova** *(par défaut)* — une expérience futuriste : fond vivant (orbes, particules, flèches lumineuses animées), page d'accueil spectaculaire, **recherche de commande `Ctrl+K`**, sidebar en verre, cartes d'outils animées (tilt 3D + glow), **retours tactiles** (animation de clic + petits bruitages mutables) et **interface responsive**.
 - **Orbit Classic** — l'interface d'origine, inchangée.
 
+Au tout premier lancement, une **expérience d'installation premium** plein écran t'accueille (Welcome → Installing → Installed) avec logo orbital animé, particules et boutons magnétiques.
+
 > Les deux interfaces partagent exactement les **mêmes fonctionnalités** : changer d'interface ne change que l'habillage.
 
 <br/>
@@ -49,6 +51,7 @@ Depuis la **v0.40.0**, Orbit propose deux interfaces et bascule de l'une à l'au
 - File d'attente avec téléchargements parallèles, qualité jusqu'au **8K**, extraction audio (MP3/FLAC/WAV/M4A…)
 - Navigateur-renifleur intégré pour capturer les flux (HLS/DASH/MP4), cookies, métadonnées & miniatures
 - SponsorBlock (marquer / supprimer), archive anti-doublons, sous-titres
+- **Forcer H.264/AAC** (évite le VP9/AV1 4K+ refusé par les logiciels de montage) · moteur **Deno** installable en 1 clic pour une extraction YouTube complète
 
 ### 🔃 Convertisseur & Tags
 - Conversion entre tous formats (MP4, MKV, AVI, MOV, MP3, FLAC, WAV, OGG…)
@@ -65,7 +68,7 @@ Depuis la **v0.40.0**, Orbit propose deux interfaces et bascule de l'une à l'au
 
 ### 🔄 Convertisseur Pro (convertisseur universel)
 - Glissez **fichiers ou dossiers entiers** : détection automatique du type, qualité adaptative, **conversion par lot** suivie dans le Centre de tâches
-- **Vidéo** (MP4/MOV/MKV/WebM/AVI/GIF), **Audio** (WAV/MP3/FLAC/AAC/OGG/Opus/M4A), **Image** (PNG/JPG/WebP/AVIF/TIFF/BMP)
+- **Vidéo** (MP4/MOV/MKV/WebM/AVI/GIF) + **ProRes 422 HQ** (.mov, intermédiaire idéal AE/Premiere/Resolve), **Audio** (WAV/MP3/FLAC/AAC/OGG/Opus/M4A), **Image** (PNG/JPG/WebP/AVIF/TIFF/BMP)
 - **LUT / Couleur** (.cube ↔ .3dl, conversion mathématique sans perte)
 - **Polices** (TTF/OTF → TTF/WOFF/WOFF2) et **3D** (OBJ/STL/PLY/GLTF/GLB/FBX… → GLB/OBJ/STL/PLY)
 - **Documents** (DOCX/XLSX/Markdown → PDF/HTML/CSV) via le moteur de rendu intégré, sans téléchargement externe

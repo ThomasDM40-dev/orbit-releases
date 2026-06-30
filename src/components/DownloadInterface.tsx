@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Download, Video, CheckCircle2, ClipboardX, Crop, Cloud, MoreHorizontal, Subtitles, Cookie, Trash, LayoutGrid, List, Rss, TerminalSquare, Filter, Folder, Heart, Gift, File, Play, X, Pause, Clock, Globe } from "lucide-react";
+import { Loader2, Download, Video, CheckCircle2, ClipboardX, Crop, MoreHorizontal, Subtitles, Cookie, Trash, LayoutGrid, List, TerminalSquare, Folder, Play, X, Pause, Clock, Globe } from "lucide-react";
 import OrbitPlayer from "./OrbitPlayer";
 import LogPanel from "./LogPanel";
 import SnifferBrowser from "./SnifferBrowser";

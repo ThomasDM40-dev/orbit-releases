@@ -30,11 +30,13 @@ export default function ImportModal({ onClose }: ImportModalProps) {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
   };
 
@@ -63,8 +65,9 @@ export default function ImportModal({ onClose }: ImportModalProps) {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFile(e.dataTransfer.files[0]);
     }
@@ -85,9 +88,10 @@ export default function ImportModal({ onClose }: ImportModalProps) {
           {t.desc}
         </p>
 
-        <div 
-          className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-12 transition-colors cursor-pointer ${
-            isDragging ? 'border-pink-500 bg-pink-500/10' : 'border-white/10 glass-panel hover:border-white/30 hover:bg-white/5'
+        <div
+          data-orbit-dropzone
+          className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-12 transition-all cursor-pointer ${
+            isDragging ? 'border-pink-500 bg-pink-500/10 scale-[1.01]' : 'border-white/10 glass-panel hover:border-white/30 hover:bg-white/5'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}

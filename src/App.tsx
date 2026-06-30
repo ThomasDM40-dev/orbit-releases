@@ -8,13 +8,14 @@ import { TAB_ICONS } from "@/components/TabIcons";
 import LiquidLoader from "@/components/LiquidLoader";
 import OrbitSpinner from "@/components/OrbitSpinner";
 import AIAssistant from "@/components/AIAssistant";
+import InstallExperience from "@/components/InstallExperience";
 import TaskCenter from "@/components/TaskCenter";
 import PremiumModal from "@/components/PremiumModal";
 import PremiumGate from "@/components/PremiumGate";
 import { usePremium, PREMIUM_TABS } from "@/premium";
 import { useShell } from "@/shell/ShellContext";
 import { NOVA_HOME } from "@/nova/catalog";
-import { Sparkles, UploadCloud, Search } from "lucide-react";
+import { Sparkles, Search } from "lucide-react";
 
 const NovaLayout = lazy(() => import("@/nova/NovaLayout"));
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
@@ -105,8 +106,6 @@ export default function App() {
     const api = (window as any).electronAPI;
     if (api?.rpcUpdate) api.rpcUpdate({ tab: activeTab });
   }, [activeTab]);
-
-  const [showLogs, setShowLogs] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [updateOk, setUpdateOk] = useState<boolean | null>(null);
   const [isUpdateReady, setIsUpdateReady] = useState(false);
@@ -117,10 +116,14 @@ export default function App() {
   const { premium } = usePremium();
   const { shell, setShell } = useShell();
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('orbit-onboarded'));
-  
+  // Premium first-run install experience — only on a genuine fresh install
+  // (never replayed for existing users who auto-updated). Shown before onboarding.
+  const [showInstall, setShowInstall] = useState(
+    () => !localStorage.getItem('orbit-installed') && !localStorage.getItem('orbit-onboarded')
+  );
+
   // AI Assistant & Drag & Drop State
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [droppedFile, setDroppedFile] = useState<string | null>(null);
   const [clipUrl, setClipUrl] = useState<string | null>(null);
   const clipDismissed = useRef<string>('');
@@ -217,45 +220,22 @@ export default function App() {
     };
   }, [language]);
 
-  // --- Drag & Drop ---
+  // --- Drag & Drop (global guard only) ---
+  // Dropping a file outside a real dropzone must NOT open the AI or do anything —
+  // it used to pop a full-screen "Déposez ici → Orbit IA" overlay on every drop.
+  // Tool zones and the Orbit IA panel carry [data-orbit-dropzone] and handle their
+  // own drops. Everywhere else we just swallow the event so Electron doesn't
+  // navigate the window to the dropped file (file:// load = blank app).
   useEffect(() => {
-    const handleDragOver = (e: DragEvent) => {
+    const swallow = (e: DragEvent) => {
+      if ((e.target as HTMLElement | null)?.closest?.('[data-orbit-dropzone]')) return;
       e.preventDefault();
-      e.stopPropagation();
-      if (e.dataTransfer?.types.includes('Files')) {
-        setIsDragging(true);
-      }
     };
-    
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.relatedTarget === null) {
-        setIsDragging(false);
-      }
-    };
-    
-    const handleDrop = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-      
-      const files = e.dataTransfer?.files;
-      if (files && files.length > 0) {
-        const filePath = files[0].path;
-        setDroppedFile(filePath);
-        setShowAIAssistant(true);
-      }
-    };
-
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('drop', handleDrop);
-
+    window.addEventListener('dragover', swallow);
+    window.addEventListener('drop', swallow);
     return () => {
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('drop', handleDrop);
+      window.removeEventListener('dragover', swallow);
+      window.removeEventListener('drop', swallow);
     };
   }, []);
 
@@ -393,6 +373,14 @@ export default function App() {
     return () => window.removeEventListener('orbit-onboarding', reopen);
   }, []);
 
+  // Replay the premium install experience on demand (preview / demo).
+  // From the app: window.dispatchEvent(new Event('orbit-show-installer'))
+  useEffect(() => {
+    const replay = () => setShowInstall(true);
+    window.addEventListener('orbit-show-installer', replay);
+    return () => window.removeEventListener('orbit-show-installer', replay);
+  }, []);
+
   const handleUpdateYtdlp = async () => {
     setActiveMenu(null);
     setUpdateOk(null);
@@ -402,17 +390,6 @@ export default function App() {
       setUpdateOk(res.success);
       setUpdateStatus(res.success ? t("yt-dlp mis à jour avec succès !") : `${t("Erreur :")} ${res.message}`);
       setTimeout(() => setUpdateStatus(null), 5000);
-    }
-  };
-
-  const moveMainTab = (index: number, direction: -1 | 1) => {
-    const newConfig = [...mainTabConfig];
-    const targetIndex = index + direction;
-    if (targetIndex >= 0 && targetIndex < newConfig.length) {
-      const temp = newConfig[index];
-      newConfig[index] = newConfig[targetIndex];
-      newConfig[targetIndex] = temp;
-      setMainTabConfig(newConfig);
     }
   };
 
@@ -608,7 +585,16 @@ export default function App() {
       )}
       {showImportModal && (<ImportModal onClose={() => setShowImportModal(false)} language={language} />)}
       {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
-      {showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
+      {!showInstall && showOnboarding && <OnboardingModal onComplete={applyOnboarding} />}
+
+      {/* Premium first-run install experience (covers everything until done) */}
+      <AnimatePresence>
+        {showInstall && (
+          <InstallExperience
+            onFinish={() => { localStorage.setItem('orbit-installed', '1'); setShowInstall(false); }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Floating AI Button */}
       <button
@@ -665,24 +651,6 @@ export default function App() {
             droppedFile={droppedFile}
             activeTab={activeTab}
           />
-        )}
-      </AnimatePresence>
-
-      {/* Drag & Drop Overlay */}
-      <AnimatePresence>
-        {isDragging && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center border-[4px] border-dashed border-pink-500/50 pointer-events-none"
-          >
-            <div className="bg-pink-500/20 p-8 rounded-full mb-6">
-              <UploadCloud className="w-20 h-20 text-pink-500" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">{t("Déposez votre fichier ici")}</h2>
-            <p className="text-gray-300 text-lg">{t("Orbit IA l'analysera et vous proposera des outils adaptés")}</p>
-          </motion.div>
         )}
       </AnimatePresence>
 

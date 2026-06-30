@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Flame, FolderOpen, Play, Square, Trash2, Plus, Save, Layers, Download,
@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import GlassSelect from './GlassSelect';
 import { t } from '@/i18n';
+import { orbitPrompt } from './orbitPrompt';
+import DropZone from './DropZone';
 
 const api = () => (window as any).electronAPI;
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -84,7 +86,6 @@ export default function HandBrake() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [presets, setPresets] = useState<any[]>([]);
-  const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ type: 'error' | 'info'; msg: string } | null>(null);
   const [installLog, setInstallLog] = useState('');
   const listenersRef = useRef(false);
@@ -120,7 +121,6 @@ export default function HandBrake() {
     }
   }, [outputDir, selectedId, electron]);
   const handleBrowse = async () => { const f = await electron.enhanceSelectFiles?.().catch(() => []); if (f?.length) addFiles(f); };
-  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); const ps: string[] = []; for (const f of Array.from(e.dataTransfer.files)) { const p = (f as any).path; if (p) ps.push(p); } if (ps.length) addFiles(ps); };
   const removeJob = (id: string) => { setJobs(prev => prev.filter(j => j.id !== id)); if (selectedId === id) setSelectedId(jobsRef.current.find(j => j.id !== id)?.id || null); };
   const patch = (p: Partial<S>) => { if (!selectedId) return; setJobs(prev => prev.map(j => j.id === selectedId ? { ...j, settings: { ...j.settings, ...p } } : j)); };
   const applyToAll = () => { if (!selected) return; setJobs(prev => prev.map(j => ({ ...j, settings: { ...selected.settings } }))); showToast('info', t('Réglages appliqués à toute la file.')); };
@@ -130,7 +130,7 @@ export default function HandBrake() {
   const startAll = () => { if (!jobs.some(j => j.status === 'running')) { const n = jobs.find(j => j.status === 'idle'); if (n) startJob(n); else showToast('info', t('Aucun élément en attente.')); } };
   const cancelJob = (job: Job) => { electron.hbCancel?.(job.id); setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'idle', percent: 0, stage: undefined } : j)); };
   const applyPreset = (p: Partial<S>) => { if (!selected) { showToast('info', t('Sélectionnez un fichier.')); return; } patch(p); showToast('info', t('Préréglage appliqué.')); };
-  const savePreset = async () => { if (!selected) return; const name = prompt(t('Nom du préréglage :')); if (!name) return; const np = [...presets, { name, settings: selected.settings }]; setPresets(np); await electron.hbPresetsSave?.(np); showToast('info', t('Préréglage enregistré.')); };
+  const savePreset = async () => { if (!selected) return; const name = await orbitPrompt(t('Nom du préréglage :')); if (!name) return; const np = [...presets, { name, settings: selected.settings }]; setPresets(np); await electron.hbPresetsSave?.(np); showToast('info', t('Préréglage enregistré.')); };
   const browseOutput = async () => { const d = await electron.selectDirectory?.(); if (d) { setOutputDir(d); patch({ outputDir: d }); } };
   const install = async () => { setInstalling(true); const r = await electron.hbInstall?.().catch((e: any) => ({ ok: false, error: String(e) })); setInstalling(false); if (r?.ok) { showToast('info', t('HandBrake installé ✓')); setDetect((d: any) => ({ ...(d || {}), installed: true, presets: r.presets })); } else showToast('error', r?.error || t('Échec installation')); };
 
@@ -169,10 +169,9 @@ export default function HandBrake() {
       <div className="flex-1 overflow-hidden flex">
         {/* Queue */}
         <div className="w-[330px] shrink-0 border-r border-white/5 flex flex-col">
-          <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop} onClick={handleBrowse}
-            className={`m-3 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 py-6 cursor-pointer ${dragOver ? 'border-orange-500/60 bg-orange-500/10' : 'border-white/10 hover:border-white/20 bg-white/[0.02]'}`}>
-            <Plus className="w-6 h-6 text-orange-400" /><p className="text-sm text-gray-300 font-medium">{t("Glissez vos vidéos ici")}</p><p className="text-[11px] text-gray-500">{t("ou cliquez · sélection multiple")}</p>
-          </div>
+          <DropZone compact className="m-3" accent="#f97316" icon={<Plus className="w-5 h-5" />}
+            title={t("Glissez vos vidéos ici")} hint={t("ou cliquez · sélection multiple")}
+            onClick={handleBrowse} onFiles={addFiles} />
           <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
             {jobs.length === 0 && <p className="text-center text-gray-600 text-xs mt-6">{t("File d'attente vide")}</p>}
             {jobs.map(job => (

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import GlassSelect from './GlassSelect';
 import { t } from '@/i18n';
+import DropZone, { useFileDrop } from './DropZone';
 
 const api = () => (window as any).electronAPI;
 const mediaUrl = (p: string) => 'media:///' + p.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
@@ -39,7 +40,6 @@ export default function MattingStudio() {
   const [outputDir, setOutputDir] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ type: 'info' | 'error'; msg: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewing, setPreviewing] = useState(false);
@@ -65,7 +65,7 @@ export default function MattingStudio() {
     for (const j of nj) { electron.enhanceProbe?.(j.inputPath).then((m: any) => { if (m && !m.error) setJobs(prev => prev.map(x => x.id === j.id ? { ...x, meta: m } : x)); }); electron.enhanceThumbnail?.(j.inputPath).then((t: string) => { if (t) setJobs(prev => prev.map(x => x.id === j.id ? { ...x, thumb: t } : x)); }); }
   }, [outputDir, selectedId, electron]);
   const handleBrowse = async () => { const f = await electron.enhanceSelectFiles?.().catch(() => []); if (f?.length) addFiles(f); };
-  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); const ps: string[] = []; for (const f of Array.from(e.dataTransfer.files)) { const p = (f as any).path; if (p) ps.push(p); } if (ps.length) addFiles(ps); };
+  const { dropProps: panelDrop } = useFileDrop({ onFiles: addFiles });
   const removeJob = (id: string) => { setJobs(prev => prev.filter(j => j.id !== id)); if (selectedId === id) setSelectedId(jobsRef.current.find(j => j.id !== id)?.id || null); };
   const patch = (p: Partial<S>) => { if (!selectedId) return; setJobs(prev => prev.map(j => j.id === selectedId ? { ...j, settings: { ...j.settings, ...p } } : j)); setPreviewUrl(''); };
   const applyToAll = () => { if (!selected) return; setJobs(prev => prev.map(j => ({ ...j, settings: { ...selected.settings } }))); showToast('info', t('Réglages appliqués à toute la file.')); };
@@ -86,7 +86,7 @@ export default function MattingStudio() {
 
   const s = selected?.settings;
   return (
-    <div className="h-full flex flex-col text-gray-300 overflow-hidden" onDragOver={e => e.preventDefault()} onDrop={handleDrop}>
+    <div className="h-full flex flex-col text-gray-300 overflow-hidden" {...panelDrop}>
       <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500/30 to-cyan-500/30 flex items-center justify-center border border-white/10"><Scissors className="w-5 h-5 text-teal-400" /></div>
@@ -99,9 +99,9 @@ export default function MattingStudio() {
       <div className="flex-1 overflow-hidden flex">
         {/* Queue */}
         <div className="w-[320px] shrink-0 border-r border-white/5 flex flex-col">
-          <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop} onClick={handleBrowse} className={`m-3 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 py-6 cursor-pointer ${dragOver ? 'border-teal-500/60 bg-teal-500/10' : 'border-white/10 hover:border-white/20 bg-white/[0.02]'}`}>
-            <Plus className="w-6 h-6 text-teal-400" /><p className="text-sm text-gray-300 font-medium">{t("Glissez vos vidéos ici")}</p><p className="text-[11px] text-gray-500">{t("ou cliquez · sélection multiple")}</p>
-          </div>
+          <DropZone compact className="m-3" accent="#14b8a6" icon={<Plus className="w-5 h-5" />}
+            title={t("Glissez vos vidéos ici")} hint={t("ou cliquez · sélection multiple")}
+            onClick={handleBrowse} onFiles={addFiles} />
           <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
             {jobs.length === 0 && <p className="text-center text-gray-600 text-xs mt-6">{t("File d'attente vide")}</p>}
             {jobs.map(job => (
