@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA pour l&#x27;image — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/ia-image.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html" aria-current="page">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="ia-pour-limage">IA pour l'image</h1>
+<p>Ces quatre outils font partie d'<a href="premium.html">Orbit Premium</a>. Ils tournent sur votre ordinateur ; les modèles
+se téléchargent la première fois que vous en avez besoin.</p>
+<h2 id="génération-ia">Génération IA</h2>
+<p>Décrivez une image, Orbit la crée.</p>
+<figure><a href="images/imagegen.jpg"><img alt="Génération IA : la description à gauche, vos créations à droite" src="images/imagegen.jpg" loading="lazy"></a><figcaption>Génération IA : la description à gauche, vos créations à droite</figcaption></figure>
+<ol>
+<li>Écrivez la <strong>Description (prompt)</strong> : ce que vous voulez voir, le style, la lumière. L'anglais donne souvent
+   de meilleurs résultats ; <strong>Amélioration auto du prompt</strong> complète une description courte.</li>
+<li>Choisissez un <strong>Style</strong> : Aucun, Photoréaliste, Cinématique, 3D / Blender, Anime, Digital Art, Aquarelle,
+   Cyberpunk, Minimaliste, Logo / Vecteur.</li>
+<li>Choisissez le <strong>Modèle IA</strong> :<ul>
+<li><strong>Orbit Local — FLUX Klein sur ton GPU</strong> : la meilleure compréhension des descriptions, sait écrire du
+ texte lisible ; demande une carte NVIDIA et le moteur installé par <a href="ia-video-3d.html#paint-a-plate">Paint a plate</a> ;</li>
+<li><strong>Orbit Local — SDXL sur ton GPU</strong> : carte NVIDIA, environ 7 Go à télécharger la première fois ;</li>
+<li><strong>Flux</strong> (service en ligne gratuit) : pour les PC sans carte NVIDIA ; ajoute un filigrane et limite la taille,
+ une image toutes les 45 secondes environ.</li>
+</ul>
+</li>
+<li>Réglez le <strong>Format / Ratio</strong> (1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 21:9), le <strong>Nombre d'images</strong> (1 à 4) et la
+   <strong>Seed</strong> :
+   une seed fixe redonne la même image, pratique pour ajuster une description mot par mot.</li>
+<li>Cliquez <strong>Générer l'image</strong> (ou <kbd>Ctrl</kbd>+<kbd>Entrée</kbd>). Avec les moteurs locaux, l'image apparaît
+   et se précise en direct pendant le calcul.</li>
+</ol>
+<p>Chaque image de la galerie a ses boutons : ouvrir, ouvrir le dossier, <strong>Réutiliser prompt + seed</strong>, copier le
+prompt, voir les logs, supprimer. <strong>Ajouter à la file d'attente</strong> enchaîne plusieurs descriptions.</p>
+<h2 id="gomme-magique-ia">Gomme magique IA</h2>
+<p>Effacez un objet d'une photo, ou remplacez-le par autre chose, comme le remplissage génératif de Photoshop.</p>
+<figure><a href="images/inpaint.jpg"><img alt="La Gomme magique : outils à gauche, photo au centre" src="images/inpaint.jpg" loading="lazy"></a><figcaption>La Gomme magique : outils à gauche, photo au centre</figcaption></figure>
+<ol>
+<li>Glissez une photo dans la zone (JPG, PNG, WEBP, TIFF, AVIF…).</li>
+<li>Sélectionnez la zone à modifier :<ul>
+<li><strong>Sélection IA (clic sur l'objet)</strong> : cliquez sur un objet, son contour est trouvé tout seul ; cliquez
+ encore pour agrandir, <kbd>Maj</kbd>+clic ou clic droit pour retirer une partie ;</li>
+<li><strong>Détecter les objets</strong> propose tous les objets trouvés dans la photo ;</li>
+<li><strong>Pinceau</strong> et <strong>Gomme</strong> pour peindre ou corriger la zone à la main.</li>
+</ul>
+</li>
+<li>Dans <strong>Prompt (optionnel)</strong> :<ul>
+<li>laissez vide et cliquez <strong>Effacer</strong> : l'objet disparaît, le décor est reconstruit ;</li>
+<li>décrivez ce qu'il faut mettre à la place (« a leather backpack », « un arbre ») et cliquez <strong>Générer /
+ Remplacer</strong>.</li>
+</ul>
+</li>
+<li>Le résultat est enregistré dans le <strong>Dossier de sortie</strong> ; <strong>Annuler la dernière suppression</strong> revient en
+   arrière.</li>
+</ol>
+<p>Le <strong>Moteur</strong> se choisit au-dessus des outils :</p>
+<ul>
+<li><strong>FLUX Klein</strong> : comprend toute la scène, travaille sur l'image entière jusqu'à 1920 pixels ; carte NVIDIA et
+  moteur de <a href="ia-video-3d.html#paint-a-plate">Paint a plate</a>. Utilisé pour remplacer (l'effacement passe toujours
+  par LaMa, plus fiable) ;</li>
+<li><strong>Standard</strong> : LaMa pour effacer, Stable Diffusion pour générer, avec trois niveaux : <strong>Rapide</strong> (PC modeste),
+  <strong>Qualité</strong> (PC puissant) et <strong>SDXL HQ</strong> (carte NVIDIA, environ 6,5 Go la première fois).</li>
+</ul>
+<blockquote>
+<p>Pour remplacer un fond, sélectionnez le <strong>fond</strong>, pas le personnage : seule la zone sélectionnée change.</p>
+</blockquote>
+<h2 id="détourage-ia">Détourage IA</h2>
+<p>Retire l'arrière-plan d'une vidéo, sans fond vert.</p>
+<figure><a href="images/matting.jpg"><img alt="Le Détourage IA" src="images/matting.jpg" loading="lazy"></a><figcaption>Le Détourage IA</figcaption></figure>
+<ol>
+<li>Glissez une ou plusieurs vidéos.</li>
+<li>Sélectionnez un fichier et réglez :<ul>
+<li><strong>Modèle &amp; qualité</strong> : <strong>Rapide (512p)</strong>, <strong>Équilibré (960p)</strong> ou <strong>Max (source)</strong> ;</li>
+<li><strong>Arrière-plan</strong> : transparent (<strong>WebM VP9</strong>, <strong>ProRes 4444</strong> ou <strong>Séquence PNG</strong>, prêts pour After Effects
+ et Premiere), une <strong>couleur de fond</strong>, un <strong>flou</strong> ou une <strong>image de fond</strong> ;</li>
+<li><strong>Affinage des bords</strong> : adoucir les contours, resserrer ou élargir le masque pour enlever un liseré.</li>
+</ul>
+</li>
+<li><strong>Aperçu (3s)</strong> montre le résultat sur 3 secondes (le damier = zones transparentes).</li>
+<li><strong>Détourer</strong>, ou <strong>Appliquer à toute la file</strong> puis <strong>Lancer la file</strong>.</li>
+</ol>
+<h2 id="amélioration-ia">Amélioration IA</h2>
+<p>Agrandit, nettoie et stabilise vos vidéos et vos images.</p>
+<figure><a href="images/enhance.jpg"><img alt="L'Amélioration IA" src="images/enhance.jpg" loading="lazy"></a><figcaption>L'Amélioration IA</figcaption></figure>
+<p>Trois onglets : <strong>File &amp; Réglages</strong>, <strong>Aperçu Avant/Après</strong> (comparez une image avant de lancer) et
+<strong>Performance GPU</strong> (charge et mémoire de la carte en direct).</p>
+<p>Les réglages, par section :</p>
+<ul>
+<li><strong>Upscale IA (Real-ESRGAN)</strong> : modèle, échelle ou résolution cible, taille des tuiles (plus petite si la
+  carte a peu de mémoire), mode <strong>TTA</strong> (qualité maximale, plus lent) ;</li>
+<li><strong>Restauration vidéo</strong> : débruitage (classique et temporel), récupération de la compression, anti-banding,
+  récupération de détail, désentrelacement, luminosité, contraste, saturation, gamma ;</li>
+<li><strong>Stabilisation</strong> en deux passes, avec lissage, sensibilité et zoom automatique pour masquer les bords ;</li>
+<li><strong>Interpolation d'images (RIFE)</strong> : images par seconde de sortie ou ralenti ;</li>
+<li><strong>Netteté &amp; Export</strong> : netteté sans artefacts, format et codec.</li>
+</ul>
+<p>Enregistrez vos réglages comme préréglage, puis <strong>Lancer la file</strong>.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="conversion.html"><span>Précédent</span>Conversion</a>
+<a class="next" href="ia-video-3d.html"><span>Suivant</span>IA pour la vidéo et la 3D</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#génération-ia">Génération IA</a></li>
+<li><a href="#gomme-magique-ia">Gomme magique IA</a></li>
+<li><a href="#détourage-ia">Détourage IA</a></li>
+<li><a href="#amélioration-ia">Amélioration IA</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>

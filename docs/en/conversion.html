@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversion — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../conversion.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html" aria-current="page">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Discord Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="conversion">Conversion</h1>
+<h2 id="the-converter">The Converter</h2>
+<p>The <strong>Converter</strong> turns almost any kind of file into another. Drop files or <strong>whole folders</strong> (Orbit goes
+through subfolders) in the area, or click the files or folder button. Orbit recognizes each file and offers the
+possible output formats.</p>
+<figure><a href="images/convertpro.jpg"><img alt="The Converter, ready for files" src="images/convertpro.jpg" loading="lazy"></a><figcaption>The Converter, ready for files</figcaption></figure>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Video</td>
+<td>MP4, MKV, MOV, AVI, WEBM…</td>
+<td>MP4, MOV, ProRes, MKV, WEBM, AVI, GIF, or audio extraction (MP3, WAV, FLAC, M4A)</td>
+</tr>
+<tr>
+<td>Audio</td>
+<td>MP3, WAV, FLAC, M4A, OGG…</td>
+<td>WAV, MP3, FLAC, AAC, OGG, OPUS, M4A, with tag editing (title, artist, album, year, cover)</td>
+</tr>
+<tr>
+<td>Image</td>
+<td>JPG, PNG, WEBP, HEIC, TIFF, BMP…</td>
+<td>PNG, JPG, WEBP, AVIF, TIFF, BMP</td>
+</tr>
+<tr>
+<td>LUT</td>
+<td><code>.cube</code>, <code>.3dl</code></td>
+<td><code>.cube</code> ↔ <code>.3dl</code></td>
+</tr>
+<tr>
+<td>Fonts</td>
+<td>TTF, OTF</td>
+<td>TTF, WOFF, WOFF2</td>
+</tr>
+<tr>
+<td>3D</td>
+<td>FBX, OBJ, GLB, GLTF, STL, PLY, DAE…</td>
+<td>GLB, OBJ, STL, PLY</td>
+</tr>
+<tr>
+<td>Documents</td>
+<td>DOCX, XLSX, Markdown</td>
+<td>PDF, HTML</td>
+</tr>
+<tr>
+<td>After Effects</td>
+<td><code>.ffx</code>, <code>.aep</code></td>
+<td>analysis (effects and required plugins) and After Effects version change</td>
+</tr>
+</tbody>
+</table>
+<h3 id="video-settings">Video settings</h3>
+<p>Select a video file to see its settings:</p>
+<ul>
+<li><strong>Encoder</strong>: <strong>Auto (GPU if available)</strong>, <strong>NVIDIA GPU (NVENC)</strong> (much faster) or <strong>Processor (CPU)</strong> (slightly
+  smaller files). If the GPU fails, Orbit retries on the processor by itself.</li>
+<li><strong>Codec</strong>: H.264 (works everywhere), H.265, AV1, or <strong>fast copy</strong> (no re-encoding, instant, when the output
+  format allows it).</li>
+<li><strong>Quality</strong>: high, balanced or small, and a <strong>maximum height</strong> (1080p, 720p…).</li>
+<li><strong>Target size</strong>: to stay under an upload limit: <strong>Discord (10 MB)</strong>, <strong>WhatsApp (16 MB)</strong>, <strong>E-mail (25 MB)</strong>,
+  <strong>Discord Nitro (50 MB)</strong>, <strong>Nitro+ (500 MB)</strong> or a custom size.</li>
+</ul>
+<p>Every audio track and the subtitles are kept when the container accepts them. If a track cannot be kept (for
+example image subtitles in an MP4), the row says so in orange.</p>
+<h3 id="the-queue">The queue</h3>
+<p>Drag a row by its handle to change the order: the queue always takes the first waiting row, even if you
+reorder it during the conversion. With the graphics card, two videos are converted at the same time.</p>
+<h3 id="after-effects">After Effects</h3>
+<p>For a <code>.ffx</code> preset or a <code>.aep</code> project, Orbit lists the effects used and the <strong>third-party plugins required</strong>.
+It can also change the After Effects version of a file so it opens in an older or newer version, and, if After
+Effects is installed on your PC, use it to save a project in another version or apply a preset to a
+composition.</p>
+<h2 id="handbrake">HandBrake</h2>
+<p>The <strong>HandBrake</strong> tab drives the well-known encoder for advanced compression. The first time, click <strong>Install
+HandBrake</strong> (automatic download).</p>
+<figure><a href="images/handbrake.jpg"><img alt="The HandBrake tab" src="images/handbrake.jpg" loading="lazy"></a><figcaption>The HandBrake tab</figcaption></figure>
+<ol>
+<li>Drop your videos in the area (several at once).</li>
+<li>Select a file to set its encoding, or set it once and apply it to the whole queue.</li>
+<li>Click <strong>Encode queue</strong>.</li>
+</ol>
+<p>The settings, by section:</p>
+<ul>
+<li><strong>Preset &amp; Format</strong>: an official HandBrake preset as a base, or <strong>None (manual settings)</strong>; container; <strong>Web
+  optimized (progressive playback)</strong>.</li>
+<li><strong>Video</strong>: encoder, encoding speed, <strong>Constant quality (RF)</strong> (lower = better) or <strong>Average bitrate</strong> with
+  <strong>2-pass</strong>; maximum resolution; frames per second; rotation. The estimated size is shown.</li>
+<li><strong>Filters</strong>: denoise (NLMeans), sharpen (Lapsharp), deinterlace, deblock, black and white.</li>
+<li><strong>Audio &amp; Output</strong>: <strong>Copy (no re-encoding)</strong> or audio bitrate; <strong>Keep subtitles</strong>; output folder.</li>
+</ul>
+<p>Save your settings as a personal preset to find them later.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="telechargements.html"><span>Previous</span>Downloads</a>
+<a class="next" href="ia-image.html"><span>Next</span>AI for images</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#the-converter">The Converter</a></li>
+<li><a href="#handbrake">HandBrake</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="../site.js?v=1794509440" defer></script>
+</body>
+</html>

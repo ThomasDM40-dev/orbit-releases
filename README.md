@@ -17,6 +17,9 @@
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe">
     <img src="https://img.shields.io/badge/⬇️_Télécharger-Orbit_Installer.exe-ff2a6d?style=for-the-badge" alt="Download"/>
   </a>
+  <a href="https://thomasdm40-dev.github.io/orbit-releases/">
+    <img src="https://img.shields.io/badge/📖_Documentation-FR_%2F_EN-7c3aed?style=for-the-badge" alt="Documentation"/>
+  </a>
 </p>
 
 ---

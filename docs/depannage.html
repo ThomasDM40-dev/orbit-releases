@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dépannage — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/depannage.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html" aria-current="page">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="dépannage">Dépannage</h1>
+<h2 id="un-téléchargement-échoue">Un téléchargement échoue</h2>
+<ol>
+<li>Cliquez <strong>Échec — voir les logs</strong> sur la ligne : la fin du journal donne la raison.</li>
+<li>Les sites changent souvent : <strong>Réglages › Système › Réinstaller yt-dlp</strong> installe la dernière version (Orbit
+   la met aussi à jour à chaque lancement).</li>
+<li>Pour YouTube, si le journal parle de « JavaScript runtime » ou s'il manque des formats : <strong>Réglages ›
+   Système › Moteur JS pour YouTube (Deno) › Installer</strong>.</li>
+<li>Contenu privé, réservé aux membres ou limité par l'âge : activez l'icône <strong>Cookie</strong> de la barre (vous devez
+   être connecté au site dans Chrome), ou ouvrez la page dans le <strong>SNIFFER</strong>.</li>
+<li><strong>Menu › Téléchargements › Redémarrer les téléchargements échoués</strong> relance tous les échecs.</li>
+</ol>
+<h2 id="-fichier-supprimé--sur-un-téléchargement-terminé">« Fichier supprimé » sur un téléchargement terminé</h2>
+<p>Le fichier a été déplacé ou supprimé du disque. <strong>Retélécharger</strong> le récupère, ou retirez la ligne.</p>
+<h2 id="orbit-sest-fermé-pendant-un-téléchargement">Orbit s'est fermé pendant un téléchargement</h2>
+<p>Relancez Orbit : les téléchargements reprennent là où ils s'étaient arrêtés. Les files HandBrake et Topaz
+reviennent aussi, mais il faut les relancer à la main.</p>
+<h2 id="un-outil-ia-est-lent-ou-manque-de-mémoire">Un outil IA est lent ou manque de mémoire</h2>
+<ul>
+<li>Fermez les jeux et les logiciels qui utilisent la carte graphique.</li>
+<li>Gardez <strong>Réglages › Téléchargements › Jobs IA simultanés (GPU)</strong> sur <strong>1</strong>.</li>
+<li>Réglez une <strong>VRAM maximale pour l'IA</strong> pour laisser de la marge.</li>
+<li>Dans l'Amélioration IA, baissez la <strong>taille des tuiles</strong> ; dans IA Création 3D, choisissez <strong>Rapide</strong> ou
+  moins de <strong>Faces</strong>.</li>
+<li>Dans Paint a plate, utilisez <strong>Arrêter</strong> quand vous avez fini : ComfyUI libère la mémoire vidéo.</li>
+</ul>
+<h2 id="-une-carte-graphique-nvidia-est-nécessaire-">« Une carte graphique NVIDIA est nécessaire »</h2>
+<p>IA Création 3D, Paint a plate et la Génération IA en local utilisent CUDA, qui n'existe que sur les cartes
+NVIDIA. Sur un autre PC, la Génération IA passe par le service en ligne <strong>Flux</strong>. Les autres outils IA
+(upscale, interpolation, détourage, gomme magique) marchent avec toutes les cartes récentes.</p>
+<h2 id="linterface-scintille-ou-reste-noire">L'interface scintille ou reste noire</h2>
+<p><strong>Réglages › IA &amp; Performance › Désactiver l'accélération matérielle</strong>, puis redémarrez Orbit. Si l'interface
+est lente, réduisez le <strong>Verre liquide</strong> (préréglage <strong>Subtil</strong>) ou désactivez-le dans <strong>Réglages ›
+Apparence</strong>.</p>
+<h2 id="un-outil-premium-reste-verrouillé">Un outil Premium reste verrouillé</h2>
+<ul>
+<li>Vérifiez en bas de la barre latérale : <strong>Premium actif</strong> doit être affiché.</li>
+<li>Après un paiement, ouvrez la fenêtre Premium : le déblocage se fait dès que le paiement est confirmé.</li>
+<li><strong>Mise à jour requise</strong> : votre version est trop ancienne pour les outils IA ; cliquez le bouton pour
+  installer la dernière.</li>
+</ul>
+<h2 id="lantivirus-bloque-orbit-ou-un-module">L'antivirus bloque Orbit ou un module</h2>
+<p>Orbit télécharge des moteurs (yt-dlp, ffmpeg, modèles IA) dans <code>C:\Users\&lt;vous&gt;\.orbit</code>. Si votre antivirus
+en bloque un, ajoutez ce dossier à ses exceptions, puis réinstallez le module depuis <strong>Réglages › Modules &amp;
+IA</strong>.</p>
+<h2 id="libérer-de-la-place">Libérer de la place</h2>
+<ul>
+<li><strong>Réglages › Système › Fichiers temporaires › Vider</strong> supprime les fichiers de travail.</li>
+<li><strong>Réglages › Modules &amp; IA</strong> : supprimez les modèles des outils que vous n'utilisez pas (ils se
+  retéléchargeront si besoin).</li>
+</ul>
+<h2 id="signaler-un-problème">Signaler un problème</h2>
+<p><strong>Réglages › À propos › Signaler un bug</strong> : décrivez ce que vous faisiez et ce qui s'est passé, puis <strong>Envoyer
+le rapport</strong>. Les 25 dernières lignes du journal sont jointes, sans votre nom d'utilisateur. Le journal complet
+est dans <strong>Réglages › Système › Voir les journaux</strong>.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="premium.html"><span>Précédent</span>Orbit Premium</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#un-téléchargement-échoue">Un téléchargement échoue</a></li>
+<li><a href="#-fichier-supprimé--sur-un-téléchargement-terminé">« Fichier supprimé » sur un téléchargement terminé</a></li>
+<li><a href="#orbit-sest-fermé-pendant-un-téléchargement">Orbit s'est fermé pendant un téléchargement</a></li>
+<li><a href="#un-outil-ia-est-lent-ou-manque-de-mémoire">Un outil IA est lent ou manque de mémoire</a></li>
+<li><a href="#-une-carte-graphique-nvidia-est-nécessaire-">« Une carte graphique NVIDIA est nécessaire »</a></li>
+<li><a href="#linterface-scintille-ou-reste-noire">L'interface scintille ou reste noire</a></li>
+<li><a href="#un-outil-premium-reste-verrouillé">Un outil Premium reste verrouillé</a></li>
+<li><a href="#lantivirus-bloque-orbit-ou-un-module">L'antivirus bloque Orbit ou un module</a></li>
+<li><a href="#libérer-de-la-place">Libérer de la place</a></li>
+<li><a href="#signaler-un-problème">Signaler un problème</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/installation.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html" aria-current="page">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="installation">Installation</h1>
+<h2 id="installer-orbit">Installer Orbit</h2>
+<ol>
+<li>Téléchargez l'installeur : bouton <strong>Télécharger Orbit</strong> en haut à gauche de cette page, ou la page
+   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest">des versions d'Orbit</a> (fichier
+   <code>Orbit-Installer.exe</code>).</li>
+<li>Lancez <code>Orbit-Installer.exe</code> et suivez la fenêtre d'installation.</li>
+<li>À la fin, cliquez sur le bouton de lancement : Orbit s'ouvre.</li>
+</ol>
+<p>Orbit s'installe pour votre compte Windows seulement (aucun droit administrateur demandé) et crée un raccourci
+<strong>Orbit</strong> sur le bureau et dans le menu Démarrer.</p>
+<blockquote>
+<p>Si Windows affiche « Windows a protégé votre ordinateur », cliquez <strong>Informations complémentaires</strong> puis
+<strong>Exécuter quand même</strong>. Ce message apparaît pour les applications récentes que Windows ne connaît pas encore.</p>
+</blockquote>
+<h2 id="premier-lancement">Premier lancement</h2>
+<p>Au premier lancement, Orbit vous demande ce que vous faites (monteur vidéo, motion design, 3D, audio,
+téléchargement, création d'images…). Selon vos choix, il n'affiche que les outils qui vous servent ; <strong>Je veux
+tout découvrir</strong> garde tout. En bas, vous choisissez aussi le thème et la couleur d'accent.</p>
+<figure><a href="images/onboarding.jpg"><img alt="L'assistant de démarrage : choisissez vos usages, Orbit range ses outils" src="images/onboarding.jpg" loading="lazy"></a><figcaption>L'assistant de démarrage : choisissez vos usages, Orbit range ses outils</figcaption></figure>
+<p>Vous pouvez relancer cet assistant à tout moment : <strong>Réglages › Apparence › Assistant de démarrage ›
+Relancer</strong>. Les onglets masqués restent accessibles par la recherche (<kbd>Ctrl</kbd>+<kbd>K</kbd>) et par le
+<strong>Menu</strong>.</p>
+<h2 id="les-modules-installés-à-la-demande">Les modules installés à la demande</h2>
+<p>Orbit reste léger : les moteurs lourds ne sont téléchargés que la première fois que vous en avez besoin
+(ffmpeg, yt-dlp, moteurs IA, modèles). Chaque outil propose un bouton <strong>Installer</strong> quand il lui manque
+quelque chose, avec une barre de progression. La page <strong>Réglages › Modules &amp; IA</strong> liste tous les modules, leur
+taille et leur état, et permet de les installer ou de les mettre à jour d'un coup.</p>
+<p>Les modules et les modèles sont rangés dans le dossier <code>.orbit</code> de votre dossier utilisateur
+(<code>C:\Users\&lt;vous&gt;\.orbit</code>). <strong>Réglages › Système › Dossier de données Orbit › Ouvrir</strong> l'affiche.</p>
+<h2 id="mises-à-jour">Mises à jour</h2>
+<p>Orbit se met à jour tout seul : au lancement, il vérifie s'il existe une nouvelle version, la télécharge en
+arrière-plan et l'installe au redémarrage suivant. Après une mise à jour, une fenêtre présente les nouveautés.</p>
+<ul>
+<li>Pour vérifier à la main : <strong>Réglages › À propos › Vérifier les mises à jour</strong>.</li>
+<li>Le moteur de téléchargement (yt-dlp) se met aussi à jour tout seul à chaque lancement, pour suivre les
+  changements des sites.</li>
+</ul>
+<p>Si une version trop ancienne est détectée, les outils IA affichent <strong>Mise à jour requise</strong> avec un bouton qui
+installe la dernière version.</p>
+<h2 id="désinstaller">Désinstaller</h2>
+<p><strong>Paramètres Windows › Applications › Applications installées</strong>, cherchez <strong>Orbit</strong>, puis <strong>Désinstaller</strong>.
+Le dossier <code>.orbit</code> (modules, modèles IA, réglages) n'est pas supprimé : effacez-le à la main si vous voulez
+récupérer l'espace disque.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="index.html"><span>Précédent</span>Orbit</a>
+<a class="next" href="interface.html"><span>Suivant</span>L&#x27;interface</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#installer-orbit">Installer Orbit</a></li>
+<li><a href="#premier-lancement">Premier lancement</a></li>
+<li><a href="#les-modules-installés-à-la-demande">Les modules installés à la demande</a></li>
+<li><a href="#mises-à-jour">Mises à jour</a></li>
+<li><a href="#désinstaller">Désinstaller</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI for images — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../ia-image.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html" aria-current="page">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Discord Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="ai-for-images">AI for images</h1>
+<p>These four tools are part of <a href="premium.html">Orbit Premium</a>. They run on your computer; the models download the
+first time you need them.</p>
+<h2 id="ai-generation">AI Generation</h2>
+<p>Describe an image, Orbit creates it.</p>
+<figure><a href="images/imagegen.jpg"><img alt="AI Generation: the description on the left, your creations on the right" src="images/imagegen.jpg" loading="lazy"></a><figcaption>AI Generation: the description on the left, your creations on the right</figcaption></figure>
+<ol>
+<li>Write the <strong>Description (prompt)</strong>: what you want to see, the style, the light. <strong>Auto prompt enhancement</strong>
+   fills out a short description.</li>
+<li>Pick a <strong>Style</strong>: None, Photorealistic, Cinematic, 3D / Blender, Anime, Digital Art, Watercolor, Cyberpunk,
+   Minimalist, Logo / Vector.</li>
+<li>Pick the <strong>AI model</strong>:<ul>
+<li><strong>Orbit Local — FLUX Klein on your GPU</strong>: the best understanding of descriptions, can write legible text;
+ needs an NVIDIA card and the engine installed by <a href="ia-video-3d.html#paint-a-plate">Paint a plate</a>;</li>
+<li><strong>Orbit Local — SDXL on your GPU</strong>: NVIDIA card, about 7 GB to download the first time;</li>
+<li><strong>Flux</strong> (free online service): for PCs without an NVIDIA card; adds a watermark and limits the size, about
+ one image every 45 seconds.</li>
+</ul>
+</li>
+<li>Set the <strong>Format / Ratio</strong> (1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 21:9), the <strong>Number of images</strong> (1 to 4) and the
+   <strong>Seed</strong>: a fixed seed gives the same image again, handy to tune a description word by word.</li>
+<li>Click <strong>Generate the image</strong> (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>). With the local engines, the image shows up
+   and sharpens live while it is computed.</li>
+</ol>
+<p>Each image of the gallery has its buttons: open, open the folder, <strong>Reuse prompt + seed</strong>, copy the prompt, see
+the logs, delete. Adding to the queue chains several descriptions.</p>
+<h2 id="ai-magic-eraser">AI Magic Eraser</h2>
+<p>Erase an object from a photo, or replace it with something else, like Photoshop's generative fill.</p>
+<figure><a href="images/inpaint.jpg"><img alt="The Magic Eraser: tools on the left, photo in the middle" src="images/inpaint.jpg" loading="lazy"></a><figcaption>The Magic Eraser: tools on the left, photo in the middle</figcaption></figure>
+<ol>
+<li>Drop a photo in the area (JPG, PNG, WEBP, TIFF, AVIF…).</li>
+<li>Select the area to change:<ul>
+<li><strong>AI selection (click the object)</strong>: click an object, its outline is found for you; click again to grow
+ it, <kbd>Shift</kbd>+click or right-click to remove a part;</li>
+<li><strong>Detect objects</strong> offers every object found in the photo;</li>
+<li><strong>Brush</strong> and <strong>Eraser</strong> to paint or fix the area by hand.</li>
+</ul>
+</li>
+<li>In the prompt field (optional):<ul>
+<li>leave it empty and click <strong>🧽 Erase</strong>: the object disappears, the background is rebuilt;</li>
+<li>describe what to put instead ("a leather backpack", "a tree") and click <strong>✨ Generate / Replace</strong>.</li>
+</ul>
+</li>
+<li>The result is saved in the <strong>Output folder</strong>; <strong>Undo the last removal</strong> goes back.</li>
+</ol>
+<p>The <strong>Engine</strong> is chosen above the tools:</p>
+<ul>
+<li><strong>FLUX Klein</strong>: understands the whole scene, works on the full image up to 1920 pixels; NVIDIA card and the
+  <a href="ia-video-3d.html#paint-a-plate">Paint a plate</a> engine. Used to replace (erasing always goes through LaMa, which
+  is more reliable);</li>
+<li><strong>Standard</strong>: LaMa to erase, Stable Diffusion to generate, with three levels: <strong>Fast</strong> (modest PC),
+  <strong>Quality</strong> (powerful PC) and <strong>SDXL HQ</strong> (NVIDIA card, about 6.5 GB the first time).</li>
+</ul>
+<blockquote>
+<p>To replace a background, select the <strong>background</strong>, not the person: only the selected area changes.</p>
+</blockquote>
+<h2 id="ai-cutout">AI Cutout</h2>
+<p>Removes the background of a video, without a green screen.</p>
+<figure><a href="images/matting.jpg"><img alt="AI Cutout" src="images/matting.jpg" loading="lazy"></a><figcaption>AI Cutout</figcaption></figure>
+<ol>
+<li>Drop one or more videos.</li>
+<li>Select a file and set:<ul>
+<li><strong>Model &amp; quality</strong>: <strong>Fast (512p)</strong>, <strong>Balanced (960p)</strong> or <strong>Max (source)</strong>;</li>
+<li><strong>Background</strong>: transparent (<strong>WebM VP9</strong>, <strong>ProRes 4444</strong> or <strong>PNG sequence</strong>, ready for After Effects and
+ Premiere), a background color, a blur or a background image;</li>
+<li><strong>Edge refinement</strong>: soften the edges, shrink or grow the mask to remove a fringe.</li>
+</ul>
+</li>
+<li><strong>Preview (3s)</strong> shows the result over 3 seconds (the checkerboard = transparent areas).</li>
+<li><strong>Cut out</strong>, or <strong>Apply to the whole queue</strong> then <strong>Run queue</strong>.</li>
+</ol>
+<h2 id="ai-enhance">AI Enhance</h2>
+<p>Upscales, cleans and stabilizes your videos and images.</p>
+<figure><a href="images/enhance.jpg"><img alt="AI Enhance" src="images/enhance.jpg" loading="lazy"></a><figcaption>AI Enhance</figcaption></figure>
+<p>Three tabs: <strong>Queue &amp; Settings</strong>, <strong>Before/After Preview</strong> (compare a frame before you start) and <strong>GPU
+Performance</strong> (live load and memory of the card).</p>
+<p>The settings, by section:</p>
+<ul>
+<li><strong>AI Upscale (Real-ESRGAN)</strong>: model, scale or target resolution, tile size (smaller if the card has little
+  memory), <strong>TTA</strong> mode (best quality, slower);</li>
+<li><strong>Video restoration</strong>: denoise (classic and temporal), compression recovery, anti-banding, detail recovery,
+  deinterlace, brightness, contrast, saturation, gamma;</li>
+<li><strong>Stabilization</strong> in two passes, with smoothing, sensitivity and auto zoom to hide the edges;</li>
+<li><strong>Frame interpolation (RIFE)</strong>: output frames per second or slow motion;</li>
+<li><strong>Sharpening &amp; Export</strong>: artifact-free sharpening, format and codec.</li>
+</ul>
+<p>Save your settings as a preset, then <strong>Run queue</strong>.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="conversion.html"><span>Previous</span>Conversion</a>
+<a class="next" href="ia-video-3d.html"><span>Next</span>AI for video and 3D</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#ai-generation">AI Generation</a></li>
+<li><a href="#ai-magic-eraser">AI Magic Eraser</a></li>
+<li><a href="#ai-cutout">AI Cutout</a></li>
+<li><a href="#ai-enhance">AI Enhance</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="../site.js?v=1794509440" defer></script>
+</body>
+</html>

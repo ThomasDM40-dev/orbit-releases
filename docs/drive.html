@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drive Discord — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/drive.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html" aria-current="page">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="drive-discord">Drive Discord</h1>
+<p>Le <strong>Drive Discord</strong> stocke vos fichiers en ligne en les découpant en morceaux <strong>chiffrés</strong> (AES-256) envoyés
+sur Discord. Vos fichiers sont chiffrés sur votre PC avant l'envoi : ni Discord ni le serveur d'Orbit ne peuvent
+les lire.</p>
+<blockquote>
+<p>Discord n'est pas fait pour stocker des fichiers et ses conditions d'utilisation ne le prévoient pas : un
+salon ou un compte peut être supprimé. <strong>Gardez toujours une autre copie de vos fichiers importants.</strong></p>
+</blockquote>
+<p>L'onglet a trois modes, en haut à droite : <strong>Local</strong>, <strong>Cloud (compte)</strong> et <strong>Drop</strong>.</p>
+<figure><a href="images/drive.jpg"><img alt="Le Drive Discord en mode Local, à configurer" src="images/drive.jpg" loading="lazy"></a><figcaption>Le Drive Discord en mode Local, à configurer</figcaption></figure>
+<h2 id="mode-local">Mode Local</h2>
+<p>Tout reste sur votre PC (la liste des fichiers et la clé), les morceaux vont dans votre propre salon Discord.</p>
+<ol>
+<li>Sur Discord, choisissez ou créez un <strong>salon privé</strong>.</li>
+<li><strong>Paramètres du salon › Intégrations › Webhooks › Nouveau webhook</strong>, puis <strong>Copier l'URL du webhook</strong>.</li>
+<li>Dans Orbit, collez-la dans <strong>URL du webhook Discord</strong>. Plusieurs webhooks (un par ligne, dans des salons
+   différents) rendent les envois plus rapides.</li>
+<li>Choisissez une <strong>Phrase secrète de chiffrement</strong> forte, puis <strong>Configurer le Drive</strong>.</li>
+</ol>
+<blockquote>
+<p>Sans la phrase secrète, personne ne peut relire les fichiers, <strong>vous non plus</strong>. Notez-la en lieu sûr : elle
+ne peut pas être récupérée.</p>
+</blockquote>
+<p>À chaque ouverture, saisissez la phrase pour <strong>Déverrouiller</strong> le Drive. <strong>Verrouiller</strong> le referme.</p>
+<h2 id="mode-cloud-compte">Mode Cloud (compte)</h2>
+<p>Le mode Cloud utilise un <strong>compte Orbit</strong> : vos fichiers vous suivent sur tous vos PC.</p>
+<ol>
+<li><strong>Créer un compte</strong> (e-mail et mot de passe) ou <strong>Se connecter</strong>.</li>
+<li>Choisissez une <strong>phrase secrète de chiffrement</strong> ; elle protège vos fichiers et fonctionne sur tous vos
+   appareils.</li>
+</ol>
+<p>Ensuite : <strong>Envoyer des fichiers</strong>, <strong>Nouveau dossier</strong>, <strong>Actualiser</strong>, filtrer, télécharger, supprimer. Les
+vidéos se lisent directement depuis le Drive. <strong>Mot de passe oublié ?</strong> envoie un code par e-mail ; il change le
+mot de passe de connexion, pas la phrase secrète.</p>
+<p>Le bouton <strong>Telegram</strong> permet de stocker sur votre compte Telegram (dans vos <strong>Messages enregistrés</strong>) plutôt
+que sur Discord. La connexion Telegram reste sur votre PC.</p>
+<h2 id="drop--partager-sans-compte">Drop : partager sans compte</h2>
+<p><strong>Drop</strong> envoie un fichier à quelqu'un, même sans compte : Orbit le chiffre avec une clé à usage unique et vous
+donne un <strong>code de partage</strong>. La personne colle ce code dans <strong>Drop › Récupérer</strong> pour télécharger et déchiffrer
+le fichier. Les Drops expirent automatiquement après un certain temps.</p>
+<p>Les <strong>dossiers partagés</strong> (codes qui commencent par <code>orbf1_</code>) s'ouvrent au même endroit ; vous pouvez les
+télécharger, les lire ou les <strong>Enregistrer dans mon Drive</strong>.</p>
+<h2 id="partager-depuis-le-drive">Partager depuis le Drive</h2>
+<p>Dans le mode Cloud, <strong>Partager</strong> un fichier ou un dossier crée un code : le contenu est rechiffré avec une clé
+neuve, votre clé de compte n'est jamais transmise. Donnez un <strong>titre au partage</strong> : il est visible par ceux qui
+ont le code.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="boite-a-outils.html"><span>Précédent</span>Boîte à outils et médiathèque</a>
+<a class="next" href="reglages.html"><span>Suivant</span>Réglages</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#mode-local">Mode Local</a></li>
+<li><a href="#mode-cloud-compte">Mode Cloud (compte)</a></li>
+<li><a href="#drop--partager-sans-compte">Drop : partager sans compte</a></li>
+<li><a href="#partager-depuis-le-drive">Partager depuis le Drive</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>

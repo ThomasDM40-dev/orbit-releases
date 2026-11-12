@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../reglages.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Discord Drive</a></li>
+<li><a href="reglages.html" aria-current="page">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="settings">Settings</h1>
+<p>Open the settings with <strong>Settings</strong>, at the bottom of the sidebar. The pages are listed on the left.</p>
+<h2 id="general">General</h2>
+<figure><a href="images/settings-general.jpg"><img alt="Settings › General" src="images/settings-general.jpg" loading="lazy"></a><figcaption>Settings › General</figcaption></figure>
+<ul>
+<li><strong>Output</strong>: <strong>Download folder</strong>, <strong>Default video format</strong>, <strong>Restricted filenames (ASCII)</strong> (avoids special
+  characters in names).</li>
+<li><strong>Language</strong>: the interface language (English, French, Spanish, German, Italian, Portuguese).</li>
+</ul>
+<h2 id="downloads">Downloads</h2>
+<figure><a href="images/settings-downloads.jpg"><img alt="Settings › Downloads" src="images/settings-downloads.jpg" loading="lazy"></a><figcaption>Settings › Downloads</figcaption></figure>
+<p><strong>Embedded content</strong>:</p>
+<ul>
+<li><strong>Force H.264 (editing-friendly)</strong>: H.264/AAC for After Effects and Premiere, instead of VP9 or AV1;</li>
+<li><strong>Compress after download</strong>;</li>
+<li><strong>Audio only</strong>: keep only the sound (MP3, FLAC…);</li>
+<li><strong>Embed thumbnail</strong> (cover), <strong>Embed metadata</strong> (title, author, date), <strong>Embed subtitles</strong>, chapters;</li>
+<li>auto-generated subtitles and subtitle languages (comma-separated codes, for example <code>fr.*,en.*</code>);</li>
+<li><strong>Write the .info.json</strong>;</li>
+<li><strong>Mark sponsor segments</strong> (SponsorBlock chapters) or <strong>Remove sponsors</strong> (cuts intro, ads…).</li>
+</ul>
+<p><strong>Behavior</strong>:</p>
+<ul>
+<li><strong>Download archive</strong>: never download again what was already downloaded;</li>
+<li><strong>Ignore errors</strong>: keep going in a playlist when one video fails;</li>
+<li><strong>Keep the original timestamp</strong>, <strong>No .part files</strong>;</li>
+<li><strong>Concurrent fragments</strong>: speeds up HLS and DASH streams;</li>
+<li><strong>Simultaneous AI jobs (GPU)</strong>: how many AI tools use the graphics card at the same time. <strong>1</strong> (a queue) is
+  recommended;</li>
+<li><strong>Maximum VRAM for AI</strong>: a video memory cap for the AI engines, from 1 GB to the size of your card, or
+  <strong>Unlimited</strong>. Useful to keep room for a game or another program;</li>
+<li><strong>Speed limit</strong>: for example <code>5M</code> or <code>800k</code> (empty = unlimited);</li>
+<li><strong>Windows right-click menu</strong>: adds "Orbit ▸ Compress / Crop…" to the right-click menu of a file.</li>
+</ul>
+<p><strong>Authentication</strong>: <strong>Browser cookies</strong>, for content that needs a login.</p>
+<h2 id="appearance">Appearance</h2>
+<figure><a href="images/settings-appearance.jpg"><img alt="Settings › Appearance" src="images/settings-appearance.jpg" loading="lazy"></a><figcaption>Settings › Appearance</figcaption></figure>
+<ul>
+<li><strong>Theme</strong>: Nova, Graphite, Black, White, Midnight, or <strong>System</strong> (follows Windows' light/dark mode).</li>
+<li><strong>Setup wizard</strong>: <strong>Relaunch</strong> to rearrange the tabs for your profile.</li>
+<li><strong>Accent color</strong>.</li>
+<li><strong>Liquid glass (Apple style)</strong>: real refraction on the edge of panels and cards. Presets <strong>Subtle</strong>, <strong>Apple</strong>,
+  <strong>Intense</strong> or <strong>Custom</strong>, then fine settings: refraction, prism effect, glass blur, tint, highlights,
+  mouse-following glare, drop shadow. A live preview shows the result.</li>
+<li><strong>Wallpaper</strong>: an image behind the glass, with its blur and dimming; <strong>Tool page blur</strong> and <strong>Text shadow</strong> keep
+  text readable.</li>
+<li><strong>Brighter text</strong>: lightens the secondary grey texts.</li>
+<li><strong>Reset</strong> puts every glass, background and text setting back to default.</li>
+<li>Interface sounds: small clicks on press.</li>
+</ul>
+<h2 id="ai--performance">AI &amp; Performance</h2>
+<figure><a href="images/settings-ai.jpg"><img alt="Settings › AI &amp; Performance" src="images/settings-ai.jpg" loading="lazy"></a><figcaption>Settings › AI &amp; Performance</figcaption></figure>
+<ul>
+<li><strong>AI Assistant</strong>: <strong>Free local AI</strong> (about 2 GB, downloaded once, works offline) or your <strong>Anthropic API key
+  (Claude)</strong>, more powerful. The key stays on your PC.</li>
+<li><strong>AI Enhance &amp; Topaz</strong>: <strong>Default AI output folder</strong> and <strong>Default GPU</strong> for upscale, interpolation and Topaz.</li>
+<li><strong>Performance</strong>:<ul>
+<li><strong>Disable hardware acceleration</strong> if the interface flickers (restart needed);</li>
+<li><strong>Video encoding</strong> for the Converter: <strong>Auto (GPU if available)</strong>, <strong>NVIDIA GPU (NVENC)</strong> or <strong>Processor
+(CPU)</strong>;</li>
+<li><strong>Max simultaneous downloads</strong>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="modules--ai">Modules &amp; AI</h2>
+<figure><a href="images/settings-modules.jpg"><img alt="Settings › Modules &amp; AI" src="images/settings-modules.jpg" loading="lazy"></a><figcaption>Settings › Modules &amp; AI</figcaption></figure>
+<p>The list of every Orbit engine and model (yt-dlp, ffmpeg, local AI, Real-ESRGAN, RIFE, HandBrake, Magic Eraser,
+Cutout, Audio Studio, AI 3D Creation…), with its size and state. Install, update or remove each one in a click;
+<strong>Refresh</strong> checks them all.</p>
+<h2 id="network">Network</h2>
+<figure><a href="images/settings-network.jpg"><img alt="Settings › Network" src="images/settings-network.jpg" loading="lazy"></a><figcaption>Settings › Network</figcaption></figure>
+<ul>
+<li><strong>Proxy server</strong> and <strong>Test the proxy</strong> (checks the connection through yt-dlp).</li>
+<li><strong>Security</strong>: <strong>Don't verify the HTTPS certificate</strong> (for servers with an invalid certificate; avoid unless
+  needed).</li>
+<li><strong>Advanced</strong>: <strong>Custom yt-dlp arguments</strong>, added to every download.</li>
+</ul>
+<h2 id="system">System</h2>
+<figure><a href="images/settings-system.jpg"><img alt="Settings › System" src="images/settings-system.jpg" loading="lazy"></a><figcaption>Settings › System</figcaption></figure>
+<ul>
+<li><strong>Startup &amp; window</strong>: start Orbit with Windows, minimize to the notification area instead of closing,
+  notifications when a download or a render finishes.</li>
+<li><strong>Storage</strong>: <strong>Temporary files</strong> (size of the work files, <strong>Clear</strong> button) and <strong>Orbit data folder</strong>
+  (<strong>Open</strong>).</li>
+<li><strong>Maintenance</strong>: <strong>Re-install yt-dlp</strong> if downloads fail; the JS engine for YouTube (Deno), which avoids the
+  "no supported JavaScript runtime" error and missing formats; <strong>View logs</strong>.</li>
+</ul>
+<h2 id="about">About</h2>
+<figure><a href="images/settings-about.jpg"><img alt="Settings › About" src="images/settings-about.jpg" loading="lazy"></a><figcaption>Settings › About</figcaption></figure>
+<ul>
+<li><strong>Version</strong> and the update check.</li>
+<li>Bug report: describe the problem and send the report. Automatic sending also sends errors on its own (without
+  your files or your user name).</li>
+<li>Privacy: no tracking and no usage statistics; your statistics stay on your device.</li>
+</ul>
+</article>
+<nav class="pager">
+<a class="prev" href="drive.html"><span>Previous</span>Discord Drive</a>
+<a class="next" href="premium.html"><span>Next</span>Orbit Premium</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#general">General</a></li>
+<li><a href="#downloads">Downloads</a></li>
+<li><a href="#appearance">Appearance</a></li>
+<li><a href="#ai--performance">AI &amp; Performance</a></li>
+<li><a href="#modules--ai">Modules &amp; AI</a></li>
+<li><a href="#network">Network</a></li>
+<li><a href="#system">System</a></li>
+<li><a href="#about">About</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="../site.js?v=1794509440" defer></script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversion — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/conversion.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html" aria-current="page">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="conversion">Conversion</h1>
+<h2 id="le-convertisseur">Le Convertisseur</h2>
+<p>Le <strong>Convertisseur</strong> transforme presque tout type de fichier. Glissez des fichiers ou des <strong>dossiers entiers</strong>
+(Orbit parcourt les sous-dossiers) dans la zone, ou cliquez <strong>Fichiers</strong> / <strong>Dossier</strong>. Orbit reconnaît chaque
+fichier et propose les formats de sortie possibles.</p>
+<figure><a href="images/convertpro.jpg"><img alt="Le Convertisseur, prêt à recevoir des fichiers" src="images/convertpro.jpg" loading="lazy"></a><figcaption>Le Convertisseur, prêt à recevoir des fichiers</figcaption></figure>
+<table>
+<thead>
+<tr>
+<th>Catégorie</th>
+<th>Entrée</th>
+<th>Sortie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vidéo</td>
+<td>MP4, MKV, MOV, AVI, WEBM…</td>
+<td>MP4, MOV, ProRes, MKV, WEBM, AVI, GIF, ou extraction audio (MP3, WAV, FLAC, M4A)</td>
+</tr>
+<tr>
+<td>Audio</td>
+<td>MP3, WAV, FLAC, M4A, OGG…</td>
+<td>WAV, MP3, FLAC, AAC, OGG, OPUS, M4A, avec modification des tags (titre, artiste, album, année, pochette)</td>
+</tr>
+<tr>
+<td>Image</td>
+<td>JPG, PNG, WEBP, HEIC, TIFF, BMP…</td>
+<td>PNG, JPG, WEBP, AVIF, TIFF, BMP</td>
+</tr>
+<tr>
+<td>LUT</td>
+<td><code>.cube</code>, <code>.3dl</code></td>
+<td><code>.cube</code> ↔ <code>.3dl</code></td>
+</tr>
+<tr>
+<td>Polices</td>
+<td>TTF, OTF</td>
+<td>TTF, WOFF, WOFF2</td>
+</tr>
+<tr>
+<td>3D</td>
+<td>FBX, OBJ, GLB, GLTF, STL, PLY, DAE…</td>
+<td>GLB, OBJ, STL, PLY</td>
+</tr>
+<tr>
+<td>Documents</td>
+<td>DOCX, XLSX, Markdown</td>
+<td>PDF, HTML</td>
+</tr>
+<tr>
+<td>After Effects</td>
+<td><code>.ffx</code>, <code>.aep</code></td>
+<td>analyse (effets et plugins requis) et changement de version d'After Effects</td>
+</tr>
+</tbody>
+</table>
+<h3 id="les-réglages-vidéo">Les réglages vidéo</h3>
+<p>Sélectionnez un fichier vidéo pour voir ses réglages :</p>
+<ul>
+<li><strong>Encodeur</strong> : <strong>Auto (GPU si dispo)</strong>, <strong>GPU NVIDIA (NVENC)</strong> (bien plus rapide) ou <strong>Processeur (CPU)</strong>
+  (fichiers un peu plus légers). Si le GPU échoue, Orbit recommence tout seul sur le processeur.</li>
+<li><strong>Codec</strong> : H.264 (compatible partout), H.265, AV1, ou <strong>Copie rapide</strong> (aucun réencodage, instantané, quand
+  le format de sortie le permet).</li>
+<li><strong>Qualité</strong> : haute, équilibrée ou légère, et une <strong>hauteur maximale</strong> (1080p, 720p…).</li>
+<li><strong>Poids cible</strong> : pour tenir sous une limite d'envoi : <strong>Discord (10 Mo)</strong>, <strong>WhatsApp (16 Mo)</strong>, <strong>E-mail
+  (25 Mo)</strong>, <strong>Discord Nitro (50 Mo)</strong>, <strong>Nitro+ (500 Mo)</strong> ou une taille personnalisée.</li>
+</ul>
+<p>Toutes les pistes audio et les sous-titres sont conservés quand le conteneur les accepte. Si une piste ne peut
+pas l'être (par exemple des sous-titres image dans un MP4), la ligne l'indique en orange.</p>
+<h3 id="la-file-dattente">La file d'attente</h3>
+<p>Glissez une ligne par sa poignée pour changer l'ordre : la file traite toujours la première ligne en attente,
+même si vous la réorganisez pendant la conversion. Avec la carte graphique, deux vidéos sont converties en même
+temps.</p>
+<h3 id="after-effects">After Effects</h3>
+<p>Pour un préréglage <code>.ffx</code> ou un projet <code>.aep</code>, Orbit liste les effets utilisés et les <strong>plugins tiers
+nécessaires</strong>. Il peut aussi changer la version d'After Effects d'un fichier pour l'ouvrir dans une version plus
+ancienne ou plus récente, et, si After Effects est installé sur votre PC, l'utiliser pour enregistrer un projet
+dans une autre version ou appliquer un préréglage à une composition.</p>
+<h2 id="handbrake">HandBrake</h2>
+<p>L'onglet <strong>HandBrake</strong> pilote le célèbre encodeur pour les compressions avancées. La première fois, cliquez
+<strong>Installer HandBrake</strong> (téléchargement automatique).</p>
+<figure><a href="images/handbrake.jpg"><img alt="L'onglet HandBrake" src="images/handbrake.jpg" loading="lazy"></a><figcaption>L'onglet HandBrake</figcaption></figure>
+<ol>
+<li>Glissez vos vidéos dans la zone (plusieurs à la fois).</li>
+<li>Sélectionnez un fichier pour régler son encodage, ou réglez une fois et cliquez <strong>Réglages appliqués à toute
+   la file</strong>.</li>
+<li>Cliquez <strong>Encoder la file</strong>.</li>
+</ol>
+<p>Les réglages, par section :</p>
+<ul>
+<li><strong>Préréglage &amp; Format</strong> : un préréglage HandBrake officiel comme base, ou <strong>Aucun (réglages manuels)</strong> ;
+  conteneur ; <strong>Optimisé web</strong> (lecture progressive).</li>
+<li><strong>Vidéo</strong> : encodeur, vitesse d'encodage, <strong>Qualité constante (RF)</strong> (plus bas = meilleur) ou <strong>Débit moyen</strong>
+  avec <strong>2 passes</strong> ; résolution maximale ; images par seconde ; rotation. La <strong>taille estimée</strong> s'affiche.</li>
+<li><strong>Filtres</strong> : débruitage (NLMeans), netteté (Lapsharp), désentrelacement, deblock, noir et blanc.</li>
+<li><strong>Audio &amp; Sortie</strong> : <strong>Copier (sans réencodage)</strong> ou débit audio ; <strong>Conserver les sous-titres</strong> ; dossier de
+  sortie.</li>
+</ul>
+<p>Enregistrez vos réglages comme préréglage personnel pour les retrouver plus tard.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="telechargements.html"><span>Précédent</span>Téléchargements</a>
+<a class="next" href="ia-image.html"><span>Suivant</span>IA pour l&#x27;image</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#le-convertisseur">Le Convertisseur</a></li>
+<li><a href="#handbrake">HandBrake</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>

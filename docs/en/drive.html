@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discord Drive — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../drive.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html" aria-current="page">Discord Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="discord-drive">Discord Drive</h1>
+<p>The <strong>Discord Drive</strong> stores your files online by cutting them into <strong>encrypted</strong> pieces (AES-256) sent to
+Discord. Your files are encrypted on your PC before they leave: neither Discord nor the Orbit server can read
+them.</p>
+<blockquote>
+<p>Discord is not made to store files and its terms of service do not plan for it: a channel or an account can be
+deleted. <strong>Always keep another copy of your important files.</strong></p>
+</blockquote>
+<p>The tab has three modes, at the top right: <strong>Local</strong>, <strong>Cloud (account)</strong> and <strong>Drop</strong>.</p>
+<figure><a href="images/drive.jpg"><img alt="The Discord Drive in Local mode, ready to set up" src="images/drive.jpg" loading="lazy"></a><figcaption>The Discord Drive in Local mode, ready to set up</figcaption></figure>
+<h2 id="local-mode">Local mode</h2>
+<p>Everything stays on your PC (the file list and the key); the pieces go to your own Discord channel.</p>
+<ol>
+<li>On Discord, pick or create a <strong>private channel</strong>.</li>
+<li><strong>Channel settings › Integrations › Webhooks › New webhook</strong>, then <strong>Copy webhook URL</strong>.</li>
+<li>In Orbit, paste it in <strong>Discord webhook URL</strong>. Several webhooks (one per line, in different channels) make
+   uploads faster.</li>
+<li>Pick a strong <strong>Encryption passphrase</strong>, then <strong>Set up Drive</strong>.</li>
+</ol>
+<blockquote>
+<p>Without the passphrase, nobody can read the files back, <strong>not even you</strong>. Write it down somewhere safe: it
+cannot be recovered.</p>
+</blockquote>
+<p>Each time you open it, type the passphrase to <strong>Unlock</strong> the Drive. <strong>Lock</strong> closes it.</p>
+<h2 id="cloud-mode-account">Cloud mode (account)</h2>
+<p>Cloud mode uses an <strong>Orbit account</strong>: your files follow you on all your PCs.</p>
+<ol>
+<li><strong>Create account</strong> (e-mail and password) or <strong>Sign in</strong>.</li>
+<li>Pick an <strong>encryption passphrase</strong>; it protects your files and works on all your devices.</li>
+</ol>
+<p>Then: <strong>Upload files</strong>, <strong>New folder</strong>, <strong>Refresh</strong>, filter, download, delete. Videos play straight from the
+Drive. <strong>Forgot password?</strong> sends a code by e-mail; it changes the sign-in password, not the passphrase.</p>
+<p>The <strong>Telegram</strong> button stores files on your Telegram account (in your <strong>Saved Messages</strong>) instead of Discord.
+The Telegram session stays on your PC.</p>
+<h2 id="drop-share-without-an-account">Drop: share without an account</h2>
+<p><strong>Drop</strong> sends a file to someone, even without an account: Orbit encrypts it with a one-time key and gives you a
+<strong>share code</strong>. The other person pastes this code in Drop to download and decrypt the file. Drops expire
+automatically after a while.</p>
+<p><strong>Shared folders</strong> (codes starting with <code>orbf1_</code>) open in the same place; you can download them, play them or
+<strong>Save to my Drive</strong>.</p>
+<h2 id="share-from-the-drive">Share from the Drive</h2>
+<p>In Cloud mode, <strong>Share</strong> on a file or a folder creates a code: the content is re-encrypted with a new key, your
+account key is never sent. Give the share a <strong>title</strong>: it is visible to anyone who has the code.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="boite-a-outils.html"><span>Previous</span>Toolbox and media library</a>
+<a class="next" href="reglages.html"><span>Next</span>Settings</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#local-mode">Local mode</a></li>
+<li><a href="#cloud-mode-account">Cloud mode (account)</a></li>
+<li><a href="#drop-share-without-an-account">Drop: share without an account</a></li>
+<li><a href="#share-from-the-drive">Share from the Drive</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="../site.js?v=1794509440" defer></script>
+</body>
+</html>

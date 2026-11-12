@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio et transcription — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/audio-transcription.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html" aria-current="page">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="audio-et-transcription">Audio et transcription</h1>
+<h2 id="studio-audio">Studio Audio</h2>
+<p>Traite l'audio d'un fichier son <strong>ou d'une vidéo</strong>.</p>
+<figure><a href="images/audiostudio.jpg"><img alt="Le Studio Audio" src="images/audiostudio.jpg" loading="lazy"></a><figcaption>Le Studio Audio</figcaption></figure>
+<ol>
+<li>Glissez vos audios ou vos vidéos dans la zone (plusieurs à la fois).</li>
+<li>Sélectionnez un fichier et choisissez le <strong>Traitement</strong> :</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Traitement</th>
+<th>Ce qu'il fait</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Séparation en stems</strong></td>
+<td>sépare la voix de la musique : <strong>2 stems</strong> (voix + accompagnement), <strong>4 stems</strong> (voix, batterie, basse, autres) ou, avec Demucs, <strong>6 stems</strong> (+ guitare et piano). <a href="premium.html">Premium</a>.</td>
+</tr>
+<tr>
+<td><strong>Débruitage</strong></td>
+<td>réduit le souffle et les bruits de fond constants ; réglez l'intensité.</td>
+</tr>
+<tr>
+<td><strong>Normalisation</strong></td>
+<td>met le volume au niveau des plateformes de streaming (-14 LUFS, crête -1,5 dBTP).</td>
+</tr>
+<tr>
+<td><strong>Extraire l'audio</strong></td>
+<td>sort la piste son d'une vidéo, sans réencoder l'image, en WAV, MP3 ou FLAC.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li><strong>Appliquer à toute la file</strong> si besoin, puis <strong>Lancer la file</strong>.</li>
+</ol>
+<p>Pour la séparation, deux moteurs :</p>
+<ul>
+<li><strong>Haute qualité</strong> (Demucs v4) : bien meilleur ; avec une carte NVIDIA, il utilise le GPU. Installation :
+  <strong>Installer Demucs + PyTorch GPU</strong> (environ 2,5 Go) ou <strong>CPU</strong> (environ 700 Mo). Les stems sortent en MP3
+  320 kb/s. <strong>Rapide</strong> (environ 4 fois plus vite) ou <strong>Qualité max</strong> (modèle affiné).</li>
+<li><strong>Rapide &amp; léger</strong> (Spleeter) : qualité correcte, environ 700 Mo à installer.</li>
+</ul>
+<h2 id="transcription">Transcription</h2>
+<p>Transforme la parole d'une vidéo ou d'un audio en texte et en sous-titres, sur votre ordinateur. Fait partie
+d'<a href="premium.html">Orbit Premium</a>.</p>
+<figure><a href="images/transcription.jpg"><img alt="La Transcription" src="images/transcription.jpg" loading="lazy"></a><figcaption>La Transcription</figcaption></figure>
+<ol>
+<li><strong>Choisir une vidéo ou un audio</strong> (MP4, MKV, MOV, MP3, WAV…).</li>
+<li><strong>Langue</strong> : <strong>Détection auto</strong> ou la langue parlée.</li>
+<li><strong>Modèle IA</strong> : du plus rapide (<strong>Base</strong>, environ 142 Mo) au plus précis (plus lourd et plus lent).</li>
+<li><strong>Exporter vers</strong> : cochez les formats voulus. Orbit prépare le bon fichier pour chaque logiciel :
+   <strong>Premiere Pro</strong>, <strong>After Effects</strong>, <strong>CapCut</strong>, <strong>DaVinci Resolve</strong>, <strong>Final Cut Pro</strong>, <strong>YouTube / Web</strong>,
+   <strong>Sous-titres stylés</strong>, <strong>Texte brut</strong>, <strong>Données</strong> et <strong>Paroles</strong>.</li>
+<li><strong>Incruster les sous-titres dans la vidéo</strong> crée aussi un <code>.mp4</code> avec les sous-titres gravés (non
+   modifiables) ; réglez la <strong>taille de police</strong> et la <strong>couleur</strong>.</li>
+<li><strong>Dossier de sortie</strong> (par défaut à côté du fichier source), puis <strong>Transcrire &amp; exporter</strong>.</li>
+</ol>
+<p>Une fois fini, <strong>Ouvrir</strong> affiche les fichiers créés.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="ia-video-3d.html"><span>Précédent</span>IA pour la vidéo et la 3D</a>
+<a class="next" href="boite-a-outils.html"><span>Suivant</span>Boîte à outils et médiathèque</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#studio-audio">Studio Audio</a></li>
+<li><a href="#transcription">Transcription</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>

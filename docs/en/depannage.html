@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../depannage.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Discord Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html" aria-current="page">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="troubleshooting">Troubleshooting</h1>
+<h2 id="a-download-fails">A download fails</h2>
+<ol>
+<li>Click <strong>Failed — see logs</strong> on the row: the end of the log gives the reason.</li>
+<li>Sites change often: <strong>Settings › System › Re-install yt-dlp</strong> installs the latest version (Orbit also updates
+   it at every launch).</li>
+<li>For YouTube, if the log mentions "JavaScript runtime" or formats are missing: <strong>Settings › System</strong>, install
+   the JS engine for YouTube (Deno).</li>
+<li>Private, members-only or age-restricted content: turn on the <strong>Cookie</strong> icon of the bar (you must be signed in
+   to the site in Chrome), or open the page in the <strong>SNIFFER</strong>.</li>
+<li><strong>Menu › Downloads › Restart Failed Downloads</strong> restarts every failure.</li>
+</ol>
+<h2 id="file-deleted-on-a-finished-download">"File deleted" on a finished download</h2>
+<p>The file was moved or deleted from the disk. <strong>Download again</strong> gets it back, or remove the row.</p>
+<h2 id="orbit-closed-during-a-download">Orbit closed during a download</h2>
+<p>Start Orbit again: downloads resume where they stopped. HandBrake and Topaz queues come back too, but you have
+to restart them by hand.</p>
+<h2 id="an-ai-tool-is-slow-or-runs-out-of-memory">An AI tool is slow or runs out of memory</h2>
+<ul>
+<li>Close games and programs that use the graphics card.</li>
+<li>Keep <strong>Settings › Downloads › Simultaneous AI jobs (GPU)</strong> at <strong>1</strong>.</li>
+<li>Set a <strong>Maximum VRAM for AI</strong> to leave some margin.</li>
+<li>In AI Enhance, lower the tile size; in AI 3D Creation, pick <strong>Fast</strong> or fewer <strong>Faces</strong>.</li>
+<li>In Paint a plate, use <strong>Stop</strong> when you are done: ComfyUI frees the video memory.</li>
+</ul>
+<h2 id="an-nvidia-graphics-card-is-required">"An NVIDIA graphics card is required"</h2>
+<p>AI 3D Creation, Paint a plate and local AI Generation use CUDA, which only exists on NVIDIA cards. On another PC,
+AI Generation goes through the online <strong>Flux</strong> service. The other AI tools (upscale, interpolation, cutout, magic
+eraser) work with every recent card.</p>
+<h2 id="the-interface-flickers-or-stays-black">The interface flickers or stays black</h2>
+<p><strong>Settings › AI &amp; Performance › Disable hardware acceleration</strong>, then restart Orbit. If the interface is slow,
+tone down the <strong>Liquid glass</strong> (<strong>Subtle</strong> preset) or turn it off in <strong>Settings › Appearance</strong>.</p>
+<h2 id="a-premium-tool-stays-locked">A Premium tool stays locked</h2>
+<ul>
+<li>Check the bottom of the sidebar: it should read <strong>Premium active</strong>.</li>
+<li>After a payment, open the Premium window: it unlocks as soon as the payment is confirmed.</li>
+<li><strong>Update required</strong>: your version is too old for the AI tools; click the button to install the latest one.</li>
+</ul>
+<h2 id="the-antivirus-blocks-orbit-or-a-module">The antivirus blocks Orbit or a module</h2>
+<p>Orbit downloads engines (yt-dlp, ffmpeg, AI models) into <code>C:\Users\&lt;you&gt;\.orbit</code>. If your antivirus blocks one,
+add this folder to its exceptions, then reinstall the module from <strong>Settings › Modules &amp; AI</strong>.</p>
+<h2 id="free-up-space">Free up space</h2>
+<ul>
+<li><strong>Settings › System › Temporary files › Clear</strong> deletes the work files.</li>
+<li><strong>Settings › Modules &amp; AI</strong>: remove the models of tools you do not use (they download again if needed).</li>
+</ul>
+<h2 id="report-a-problem">Report a problem</h2>
+<p><strong>Settings › About</strong>, bug report: describe what you were doing and what happened, then send the report. The last
+25 lines of the log are attached, without your user name. The full log is in <strong>Settings › System › View logs</strong>.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="premium.html"><span>Previous</span>Orbit Premium</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#a-download-fails">A download fails</a></li>
+<li><a href="#file-deleted-on-a-finished-download">"File deleted" on a finished download</a></li>
+<li><a href="#orbit-closed-during-a-download">Orbit closed during a download</a></li>
+<li><a href="#an-ai-tool-is-slow-or-runs-out-of-memory">An AI tool is slow or runs out of memory</a></li>
+<li><a href="#an-nvidia-graphics-card-is-required">"An NVIDIA graphics card is required"</a></li>
+<li><a href="#the-interface-flickers-or-stays-black">The interface flickers or stays black</a></li>
+<li><a href="#a-premium-tool-stays-locked">A Premium tool stays locked</a></li>
+<li><a href="#the-antivirus-blocks-orbit-or-a-module">The antivirus blocks Orbit or a module</a></li>
+<li><a href="#free-up-space">Free up space</a></li>
+<li><a href="#report-a-problem">Report a problem</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="../site.js?v=1794509440" defer></script>
+</body>
+</html>

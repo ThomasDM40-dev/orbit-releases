@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio and transcription — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../audio-transcription.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="audio-transcription.html" aria-current="page">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Discord Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="audio-and-transcription">Audio and transcription</h1>
+<h2 id="audio-studio">Audio Studio</h2>
+<p>Processes the audio of a sound file <strong>or of a video</strong>.</p>
+<figure><a href="images/audiostudio.jpg"><img alt="The Audio Studio" src="images/audiostudio.jpg" loading="lazy"></a><figcaption>The Audio Studio</figcaption></figure>
+<ol>
+<li>Drop your audio files or videos in the area (several at once).</li>
+<li>Select a file and pick the <strong>Processing</strong>:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Processing</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stem separation</strong></td>
+<td>splits vocals from music: <strong>2 stems</strong> (vocals + accompaniment), <strong>4 stems</strong> (vocals, drums, bass, other) or, with Demucs, <strong>6 stems</strong> (+ guitar and piano). <a href="premium.html">Premium</a>.</td>
+</tr>
+<tr>
+<td><strong>Denoise</strong></td>
+<td>reduces hiss and constant background noise; set the strength.</td>
+</tr>
+<tr>
+<td><strong>Normalize</strong></td>
+<td>brings the volume to the level of streaming platforms (-14 LUFS, peak -1.5 dBTP).</td>
+</tr>
+<tr>
+<td><strong>Extract audio</strong></td>
+<td>takes the sound track out of a video, without re-encoding the picture, as WAV, MP3 or FLAC.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li><strong>Apply to the whole queue</strong> if needed, then <strong>Run queue</strong>.</li>
+</ol>
+<p>For separation, two engines:</p>
+<ul>
+<li><strong>High quality</strong> (Demucs v4): much better; with an NVIDIA card, it uses the GPU. Install: Demucs + PyTorch GPU
+  (about 2.5 GB) or CPU (about 700 MB). Stems come out as 320 kb/s MP3. <strong>Fast</strong> (about 4 times faster) or <strong>Max
+  quality</strong> (fine-tuned model).</li>
+<li><strong>Fast &amp; light</strong> (Spleeter): fair quality, about 700 MB to install.</li>
+</ul>
+<h2 id="transcription">Transcription</h2>
+<p>Turns the speech of a video or audio file into text and subtitles, on your computer. Part of
+<a href="premium.html">Orbit Premium</a>.</p>
+<figure><a href="images/transcription.jpg"><img alt="Transcription" src="images/transcription.jpg" loading="lazy"></a><figcaption>Transcription</figcaption></figure>
+<ol>
+<li><strong>Choose a video or audio</strong> (MP4, MKV, MOV, MP3, WAV…).</li>
+<li><strong>Language</strong>: <strong>Auto-detect</strong> or the spoken language.</li>
+<li><strong>AI model</strong>: from the fastest (<strong>Base</strong>, about 142 MB) to the most accurate (heavier and slower).</li>
+<li><strong>Export to</strong>: tick the formats you want. Orbit prepares the right file for each program: <strong>Premiere Pro</strong>,
+   <strong>After Effects</strong>, <strong>CapCut</strong>, <strong>DaVinci Resolve</strong>, <strong>Final Cut Pro</strong>, <strong>YouTube / Web</strong>, <strong>Styled
+   subtitles</strong>, <strong>Plain text</strong>, <strong>Data</strong> and <strong>Lyrics</strong>.</li>
+<li><strong>Burn subtitles into the video</strong> also creates an <code>.mp4</code> with burned-in subtitles (not editable); set the font
+   size and color.</li>
+<li><strong>Output folder</strong> (next to the source file by default), then transcribe and export.</li>
+</ol>
+<p>When it is done, <strong>Open</strong> shows the files created.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="ia-video-3d.html"><span>Previous</span>AI for video and 3D</a>
+<a class="next" href="boite-a-outils.html"><span>Next</span>Toolbox and media library</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#audio-studio">Audio Studio</a></li>
+<li><a href="#transcription">Transcription</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="../site.js?v=1794509440" defer></script>
+</body>
+</html>

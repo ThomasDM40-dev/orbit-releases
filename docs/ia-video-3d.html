@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA pour la vidéo et la 3D — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1794509440">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/ia-video-3d.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html" aria-current="page">IA pour la vidéo et la 3D</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="ia-pour-la-vidéo-et-la-3d">IA pour la vidéo et la 3D</h1>
+<h2 id="interpolateur-ia">Interpolateur IA</h2>
+<p>Rend une vidéo plus fluide en inventant les images manquantes : 30 i/s devient 60, 120 ou 240 i/s, ou un ralenti
+parfait. Fait partie d'<a href="premium.html">Orbit Premium</a>.</p>
+<figure><a href="images/interpolator.jpg"><img alt="L'Interpolateur IA" src="images/interpolator.jpg" loading="lazy"></a><figcaption>L'Interpolateur IA</figcaption></figure>
+<ol>
+<li><strong>Vidéo Source</strong> : <strong>Parcourir</strong> ou glissez un fichier.</li>
+<li><strong>Dossier Sortie</strong> : où enregistrer le résultat.</li>
+<li><strong>Multiplicateur</strong> : ×2, ×4, ×8 ou <strong>Perso</strong> ; puis le <strong>Format</strong> et le <strong>Codec</strong>.</li>
+<li><strong>GPU</strong> : la carte à utiliser ; <strong>Après</strong> : ce qu'Orbit fait à la fin (rien, ouvrir le dossier…).</li>
+<li>Cliquez <strong>Interpoler !</strong> ; la <strong>Console</strong> suit chaque étape (extraction, interpolation, recomposition).</li>
+</ol>
+<p>L'onglet <strong>Préréglages</strong> propose des réglages prêts : <strong>RIFE x2 - Optimisé anime</strong>, <strong>RIFE x2 - Qualité
+lossless</strong>, <strong>RIFE x4 - Ralenti x0.5</strong>, <strong>RIFE x4 - 120FPS</strong>, <strong>RIFE x2 → GIF</strong>, <strong>RIFE x8 - 240FPS</strong>. Le moteur
+RIFE fonctionne avec toutes les cartes graphiques récentes (Vulkan) et se télécharge la première fois.</p>
+<h2 id="topaz-video-ai">Topaz Video AI</h2>
+<p>Pilote <strong>votre</strong> installation de Topaz Video AI depuis Orbit, avec une file d'attente et un aperçu avant/après.
+Topaz Video AI doit être installé et activé sur votre PC (licence Topaz). Fait partie
+d'<a href="premium.html">Orbit Premium</a>.</p>
+<figure><a href="images/topaz.jpg"><img alt="L'onglet Topaz Video AI" src="images/topaz.jpg" loading="lazy"></a><figcaption>L'onglet Topaz Video AI</figcaption></figure>
+<p>Orbit détecte Topaz tout seul (<strong>Moteur détecté</strong>) ; sinon, <strong>Relancer la détection</strong>. Les réglages reprennent
+ceux de Topaz : <strong>Amélioration &amp; Upscale</strong> (modèle IA, échelle, réduction de compression, détail, netteté,
+bruit, dehalo, grain), <strong>Interpolation d'images</strong> (images par seconde, ralenti), <strong>Stabilisation</strong> (force,
+secousses, rolling shutter) et <strong>Export</strong>.</p>
+<h2 id="paint-a-plate">Paint a plate</h2>
+<p>Retouchez un plan vidéo en peignant sa première image : effacer un objet, en ajouter un, changer la lumière ou
+ajouter de la fumée, du feu, de la vapeur. L'IA applique la retouche sur tout le plan.</p>
+<figure><a href="images/paintaplate.jpg"><img alt="Paint a plate : outils à gauche, image au centre, historique à droite" src="images/paintaplate.jpg" loading="lazy"></a><figcaption>Paint a plate : outils à gauche, image au centre, historique à droite</figcaption></figure>
+<h3 id="installer">Installer</h3>
+<p>Paint a plate s'appuie sur <strong>ComfyUI</strong> et sur le pack open source <strong>Paint a plate</strong> (AInVFX). L'onglet guide
+l'installation :</p>
+<ol>
+<li><strong>Dossier ComfyUI</strong> : choisissez un ComfyUI existant, ou <strong>Installer ComfyUI</strong> (version portable officielle,
+   environ 2 Go).</li>
+<li><strong>Token Hugging Face</strong> (<code>hf_…</code>) : certains modèles en demandent un. <strong>Créer un token</strong> ouvre la page
+   Hugging Face ; collez-le ensuite dans le champ. Il reste sur votre PC.</li>
+<li><strong>Installer ce qui manque</strong> : les modèles principaux (environ 61 Go), dans le dossier de ComfyUI. Les
+   <strong>modèles optionnels</strong> ajoutent les <strong>plans de fluide</strong> (0,65 Go) et le passage <strong>SDR vers HDR</strong> (1,3 Go,
+   licence à accepter sur Hugging Face).</li>
+<li><strong>Lancer Paint a plate</strong>.</li>
+</ol>
+<p>Il faut une carte <strong>NVIDIA</strong> avec 16 Go de mémoire vidéo pour un usage confortable. Les <strong>Options de lancement de
+ComfyUI</strong> permettent de limiter la mémoire utilisée (par exemple <code>--reserve-vram 4 --cache-ram 16</code> sur une
+carte de 16 Go). Le bouton <strong>Arrêter</strong> coupe ComfyUI et libère la mémoire vidéo.</p>
+<h3 id="retoucher-un-plan">Retoucher un plan</h3>
+<ol>
+<li><strong>Ouvrir un plan</strong> : choisissez la vidéo. Le format, la cadence et le nombre d'images s'affichent en haut.</li>
+<li>Choisissez l'outil : <strong>Peindre</strong> (ajouter ou remplacer), <strong>Effacer</strong> (avec <strong>Objet entier</strong> pour sélectionner
+   tout l'objet d'un clic) ou <strong>Lumière</strong> (rééclairer).</li>
+<li>Peignez sur l'image, puis écrivez la <strong>Description</strong> de la retouche et cliquez <strong>Générer</strong>.</li>
+<li>Comparez avec <strong>Comparer</strong>, lisez le plan avec la barre du bas, puis <strong>Exporter</strong> : la vidéo garde le format
+   de la source (codec, cadence, timecode).</li>
+</ol>
+<p>Pour un <strong>plan de fluide</strong> (fumée, vapeur, feu), peignez des aplats de couleur sur l'image 0 et sur la
+dernière, décrivez le fluide, puis <strong>Générer</strong>. L'<strong>historique</strong>, à droite, garde chaque essai ; <strong>Autre seed</strong>
+relance une variante.</p>
+<h2 id="ia-création-3d">IA Création 3D</h2>
+<p>Transforme une image en <strong>modèle 3D texturé</strong>, directement sur votre carte graphique (moteur TRELLIS.2). Outil
+gratuit.</p>
+<figure><a href="images/image3d.jpg"><img alt="IA Création 3D : réglages à gauche, aperçu 3D au centre" src="images/image3d.jpg" loading="lazy"></a><figcaption>IA Création 3D : réglages à gauche, aperçu 3D au centre</figcaption></figure>
+<h3 id="installer-1">Installer</h3>
+<p>Il faut une carte <strong>NVIDIA</strong>. La première fois, cliquez <strong>Installer le moteur</strong> : Orbit installe Python,
+PyTorch et les bibliothèques, puis les modèles (plusieurs Go). Vous pouvez continuer à utiliser Orbit pendant
+l'installation ; si elle est interrompue, elle reprend là où elle s'était arrêtée.</p>
+<h3 id="créer-un-modèle">Créer un modèle</h3>
+<ol>
+<li>Déposez une <strong>Image</strong> : un seul objet, bien visible, sur un fond simple donne les meilleurs résultats. Pas
+   d'image ? Décrivez l'objet (« un tonneau en bois ») et cliquez <strong>Créer l'image</strong> (SDXL en local).</li>
+<li><strong>Références en plus</strong> (expérimental) : d'autres photos du même objet sous d'autres angles.</li>
+<li>Réglez la <strong>Qualité</strong> (<strong>Rapide</strong>, <strong>Haute</strong>, <strong>Ultra</strong>) et le nombre de <strong>Faces</strong>. Avec moins de 20 Go de
+   mémoire vidéo, la résolution est réduite automatiquement si besoin.</li>
+<li>Options : <strong>Générer la texture</strong> (désactivée = géométrie seule, bien plus rapide), <strong>Retirer le fond</strong>,
+   <strong>Remaillage propre</strong>, taille de texture, étapes, seed.</li>
+<li>Cliquez <strong>Créer le modèle 3D</strong>. Comptez une à trois minutes selon la qualité.</li>
+</ol>
+<h3 id="voir-améliorer-exporter">Voir, améliorer, exporter</h3>
+<p>L'aperçu tourne le modèle sous tous les angles, avec plusieurs vues : <strong>Texture</strong>, <strong>Argile</strong>, <strong>Maillage</strong>,
+<strong>Normales</strong>, <strong>UV</strong>. Ensuite :</p>
+<ul>
+<li><strong>Améliorer la texture</strong> : ajoute du détail avec FLUX.2 klein, sans changer les couleurs ni la forme (15 Go à
+  télécharger la première fois ; intensité <strong>Léger</strong>, <strong>Moyen</strong>, <strong>Fort</strong>) ;</li>
+<li><strong>Optimiser polygones + UV</strong> : un maillage bien plus léger qui garde l'aspect ;</li>
+<li><strong>Rigger</strong> : ajoute un squelette avec <strong>Rigify</strong> (automatique) ou votre propre <strong>Auto-Rig Pro</strong> (Blender
+  installé requis), puis <strong>Ouvrir le rig dans Blender</strong> ;</li>
+<li><strong>Exporter</strong> : GLB, OBJ, STL, PLY, ou <strong>FBX riggé</strong> (squelette, poids et textures pour Unity ou Unreal).</li>
+</ul>
+<p>Toutes vos créations restent dans la galerie en bas de l'écran.</p>
+</article>
+<nav class="pager">
+<a class="prev" href="ia-image.html"><span>Précédent</span>IA pour l&#x27;image</a>
+<a class="next" href="audio-transcription.html"><span>Suivant</span>Audio et transcription</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#interpolateur-ia">Interpolateur IA</a></li>
+<li><a href="#topaz-video-ai">Topaz Video AI</a></li>
+<li><a href="#paint-a-plate">Paint a plate</a></li>
+<li><a href="#ia-création-3d">IA Création 3D</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.68.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1794509440" defer></script>
+<script src="site.js?v=1794509440" defer></script>
+</body>
+</html>
