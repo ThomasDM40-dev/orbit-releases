@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Drive Discord — Orbit</title>
+<title>Orbit Drive — Orbit</title>
 <link rel="icon" href="logos/orbit.png">
-<link rel="stylesheet" href="style.css?v=1794509440">
+<link rel="stylesheet" href="style.css?v=1795359584">
 </head>
 <body>
 <a class="skip" href="#content">Aller au contenu</a>
@@ -25,9 +25,10 @@
 <li><a href="conversion.html">Conversion</a></li>
 <li><a href="ia-image.html">IA pour l&#x27;image</a></li>
 <li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="voix-musique-ia.html">Voix, doublage et musique IA</a></li>
 <li><a href="audio-transcription.html">Audio et transcription</a></li>
 <li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
-<li><a href="drive.html" aria-current="page">Drive Discord</a></li>
+<li><a href="drive.html" aria-current="page">Orbit Drive</a></li>
 <li><a href="reglages.html">Réglages</a></li>
 <li><a href="premium.html">Orbit Premium</a></li>
 <li><a href="depannage.html">Dépannage</a></li>
@@ -35,8 +36,8 @@
   </nav>
   <main id="content">
 <article>
-<h1 id="drive-discord">Drive Discord</h1>
-<p>Le <strong>Drive Discord</strong> stocke vos fichiers en ligne en les découpant en morceaux <strong>chiffrés</strong> (AES-256) envoyés
+<h1 id="orbit-drive">Orbit Drive</h1>
+<p><strong>Orbit Drive</strong> (le Drive Discord) stocke vos fichiers en ligne en les découpant en morceaux <strong>chiffrés</strong> (AES-256) envoyés
 sur Discord. Vos fichiers sont chiffrés sur votre PC avant l'envoi : ni Discord ni le serveur d'Orbit ne peuvent
 les lire.</p>
 <blockquote>
@@ -81,6 +82,54 @@ télécharger, les lire ou les <strong>Enregistrer dans mon Drive</strong>.</p>
 <p>Dans le mode Cloud, <strong>Partager</strong> un fichier ou un dossier crée un code : le contenu est rechiffré avec une clé
 neuve, votre clé de compte n'est jamais transmise. Donnez un <strong>titre au partage</strong> : il est visible par ceux qui
 ont le code.</p>
+<h3 id="protéger-un-lien">Protéger un lien</h3>
+<p>Au moment de <strong>Partager</strong>, choisissez :</p>
+<ul>
+<li><strong>Qui peut ouvrir le lien</strong> : <strong>Toute personne avec le lien</strong> ou <strong>Moi seulement</strong> ;</li>
+<li><strong>Ce qu'on peut faire</strong> : <strong>Lire et télécharger</strong>, ou <strong>Lire seulement</strong> (la personne regarde, sans pouvoir
+  enregistrer le fichier) ;</li>
+<li>un <strong>Mot de passe</strong> (facultatif) : la personne doit le taper pour ouvrir le lien ; il n'est jamais envoyé
+  au serveur en clair ;</li>
+<li>l'<strong>Expiration</strong> : <strong>1 jour</strong>, <strong>7 jours</strong>, <strong>30 jours</strong> ou <strong>Jamais</strong>.</li>
+</ul>
+<p>Puis <strong>Créer le lien</strong>. Un lien de dossier suit le dossier : ce que vous y ajoutez plus tard apparaît pour ceux
+qui ont déjà le lien. Les liens s'ouvrent aussi dans un navigateur, sur
+<a href="https://orbit-drive.com">orbit-drive.com</a>, sans installer Orbit.</p>
+<h2 id="voir-sans-télécharger">Voir sans télécharger</h2>
+<p>Dans le mode Cloud, les fichiers ont des <strong>miniatures</strong> (photos, vidéos, modèles 3D) et les dossiers montrent un
+aperçu de leur contenu. Un <strong>double-clic</strong> sur une photo ou un modèle 3D l'ouvre dans la visionneuse (flèches
+<code>←</code> <code>→</code> pour passer au suivant, <code>Échap</code> pour fermer) ; les vidéos se lisent directement.</p>
+<h2 id="synchroniser-un-dossier-de-votre-pc">Synchroniser un dossier de votre PC</h2>
+<p>Comme Google Drive : un dossier de votre PC reste <strong>identique</strong> à un dossier du Drive, dans les deux sens.
+Chaque changement est envoyé et reçu automatiquement.</p>
+<ol>
+<li>Dans le mode Cloud, ouvrez <strong>Synchronisation avec ce PC</strong> puis <strong>Synchroniser un dossier</strong>.</li>
+<li><strong>Dossier de ton PC</strong> : <strong>Choisir un dossier…</strong></li>
+<li><strong>Dans le Drive</strong> : un nouveau dossier du même nom dans <strong>Mon Drive</strong>, ou le dossier ouvert.</li>
+<li><strong>Synchroniser</strong>.</li>
+</ol>
+<p>Le panneau montre l'état (<strong>À jour</strong>, <strong>N fichiers en cours</strong>, <strong>En pause</strong>), l'<strong>Activité récente</strong>, et les
+boutons <strong>Synchroniser maintenant</strong>, <strong>Mettre en pause</strong> / <strong>Reprendre</strong> et <strong>Arrêter la synchronisation</strong> (les
+fichiers restent sur votre PC et dans le Drive).</p>
+<blockquote>
+<p>Si beaucoup de fichiers disparaissent d'un coup de votre PC, Orbit demande une <strong>confirmation</strong> avant de les
+supprimer du Drive : <strong>Supprimer du Drive</strong>, ou <strong>Non, les remettre sur mon PC</strong>.</p>
+</blockquote>
+<p>Quand vous fermez Orbit, la synchronisation continue en arrière-plan (icône près de l'horloge), avec très peu
+de mémoire.</p>
+<h2 id="dossiers-partagés-à-plusieurs">Dossiers partagés à plusieurs</h2>
+<p>Un dossier synchronisé peut être <strong>partagé avec d'autres comptes Orbit</strong>, pour travailler à plusieurs sur un
+même projet (Blender, After Effects…) :</p>
+<ol>
+<li><strong>Partager</strong> le dossier, tapez l'<strong>E-mail du compte Orbit</strong> de la personne.</li>
+<li>Cochez <strong>Peut modifier</strong> (sinon, elle est en <strong>Lecture seule</strong>), puis <strong>Inviter</strong>.</li>
+<li>L'accès s'ouvre dès que cette personne ouvre son Drive une fois. Si elle n'a pas vu l'invitation, envoyez-lui
+   le lien avec <strong>Copier le lien d'invitation</strong>.</li>
+</ol>
+<p>La personne trouve le dossier dans <strong>Partagés avec moi</strong> et peut le <strong>Synchroniser sur ce PC…</strong>. Chaque
+modification arrive chez les autres en une à deux secondes. <strong>Retirer l'accès</strong>, <strong>Arrêter le partage</strong> ou
+<strong>Quitter ce dossier</strong> à tout moment. Le chiffrement reste de bout en bout : le serveur ne voit jamais vos
+fichiers.</p>
 </article>
 <nav class="pager">
 <a class="prev" href="boite-a-outils.html"><span>Précédent</span>Boîte à outils et médiathèque</a>
@@ -90,15 +139,18 @@ ont le code.</p>
   <aside class="toc"><p>Sur cette page</p><ul><li><a href="#mode-local">Mode Local</a></li>
 <li><a href="#mode-cloud-compte">Mode Cloud (compte)</a></li>
 <li><a href="#drop--partager-sans-compte">Drop : partager sans compte</a></li>
-<li><a href="#partager-depuis-le-drive">Partager depuis le Drive</a></li></ul></aside>
+<li><a href="#partager-depuis-le-drive">Partager depuis le Drive</a></li>
+<li><a href="#voir-sans-télécharger">Voir sans télécharger</a></li>
+<li><a href="#synchroniser-un-dossier-de-votre-pc">Synchroniser un dossier de votre PC</a></li>
+<li><a href="#dossiers-partagés-à-plusieurs">Dossiers partagés à plusieurs</a></li></ul></aside>
 </div>
 <footer class="foot">
   <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
-  <span>v0.68.0</span>
+  <span>v0.81.0</span>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
 </footer>
-<script src="pages.js?v=1794509440" defer></script>
-<script src="site.js?v=1794509440" defer></script>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="site.js?v=1795359584" defer></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI for video and 3D — Orbit</title>
 <link rel="icon" href="../logos/orbit.png">
-<link rel="stylesheet" href="../style.css?v=1794509440">
+<link rel="stylesheet" href="../style.css?v=1795359584">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -25,9 +25,10 @@
 <li><a href="conversion.html">Conversion</a></li>
 <li><a href="ia-image.html">AI for images</a></li>
 <li><a href="ia-video-3d.html" aria-current="page">AI for video and 3D</a></li>
+<li><a href="voix-musique-ia.html">Voice, dubbing and music AI</a></li>
 <li><a href="audio-transcription.html">Audio and transcription</a></li>
 <li><a href="boite-a-outils.html">Toolbox and media library</a></li>
-<li><a href="drive.html">Discord Drive</a></li>
+<li><a href="drive.html">Orbit Drive</a></li>
 <li><a href="reglages.html">Settings</a></li>
 <li><a href="premium.html">Orbit Premium</a></li>
 <li><a href="depannage.html">Troubleshooting</a></li>
@@ -117,24 +118,69 @@ Then:</p>
 <li><strong>Export</strong>: GLB, OBJ, STL, PLY, or <strong>Rigged FBX</strong> (skeleton, weights and textures for Unity or Unreal).</li>
 </ul>
 <p>All your creations stay in the gallery at the bottom of the screen.</p>
+<h2 id="pbr-materials">PBR Materials</h2>
+<p>Turns <strong>a single photo</strong> of a surface (wood, stone, concrete, fabric…) into a <strong>complete PBR material</strong>, ready
+for Blender, Unreal, Unity or Substance. Part of <a href="premium.html">Orbit Premium</a>; NVIDIA card required.</p>
+<ol>
+<li><strong>Install PBR Materials</strong> (once).</li>
+<li><strong>Surface photo</strong>: drop a photo taken <strong>straight on</strong>, without perspective.</li>
+<li><strong>Create the material</strong>: the AI analyses the surface (a few seconds) and the <strong>Live preview</strong> shows the
+   material on a lit 3D plane.</li>
+<li>Adjust if needed:<ul>
+<li><strong>Resolution</strong> (up to 4K) and <strong>Seamless</strong> (the texture repeats with no visible seam);</li>
+<li><strong>Flatten the photo's lighting</strong>: removes shadows from the colour;</li>
+<li><strong>Relief</strong>: <strong>Normal strength</strong>, fine details or large shapes, height contrast, relief direction
+ (light = up or dark = up, <strong>Auto</strong> by default);</li>
+<li><strong>Occlusion</strong>, <strong>Roughness</strong> (level, variation) and <strong>Metal</strong>.</li>
+</ul>
+</li>
+<li><strong>Export</strong>: colour (albedo), OpenGL <strong>and</strong> DirectX normals, height, roughness, metal, occlusion, plus an
+   optional <strong>.glb</strong> file to preview in Blender, Unity or on the web.</li>
+</ol>
+<blockquote>
+<p>The best results come from a sharp photo, taken in overcast weather (soft light), straight on.</p>
+</blockquote>
+<h2 id="ai-mocap">AI Mocap</h2>
+<p>Turns a <strong>video</strong> into a <strong>3D animation</strong>: the filmed person's movement becomes an animated skeleton, with no
+suit or sensors. Part of <a href="premium.html">Orbit Premium</a>; NVIDIA card required.</p>
+<ol>
+<li><strong>Install AI mocap</strong> (once).</li>
+<li><strong>Video</strong>: paste a link or drop a file. Best result: the whole body in frame, no cuts. Choose the start and
+   the duration; videos longer than one minute are captured in one-minute takes.</li>
+<li><strong>People</strong>: the one most present in the video, or another one.</li>
+<li><strong>Camera</strong>: <strong>Auto</strong> (Orbit detects whether the camera moves), <strong>Fixed</strong> (camera on a tripod, the most
+   stable) or <strong>Moving</strong> (pan, tracking shot, handheld: the camera movement is removed).</li>
+<li><strong>Motion quality</strong>: <strong>Ground contacts</strong> (flat floor, stairs or free), foot locking, hands on support
+   (push-ups, walls), <strong>Smoothing</strong> (from none to strong).</li>
+<li><strong>Face (ARKit expressions)</strong> option: also records facial expressions (Live Link Face CSV).</li>
+<li><strong>Capture motion</strong>. The <strong>Live preview</strong> shows the detected body points during the computation.</li>
+</ol>
+<p><strong>Export as</strong> BVH, FBX, GLB or .blend. FBX, GLB and .blend need <a href="https://www.blender.org">Blender</a> (free):
+without it, only the BVH is created. Ready-made profiles for Blender, Unreal Engine and Mixamo.</p>
+<h3 id="apply-it-to-your-character">Apply it to your character</h3>
+<p>In <strong>Character</strong>, pick your model (FBX, GLB, VRM or .blend): Orbit recognises its bones on its own (Mixamo,
+Unreal, Unity, Rigify, VRoid…). <strong>Adjust bones</strong> lets you fix a match. Tick <strong>In place (no travel)</strong> for an
+animation that does not move around, then <strong>Apply to my character</strong> and <strong>Open in Blender</strong>.</p>
 </article>
 <nav class="pager">
 <a class="prev" href="ia-image.html"><span>Previous</span>AI for images</a>
-<a class="next" href="audio-transcription.html"><span>Next</span>Audio and transcription</a>
+<a class="next" href="voix-musique-ia.html"><span>Next</span>Voice, dubbing and music AI</a>
 </nav>
   </main>
   <aside class="toc"><p>On this page</p><ul><li><a href="#ai-interpolator">AI Interpolator</a></li>
 <li><a href="#topaz-video-ai">Topaz Video AI</a></li>
 <li><a href="#paint-a-plate">Paint a plate</a></li>
-<li><a href="#ai-3d-creation">AI 3D Creation</a></li></ul></aside>
+<li><a href="#ai-3d-creation">AI 3D Creation</a></li>
+<li><a href="#pbr-materials">PBR Materials</a></li>
+<li><a href="#ai-mocap">AI Mocap</a></li></ul></aside>
 </div>
 <footer class="foot">
   <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
-  <span>v0.68.0</span>
+  <span>v0.81.0</span>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
 </footer>
-<script src="pages.js?v=1794509440" defer></script>
-<script src="../site.js?v=1794509440" defer></script>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="../site.js?v=1795359584" defer></script>
 </body>
 </html>

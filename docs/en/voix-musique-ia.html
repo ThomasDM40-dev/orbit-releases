@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice, dubbing and music AI — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1795359584">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../voix-musique-ia.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="voix-musique-ia.html" aria-current="page">Voice, dubbing and music AI</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Orbit Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="voice-dubbing-and-music-ai">Voice, dubbing and music AI</h1>
+<p>Five tools to create sound with AI, <strong>on your own PC</strong>: voice-overs, dubbing a video into another language,
+sound effects, music, and a live voice changer. They are all part of <a href="premium.html">Orbit Premium</a> and need an
+<strong>NVIDIA</strong> graphics card (except Kokoro and the voice changer, which also run on the processor).</p>
+<p>Nothing is sent online: no subscription, no character limit, no watermark.</p>
+<h2 id="ai-voice">AI Voice</h2>
+<p>A voice-over studio: write a text, pick a voice, Orbit reads it.</p>
+<h3 id="install-an-engine">Install an engine</h3>
+<p>On first launch, <strong>Choose an engine</strong> opens the list of <strong>Voice engines</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Engine</th>
+<th>Strengths</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Kokoro</strong></td>
+<td>Ultra fast and light, works without a graphics card. Ready-made voices (only one French voice).</td>
+</tr>
+<tr>
+<td><strong>Qwen3-TTS</strong></td>
+<td>Creates a voice from a description and clones a clip. Very natural in French.</td>
+</tr>
+<tr>
+<td><strong>VoxCPM2</strong></td>
+<td>The most faithful cloning, 30 languages, 48 kHz audio. Also creates voices from a description.</td>
+</tr>
+</tbody>
+</table>
+<p>The first install also adds PyTorch (about 3 GB), shared by the three engines.</p>
+<h3 id="generate-a-voice">Generate a voice</h3>
+<ol>
+<li>Pick a voice in <strong>My voices</strong> (<strong>Ready</strong>, <strong>Created</strong> or <strong>Cloned</strong> voices).</li>
+<li>Write the text. Set the <strong>Text language</strong>, the <strong>Speed</strong> and, with VoxCPM2, the <strong>Tone / emotion</strong> (for
+   example "enthusiastic, smiling").</li>
+<li><strong>Generate voice</strong> (or <code>Ctrl+Enter</code>). Long texts are read sentence by sentence with the same voice.</li>
+</ol>
+<p>Each render goes to the history: <strong>Listen</strong>, <strong>Export as MP3</strong>, <strong>Open folder (WAV)</strong> or <strong>Reuse text,
+voice and seed</strong>. Files are saved in <code>Downloads\Orbit\Voix IA</code>.</p>
+<h3 id="create-a-voice-from-words">Create a voice from words</h3>
+<p><strong>Design a voice</strong>: describe the voice (gender, age, timbre, accent…), write a <strong>Test sentence</strong>, then choose
+<strong>1 take</strong> or <strong>3 takes</strong>. Listen, keep your favourite take and give it a <strong>Name</strong>. The kept voice will always
+sound the same.</p>
+<h3 id="clone-a-voice">Clone a voice</h3>
+<p><strong>Clone a voice</strong>: drop an audio or video clip, then choose the <strong>Part to clone</strong> (5 to 30 seconds of a single
+voice) on the waveform. <strong>Use this part</strong> removes music, sound effects and background noise, then transcribes
+what is said. Compare <strong>Cleaned voice</strong> and <strong>Original</strong>, fix the transcript if needed, then <strong>Save voice</strong>.</p>
+<blockquote>
+<p>Only clone your own voice or the voice of someone who gave you their consent.</p>
+</blockquote>
+<h2 id="ai-dubbing">AI Dubbing</h2>
+<p>Dubs any video into another language, <strong>with each person's real voice</strong>.</p>
+<ol>
+<li><strong>Video to dub</strong>: paste a link (YouTube, TikTok…) or <strong>Choose a file</strong>.</li>
+<li><strong>Dub into</strong>: one or more languages. Several languages = one audio track per language in the same video.</li>
+<li><strong>Voice acting</strong>: <strong>Steady</strong> (one steady voice per person, closest to the timbre) or <strong>Emotion of each
+   line</strong> (each line keeps the tone of the original: shouting, whispering…).</li>
+<li><strong>Translation</strong>: local Qwen3-14B (free, offline) or Claude with your API key. You can add <strong>Translation
+   instructions</strong> (informal "you", keep brand names…).</li>
+<li>Options: <strong>Keep the original track</strong>, <strong>Add subtitles</strong>. Then <strong>Dub the video</strong>.</li>
+</ol>
+<p>Orbit downloads the video, separates voices from music, transcribes, recognises who speaks, translates, clones
+each voice, fits each line to the timing and remixes everything.</p>
+<p>The project then opens in the editor:</p>
+<ul>
+<li><strong>Lines</strong>: fix a text, <strong>Listen to the original</strong>, <strong>Listen to the dub</strong>, <strong>Another take (same text)</strong> or
+  <strong>Regenerate this line</strong>;</li>
+<li><strong>Voices</strong>: rename each speaker or replace <strong>Their real voice</strong> with a voice from the AI Voice tab;</li>
+<li><strong>Export with changes</strong> only redoes what changed.</li>
+</ul>
+<p>An interrupted dub can be <strong>resumed</strong> where it stopped. Finished videos are in <code>Downloads\Orbit\Doublage IA</code>.</p>
+<h2 id="ai-foley">AI Foley</h2>
+<p>Gives sound to any video, even a silent one: footsteps, doors, engines, wind, impacts…</p>
+<ol>
+<li><strong>Video</strong>: paste a link or <strong>Choose a file</strong>.</li>
+<li><strong>Sound effect intensity</strong>: stronger = more sounds and less risk of added music.</li>
+<li><strong>Video sound</strong>: <strong>Replace</strong> the sound, or <strong>Add to the original sound</strong> (with the <strong>Original sound</strong> /
+   <strong>Sound effects</strong> balance).</li>
+<li><strong>Generate sound effects</strong>.</li>
+</ol>
+<p>The AI watches the video section by section, describes what it is going to make you hear, then generates
+sounds synced to the picture. To fix a section, edit its description (in English preferably) and run again:
+only the sounds are redone. <strong>Another version</strong> gives a variant. Result as MP4 + WAV in
+<code>Downloads\Orbit\Bruitages IA</code>.</p>
+<h2 id="ai-music">AI Music</h2>
+<p>Composes full songs, with or without vocals, from an idea. ACE-Step 1.5 engine (MIT licence: <strong>your songs belong
+to you</strong>).</p>
+<p>Three modes:</p>
+<ul>
+<li><strong>Simple</strong>: describe your idea ("a happy pop song about holidays, male voice, in English"), then <strong>Create the
+  music</strong>. The AI writes the style and lyrics for you.</li>
+<li><strong>Custom</strong>: write the <strong>Style</strong> and <strong>Lyrics</strong> yourself (or <strong>Write lyrics with AI</strong>), choose
+  <strong>Instrumental</strong> or <strong>With vocals</strong>, the <strong>Duration</strong>, <strong>Language</strong>, <strong>Tempo (BPM)</strong>, <strong>Key</strong> and number of
+  <strong>Variants</strong>.</li>
+<li><strong>Remix</strong>: drop a starting song, describe the <strong>New style</strong> and set the <strong>Faithfulness to the track</strong> (low =
+  very free style, high = keeps the melody and structure).</li>
+</ul>
+<p>A one-minute song is composed in under a minute on a recent RTX card. In the history: <strong>Export as MP3</strong>,
+<strong>Remix this track</strong>, <strong>Reuse the settings</strong> or <strong>Redo a section</strong> (only that section is recomposed, the rest
+does not move).</p>
+<h2 id="voice-changer">Voice Changer</h2>
+<p>Speak with another voice <strong>in real time</strong>, in Discord, OBS or a game.</p>
+<ol>
+<li><strong>Install the Voice Changer</strong> (without an NVIDIA card, it runs on the processor).</li>
+<li>Pick a <strong>Voice</strong>: a voice from the AI Voice tab, or <strong>Clone a voice</strong> from a 5 to 20 second clip of clear
+   speech.</li>
+<li>Choose the <strong>Mic</strong> and the <strong>Output</strong>. For Discord or OBS, install a virtual audio cable (VB-CABLE for
+   example) and choose it as the output: then select it as the microphone in Discord.</li>
+<li><strong>Start</strong>.</li>
+</ol>
+<p>Useful settings:</p>
+<ul>
+<li><strong>Latency</strong>: <strong>Responsive</strong> (about 0.4 s delay, to talk in a game or a call) or <strong>Stable</strong> (about 0.65 s,
+  three times less computing, for a modest or very busy PC);</li>
+<li><strong>Height</strong> (the pitch, in semitones), <strong>Noise threshold (gate)</strong>, <strong>Output volume</strong>, <strong>Headphone monitoring</strong>;</li>
+<li><strong>Effect on/off shortcut</strong>: works even when Orbit is in the background (in game).</li>
+</ul>
+<p><strong>Convert a recording</strong> applies the voice to an audio or video file instead of the microphone (stop the live
+mode first).</p>
+</article>
+<nav class="pager">
+<a class="prev" href="ia-video-3d.html"><span>Previous</span>AI for video and 3D</a>
+<a class="next" href="audio-transcription.html"><span>Next</span>Audio and transcription</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#ai-voice">AI Voice</a></li>
+<li><a href="#ai-dubbing">AI Dubbing</a></li>
+<li><a href="#ai-foley">AI Foley</a></li>
+<li><a href="#ai-music">AI Music</a></li>
+<li><a href="#voice-changer">Voice Changer</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.81.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="../site.js?v=1795359584" defer></script>
+</body>
+</html>

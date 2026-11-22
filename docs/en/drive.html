@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Discord Drive — Orbit</title>
+<title>Orbit Drive — Orbit</title>
 <link rel="icon" href="../logos/orbit.png">
-<link rel="stylesheet" href="../style.css?v=1794509440">
+<link rel="stylesheet" href="../style.css?v=1795359584">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -25,9 +25,10 @@
 <li><a href="conversion.html">Conversion</a></li>
 <li><a href="ia-image.html">AI for images</a></li>
 <li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="voix-musique-ia.html">Voice, dubbing and music AI</a></li>
 <li><a href="audio-transcription.html">Audio and transcription</a></li>
 <li><a href="boite-a-outils.html">Toolbox and media library</a></li>
-<li><a href="drive.html" aria-current="page">Discord Drive</a></li>
+<li><a href="drive.html" aria-current="page">Orbit Drive</a></li>
 <li><a href="reglages.html">Settings</a></li>
 <li><a href="premium.html">Orbit Premium</a></li>
 <li><a href="depannage.html">Troubleshooting</a></li>
@@ -35,8 +36,8 @@
   </nav>
   <main id="content">
 <article>
-<h1 id="discord-drive">Discord Drive</h1>
-<p>The <strong>Discord Drive</strong> stores your files online by cutting them into <strong>encrypted</strong> pieces (AES-256) sent to
+<h1 id="orbit-drive">Orbit Drive</h1>
+<p><strong>Orbit Drive</strong> (the Discord Drive) stores your files online by cutting them into <strong>encrypted</strong> pieces (AES-256) sent to
 Discord. Your files are encrypted on your PC before they leave: neither Discord nor the Orbit server can read
 them.</p>
 <blockquote>
@@ -78,6 +79,51 @@ automatically after a while.</p>
 <h2 id="share-from-the-drive">Share from the Drive</h2>
 <p>In Cloud mode, <strong>Share</strong> on a file or a folder creates a code: the content is re-encrypted with a new key, your
 account key is never sent. Give the share a <strong>title</strong>: it is visible to anyone who has the code.</p>
+<h3 id="protect-a-link">Protect a link</h3>
+<p>When you <strong>Share</strong>, choose:</p>
+<ul>
+<li><strong>Who can open the link</strong>: <strong>Anyone with the link</strong> or <strong>Only me</strong>;</li>
+<li><strong>What people can do</strong>: <strong>View and download</strong>, or <strong>View only</strong> (the person watches but cannot save the
+  file);</li>
+<li>a <strong>Password</strong> (optional): the person must type it to open the link; it is never sent to the server in
+  clear;</li>
+<li>the <strong>Expiry</strong>: <strong>1 day</strong>, <strong>7 days</strong>, <strong>30 days</strong> or <strong>Never</strong>.</li>
+</ul>
+<p>Then <strong>Create the link</strong>. A folder link follows the folder: what you add later shows up for people who already
+have the link. Links also open in a browser, on <a href="https://orbit-drive.com">orbit-drive.com</a>, without installing
+Orbit.</p>
+<h2 id="view-without-downloading">View without downloading</h2>
+<p>In Cloud mode, files have <strong>thumbnails</strong> (photos, videos, 3D models) and folders show a peek of their content.
+<strong>Double-click</strong> a photo or a 3D model to open it in the viewer (<code>←</code> <code>→</code> for the next one, <code>Esc</code> to close);
+videos play directly.</p>
+<h2 id="sync-a-folder-from-your-pc">Sync a folder from your PC</h2>
+<p>Like Google Drive: a folder on your PC stays <strong>identical</strong> to a folder in the Drive, both ways. Every change is
+sent and received automatically.</p>
+<ol>
+<li>In Cloud mode, open <strong>Sync with this PC</strong> then <strong>Sync a folder</strong>.</li>
+<li><strong>Folder on your PC</strong>: <strong>Choose a folder…</strong></li>
+<li><strong>In the Drive</strong>: a new folder with the same name in <strong>My Drive</strong>, or the open folder.</li>
+<li><strong>Sync</strong>.</li>
+</ol>
+<p>The panel shows the status (up to date, files in progress, paused), the <strong>Recent activity</strong>, and the <strong>Sync
+now</strong>, <strong>Pause</strong> / <strong>Resume</strong> and <strong>Stop syncing</strong> buttons (files stay on your PC and in the Drive).</p>
+<blockquote>
+<p>If many files disappear from your PC at once, Orbit asks for a <strong>confirmation</strong> before deleting them from
+the Drive: <strong>Delete from Drive</strong>, or <strong>No, put them back on my PC</strong>.</p>
+</blockquote>
+<p>When you close Orbit, sync keeps running in the background (icon near the clock), using very little memory.</p>
+<h2 id="folders-shared-with-others">Folders shared with others</h2>
+<p>A synced folder can be <strong>shared with other Orbit accounts</strong>, to work together on the same project (Blender,
+After Effects…):</p>
+<ol>
+<li><strong>Share</strong> the folder and type the person's <strong>Orbit account e-mail</strong>.</li>
+<li>Tick <strong>Can edit</strong> (otherwise they are <strong>Read-only</strong>), then <strong>Invite</strong>.</li>
+<li>Access opens as soon as that person opens their Drive once. If they did not see the invitation, send them
+   the link with <strong>Copy invitation link</strong>.</li>
+</ol>
+<p>The person finds the folder in <strong>Shared with me</strong> and can sync it on their PC. Each change reaches the others in
+one to two seconds. <strong>Remove access</strong>, <strong>Stop sharing</strong> or <strong>Leave this folder</strong> at any time. Encryption stays
+end-to-end: the server never sees your files.</p>
 </article>
 <nav class="pager">
 <a class="prev" href="boite-a-outils.html"><span>Previous</span>Toolbox and media library</a>
@@ -87,15 +133,18 @@ account key is never sent. Give the share a <strong>title</strong>: it is visibl
   <aside class="toc"><p>On this page</p><ul><li><a href="#local-mode">Local mode</a></li>
 <li><a href="#cloud-mode-account">Cloud mode (account)</a></li>
 <li><a href="#drop-share-without-an-account">Drop: share without an account</a></li>
-<li><a href="#share-from-the-drive">Share from the Drive</a></li></ul></aside>
+<li><a href="#share-from-the-drive">Share from the Drive</a></li>
+<li><a href="#view-without-downloading">View without downloading</a></li>
+<li><a href="#sync-a-folder-from-your-pc">Sync a folder from your PC</a></li>
+<li><a href="#folders-shared-with-others">Folders shared with others</a></li></ul></aside>
 </div>
 <footer class="foot">
   <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
-  <span>v0.68.0</span>
+  <span>v0.81.0</span>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
 </footer>
-<script src="pages.js?v=1794509440" defer></script>
-<script src="../site.js?v=1794509440" defer></script>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="../site.js?v=1795359584" defer></script>
 </body>
 </html>

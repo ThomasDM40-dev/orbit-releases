@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voix, doublage et musique IA — Orbit</title>
+<link rel="icon" href="logos/orbit.png">
+<link rel="stylesheet" href="style.css?v=1795359584">
+</head>
+<body>
+<a class="skip" href="#content">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="en/voix-musique-ia.html">English</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Télécharger Orbit</a>
+    <p class="dl-hint">Windows 10 et 11, 64 bits · gratuit<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Notes de version</a></p>
+    <details open><summary>Sommaire</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">L&#x27;interface</a></li>
+<li><a href="telechargements.html">Téléchargements</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">IA pour l&#x27;image</a></li>
+<li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="voix-musique-ia.html" aria-current="page">Voix, doublage et musique IA</a></li>
+<li><a href="audio-transcription.html">Audio et transcription</a></li>
+<li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
+<li><a href="drive.html">Orbit Drive</a></li>
+<li><a href="reglages.html">Réglages</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Dépannage</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="voix-doublage-et-musique-ia">Voix, doublage et musique IA</h1>
+<p>Cinq outils pour créer du son avec l'IA, <strong>sur votre PC</strong> : des voix off, le doublage d'une vidéo dans une autre
+langue, des bruitages, de la musique et un changeur de voix en direct. Ils font tous partie
+d'<a href="premium.html">Orbit Premium</a> et demandent une carte graphique <strong>NVIDIA</strong> (sauf Kokoro et le changeur de voix,
+qui marchent aussi sur le processeur).</p>
+<p>Rien n'est envoyé en ligne : pas d'abonnement, pas de limite de caractères, pas de filigrane.</p>
+<h2 id="voix-ia">Voix IA</h2>
+<p>Un studio de voix off : écrivez un texte, choisissez une voix, Orbit la lit.</p>
+<h3 id="installer-un-moteur">Installer un moteur</h3>
+<p>Au premier lancement, <strong>Choisir un moteur</strong> ouvre la liste des <strong>Moteurs de voix</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Moteur</th>
+<th>Points forts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Kokoro</strong></td>
+<td>Ultra rapide et léger, marche sans carte graphique. Voix toutes faites (une seule voix française).</td>
+</tr>
+<tr>
+<td><strong>Qwen3-TTS</strong></td>
+<td>Crée une voix à partir d'une description et clone un extrait. Très naturel en français.</td>
+</tr>
+<tr>
+<td><strong>VoxCPM2</strong></td>
+<td>Le clonage le plus fidèle, 30 langues, audio 48 kHz. Crée aussi des voix par description.</td>
+</tr>
+</tbody>
+</table>
+<p>La première installation ajoute aussi PyTorch (environ 3 Go), partagé par les trois moteurs.</p>
+<h3 id="générer-une-voix">Générer une voix</h3>
+<ol>
+<li>Choisissez une voix dans <strong>Mes voix</strong> (voix <strong>Prêtes</strong>, <strong>Créées</strong> ou <strong>Clonées</strong>).</li>
+<li>Écrivez le texte. Réglez la <strong>Langue du texte</strong>, la <strong>Vitesse</strong> et, avec VoxCPM2, le <strong>Ton / émotion</strong>
+   (par exemple « enthousiaste, souriant »).</li>
+<li><strong>Générer la voix</strong> (ou <code>Ctrl+Entrée</code>). Les longs textes sont lus phrase par phrase avec la même voix.</li>
+</ol>
+<p>Chaque rendu arrive dans l'historique : <strong>Écouter</strong>, <strong>Exporter en MP3</strong>, <strong>Ouvrir le dossier (WAV)</strong> ou
+<strong>Réutiliser texte, voix et seed</strong>. Les fichiers sont rangés dans <code>Téléchargements\Orbit\Voix IA</code>.</p>
+<h3 id="créer-une-voix-avec-des-mots">Créer une voix avec des mots</h3>
+<p><strong>Créer une voix</strong> : décrivez la voix (genre, âge, timbre, accent…), écrivez une <strong>Phrase d'essai</strong>, puis
+choisissez <strong>1 essai</strong> ou <strong>3 essais</strong>. Écoutez, gardez votre essai préféré et donnez-lui un <strong>Nom</strong>. La voix
+gardée sonnera toujours pareil.</p>
+<h3 id="cloner-une-voix">Cloner une voix</h3>
+<p><strong>Cloner une voix</strong> : glissez un extrait audio ou vidéo, puis choisissez la <strong>Partie à cloner</strong> (5 à 30 secondes
+d'une seule voix) sur la forme d'onde. <strong>Utiliser cette partie</strong> retire la musique, les bruitages et le bruit de
+fond, puis transcrit ce qui est dit. Comparez <strong>Voix nettoyée</strong> et <strong>Originale</strong>, corrigez la transcription si
+besoin, puis <strong>Enregistrer la voix</strong>.</p>
+<blockquote>
+<p>Ne clonez que votre propre voix ou celle d'une personne qui vous a donné son accord.</p>
+</blockquote>
+<h2 id="doublage-ia">Doublage IA</h2>
+<p>Double n'importe quelle vidéo dans une autre langue, <strong>avec la vraie voix de chaque personne</strong>.</p>
+<ol>
+<li><strong>Vidéo à doubler</strong> : collez un lien (YouTube, TikTok…) ou <strong>Choisir un fichier</strong>.</li>
+<li><strong>Doubler en</strong> : une ou plusieurs langues. Plusieurs langues = une piste audio par langue dans la même vidéo.</li>
+<li><strong>Jeu des voix</strong> : <strong>Stable</strong> (une voix régulière par personne, la plus fidèle au timbre) ou <strong>Émotion de
+   chaque phrase</strong> (chaque réplique reprend le ton de l'original : cris, chuchotements…).</li>
+<li><strong>Traduction</strong> : Qwen3-14B en local (gratuit, hors ligne) ou Claude avec votre clé API. Vous pouvez ajouter
+   des <strong>Consignes de traduction</strong> (tutoyer, garder les noms de marques…).</li>
+<li>Options : <strong>Garder la piste originale</strong>, <strong>Ajouter les sous-titres</strong>. Puis <strong>Doubler la vidéo</strong>.</li>
+</ol>
+<p>Orbit télécharge la vidéo, sépare les voix de la musique, transcrit, reconnaît qui parle, traduit, clone chaque
+voix, cale chaque réplique sur le timing et remixe le tout.</p>
+<p>Le projet s'ouvre ensuite dans l'éditeur :</p>
+<ul>
+<li><strong>Répliques</strong> : corrigez un texte, <strong>Écouter l'original</strong>, <strong>Écouter le doublage</strong>, <strong>Autre prise (même
+  texte)</strong> ou <strong>Régénérer cette réplique</strong> ;</li>
+<li><strong>Voix</strong> : renommez chaque locuteur ou remplacez <strong>Sa vraie voix</strong> par une voix de l'onglet Voix IA ;</li>
+<li><strong>Exporter avec les modifications</strong> refait seulement ce qui a changé.</li>
+</ul>
+<p>Un doublage interrompu peut être <strong>repris</strong> là où il s'est arrêté. Les vidéos finies sont dans
+<code>Téléchargements\Orbit\Doublage IA</code>.</p>
+<h2 id="bruitages-ia">Bruitages IA</h2>
+<p>Donne du son à n'importe quelle vidéo, même muette : pas, portes, moteurs, vent, impacts…</p>
+<ol>
+<li><strong>Vidéo</strong> : collez un lien ou <strong>Choisir un fichier</strong>.</li>
+<li><strong>Présence des bruitages</strong> : plus appuyé = plus de sons et moins de risque de musique ajoutée.</li>
+<li><strong>Son de la vidéo</strong> : <strong>Remplacer</strong> le son, ou <strong>Ajouter au son d'origine</strong> (avec le dosage <strong>Son
+   d'origine</strong> / <strong>Bruitages</strong>).</li>
+<li><strong>Générer les bruitages</strong>.</li>
+</ol>
+<p>L'IA regarde la vidéo passage par passage, décrit ce qu'elle va faire entendre, puis génère des sons calés sur
+l'image. Pour corriger un passage, modifiez sa description (en anglais de préférence) et relancez : seuls les
+sons sont refaits. <strong>Autre version</strong> donne une variante. Résultat en MP4 + WAV dans
+<code>Téléchargements\Orbit\Bruitages IA</code>.</p>
+<h2 id="musique-ia">Musique IA</h2>
+<p>Compose des morceaux complets, avec ou sans voix, à partir d'une idée. Moteur ACE-Step 1.5 (licence MIT : <strong>vos
+morceaux vous appartiennent</strong>).</p>
+<p>Trois modes :</p>
+<ul>
+<li><strong>Simple</strong> : décrivez votre idée (« une chanson pop joyeuse sur les vacances, voix d'homme, en français »),
+  puis <strong>Créer la musique</strong>. L'IA écrit le style et les paroles pour vous.</li>
+<li><strong>Personnalisé</strong> : écrivez vous-même le <strong>Style</strong> et les <strong>Paroles</strong> (ou <strong>Écrire les paroles avec l'IA</strong>),
+  choisissez <strong>Instrumental</strong> ou <strong>Avec voix</strong>, la <strong>Durée</strong>, la <strong>Langue</strong>, le <strong>Tempo (BPM)</strong>, la
+  <strong>Tonalité</strong> et le nombre de <strong>Variantes</strong>.</li>
+<li><strong>Remix</strong> : glissez un morceau de départ, décrivez le <strong>Nouveau style</strong> et réglez la <strong>Fidélité au morceau</strong>
+  (bas = style très libre, haut = garde la mélodie et la structure).</li>
+</ul>
+<p>Un morceau d'une minute se compose en moins d'une minute sur une RTX récente. Dans l'historique : <strong>Exporter en
+MP3</strong>, <strong>Remixer ce morceau</strong>, <strong>Réutiliser les réglages</strong> ou <strong>Refaire un passage</strong> (seul ce passage est
+recomposé, le reste ne bouge pas).</p>
+<h2 id="changeur-de-voix">Changeur de voix</h2>
+<p>Parle avec une autre voix <strong>en temps réel</strong>, dans Discord, OBS ou un jeu.</p>
+<ol>
+<li><strong>Installer le changeur de voix</strong> (sans carte NVIDIA, il tourne sur le processeur).</li>
+<li>Choisissez une <strong>Voix</strong> : une voix de l'onglet Voix IA, ou <strong>Cloner une voix</strong> depuis un extrait de 5 à 20
+   secondes de voix claire.</li>
+<li>Choisissez le <strong>Micro</strong> et la <strong>Sortie</strong>. Pour Discord ou OBS, installez un câble audio virtuel (par exemple
+   VB-CABLE) et choisissez-le comme sortie : dans Discord, sélectionnez-le ensuite comme micro.</li>
+<li><strong>Démarrer</strong>.</li>
+</ol>
+<p>Réglages utiles :</p>
+<ul>
+<li><strong>Latence</strong> : <strong>Réactif</strong> (environ 0,4 s de décalage, pour parler en jeu ou en appel) ou <strong>Stable</strong> (environ
+  0,65 s, trois fois moins de calcul, pour un PC modeste ou très chargé) ;</li>
+<li><strong>Hauteur</strong> en demi-tons, <strong>Seuil de bruit (gate)</strong>, <strong>Volume de sortie</strong>, <strong>Retour casque</strong> ;</li>
+<li><strong>Raccourci effet on/off</strong> : il marche même quand Orbit est en arrière-plan (en jeu).</li>
+</ul>
+<p><strong>Convertir un enregistrement</strong> applique la voix à un fichier audio ou vidéo au lieu du micro (arrêtez d'abord
+le direct).</p>
+</article>
+<nav class="pager">
+<a class="prev" href="ia-video-3d.html"><span>Précédent</span>IA pour la vidéo et la 3D</a>
+<a class="next" href="audio-transcription.html"><span>Suivant</span>Audio et transcription</a>
+</nav>
+  </main>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#voix-ia">Voix IA</a></li>
+<li><a href="#doublage-ia">Doublage IA</a></li>
+<li><a href="#bruitages-ia">Bruitages IA</a></li>
+<li><a href="#musique-ia">Musique IA</a></li>
+<li><a href="#changeur-de-voix">Changeur de voix</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.81.0</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
+</footer>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="site.js?v=1795359584" defer></script>
+</body>
+</html>

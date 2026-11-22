@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IA pour la vidéo et la 3D — Orbit</title>
 <link rel="icon" href="logos/orbit.png">
-<link rel="stylesheet" href="style.css?v=1794509440">
+<link rel="stylesheet" href="style.css?v=1795359584">
 </head>
 <body>
 <a class="skip" href="#content">Aller au contenu</a>
@@ -25,9 +25,10 @@
 <li><a href="conversion.html">Conversion</a></li>
 <li><a href="ia-image.html">IA pour l&#x27;image</a></li>
 <li><a href="ia-video-3d.html" aria-current="page">IA pour la vidéo et la 3D</a></li>
+<li><a href="voix-musique-ia.html">Voix, doublage et musique IA</a></li>
 <li><a href="audio-transcription.html">Audio et transcription</a></li>
 <li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
-<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="drive.html">Orbit Drive</a></li>
 <li><a href="reglages.html">Réglages</a></li>
 <li><a href="premium.html">Orbit Premium</a></li>
 <li><a href="depannage.html">Dépannage</a></li>
@@ -122,24 +123,71 @@ l'installation ; si elle est interrompue, elle reprend là où elle s'était arr
 <li><strong>Exporter</strong> : GLB, OBJ, STL, PLY, ou <strong>FBX riggé</strong> (squelette, poids et textures pour Unity ou Unreal).</li>
 </ul>
 <p>Toutes vos créations restent dans la galerie en bas de l'écran.</p>
+<h2 id="matériaux-pbr">Matériaux PBR</h2>
+<p>Transforme <strong>une seule photo</strong> d'une surface (bois, pierre, béton, tissu…) en <strong>matériau PBR complet</strong>, prêt pour
+Blender, Unreal, Unity ou Substance. Fait partie d'<a href="premium.html">Orbit Premium</a> ; carte NVIDIA requise.</p>
+<ol>
+<li><strong>Installer les matériaux PBR</strong> (une seule fois).</li>
+<li><strong>Photo de la surface</strong> : glissez une photo prise <strong>de face</strong>, sans perspective.</li>
+<li><strong>Créer le matériau</strong> : l'IA analyse la surface (quelques secondes) et l'<strong>Aperçu en direct</strong> montre le
+   matériau sur un plan 3D éclairé.</li>
+<li>Ajustez si besoin :<ul>
+<li><strong>Résolution</strong> (jusqu'à 4K) et <strong>Sans couture</strong> (la texture se répète sans raccord visible) ;</li>
+<li><strong>Aplanir l'éclairage de la photo</strong> : retire les ombres de la couleur ;</li>
+<li><strong>Relief</strong> : <strong>Force des normales</strong>, détails fins ou grandes formes, <strong>Contraste de la hauteur</strong>, sens du
+ relief (<strong>Clair = haut</strong> ou <strong>Sombre = haut</strong>, <strong>Auto</strong> par défaut) ;</li>
+<li><strong>Occlusion</strong>, <strong>Rugosité</strong> (niveau, variation) et <strong>Métal</strong>.</li>
+</ul>
+</li>
+<li><strong>Exporter</strong> : couleur (albedo), normales OpenGL <strong>et</strong> DirectX, hauteur, rugosité, métal, occlusion, avec
+   en option un fichier <strong>.glb</strong> pour l'aperçu dans Blender, Unity ou le web.</li>
+</ol>
+<blockquote>
+<p>Les meilleurs résultats viennent d'une photo nette, prise par temps couvert (lumière douce), bien de face.</p>
+</blockquote>
+<h2 id="mocap-ia">Mocap IA</h2>
+<p>Transforme une <strong>vidéo</strong> en <strong>animation 3D</strong> : le mouvement de la personne filmée devient un squelette animé,
+sans combinaison ni capteurs. Fait partie d'<a href="premium.html">Orbit Premium</a> ; carte NVIDIA requise.</p>
+<ol>
+<li><strong>Installer la mocap IA</strong> (une seule fois).</li>
+<li><strong>Vidéo</strong> : collez un lien ou glissez un fichier. Meilleur résultat : le corps entier dans le cadre, sans
+   coupe de plan. Choisissez le <strong>Début</strong> et la <strong>Durée</strong> ; les vidéos de plus d'une minute sont capturées en
+   prises d'une minute.</li>
+<li><strong>Personnes</strong> : la plus présente dans la vidéo, ou une autre.</li>
+<li><strong>Caméra</strong> : <strong>Auto</strong> (Orbit détecte si la caméra bouge), <strong>Fixe</strong> (caméra sur pied, le plus stable) ou
+   <strong>En mouvement</strong> (panoramique, travelling, caméra à l'épaule : le mouvement de la caméra est retiré).</li>
+<li><strong>Qualité du mouvement</strong> : <strong>Contacts au sol</strong> (<strong>Sol plat</strong>, <strong>Escaliers</strong> ou <strong>Libres</strong>), verrouillage
+   des pieds, <strong>Mains en appui</strong> (pompes, murs), <strong>Lissage</strong> (de <strong>Aucun</strong> à <strong>Fort</strong>).</li>
+<li>Option <strong>Visage (expressions ARKit)</strong> : enregistre aussi les expressions du visage (CSV Live Link Face).</li>
+<li><strong>Capturer le mouvement</strong>. L'<strong>Aperçu en direct</strong> montre les points du corps détectés pendant le calcul.</li>
+</ol>
+<p><strong>Exporter en</strong> BVH, FBX, GLB ou .blend. FBX, GLB et .blend demandent <a href="https://www.blender.org">Blender</a>
+(gratuit) : sans lui, seul le BVH est créé. Profils prêts pour Blender, Unreal Engine et Mixamo.</p>
+<h3 id="appliquer-sur-votre-personnage">Appliquer sur votre personnage</h3>
+<p>Dans <strong>Personnage</strong>, choisissez votre modèle (FBX, GLB, VRM ou .blend) : Orbit reconnaît tout seul ses os
+(Mixamo, Unreal, Unity, Rigify, VRoid…). <strong>Ajuster les os</strong> permet de corriger une association. Cochez <strong>Sur
+place (sans déplacement)</strong> pour une animation qui ne se déplace pas, puis <strong>Appliquer sur mon personnage</strong> et
+<strong>Ouvrir dans Blender</strong>.</p>
 </article>
 <nav class="pager">
 <a class="prev" href="ia-image.html"><span>Précédent</span>IA pour l&#x27;image</a>
-<a class="next" href="audio-transcription.html"><span>Suivant</span>Audio et transcription</a>
+<a class="next" href="voix-musique-ia.html"><span>Suivant</span>Voix, doublage et musique IA</a>
 </nav>
   </main>
   <aside class="toc"><p>Sur cette page</p><ul><li><a href="#interpolateur-ia">Interpolateur IA</a></li>
 <li><a href="#topaz-video-ai">Topaz Video AI</a></li>
 <li><a href="#paint-a-plate">Paint a plate</a></li>
-<li><a href="#ia-création-3d">IA Création 3D</a></li></ul></aside>
+<li><a href="#ia-création-3d">IA Création 3D</a></li>
+<li><a href="#matériaux-pbr">Matériaux PBR</a></li>
+<li><a href="#mocap-ia">Mocap IA</a></li></ul></aside>
 </div>
 <footer class="foot">
   <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
-  <span>v0.68.0</span>
+  <span>v0.81.0</span>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
 </footer>
-<script src="pages.js?v=1794509440" defer></script>
-<script src="site.js?v=1794509440" defer></script>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="site.js?v=1795359584" defer></script>
 </body>
 </html>

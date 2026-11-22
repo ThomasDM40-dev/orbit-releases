@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orbit — Orbit</title>
 <link rel="icon" href="logos/orbit.png">
-<link rel="stylesheet" href="style.css?v=1794509440">
+<link rel="stylesheet" href="style.css?v=1795359584">
 </head>
 <body>
 <a class="skip" href="#content">Aller au contenu</a>
@@ -25,9 +25,10 @@
 <li><a href="conversion.html">Conversion</a></li>
 <li><a href="ia-image.html">IA pour l&#x27;image</a></li>
 <li><a href="ia-video-3d.html">IA pour la vidéo et la 3D</a></li>
+<li><a href="voix-musique-ia.html">Voix, doublage et musique IA</a></li>
 <li><a href="audio-transcription.html">Audio et transcription</a></li>
 <li><a href="boite-a-outils.html">Boîte à outils et médiathèque</a></li>
-<li><a href="drive.html">Drive Discord</a></li>
+<li><a href="drive.html">Orbit Drive</a></li>
 <li><a href="reglages.html">Réglages</a></li>
 <li><a href="premium.html">Orbit Premium</a></li>
 <li><a href="depannage.html">Dépannage</a></li>
@@ -48,7 +49,7 @@ tournent sur votre propre ordinateur.</p>
 
 <div class="badges">
 <span>Windows 10 et 11</span>
-<span>17 outils</span>
+<span>25 outils</span>
 <span>IA locale (GPU)</span>
 <span>Français, English, Español, Deutsch, Italiano, Português</span>
 </div>
@@ -61,9 +62,11 @@ tournent sur votre propre ordinateur.</p>
 <li><strong>convertir</strong> n'importe quel fichier : vidéo (accélérée par la carte graphique NVIDIA), audio, image, LUT,
   polices, modèles 3D, documents, préréglages After Effects ;</li>
 <li><strong>améliorer et créer avec l'IA</strong> : générer des images, effacer ou remplacer un objet, détourer, agrandir une
-  vidéo, la rendre plus fluide, transformer une image en modèle 3D, retoucher un plan vidéo ;</li>
+  vidéo, la rendre plus fluide, transformer une image en modèle 3D, une photo en matériau PBR, une vidéo en animation 3D (mocap), retoucher un plan vidéo ;</li>
 <li><strong>travailler le son</strong> : séparer la voix de la musique, débruiter, normaliser, transcrire et sous-titrer ;</li>
-<li><strong>ranger et partager</strong> : médiathèque, boîte à outils de plus de 60 petits outils, stockage cloud chiffré.</li>
+<li><strong>créer du son avec l'IA</strong> : voix off et clonage de voix, doublage d'une vidéo dans une autre langue,
+  bruitages, musique, changeur de voix en direct ;</li>
+<li><strong>ranger et partager</strong> : médiathèque, boîte à outils de plus de 60 petits outils, stockage cloud chiffré, synchronisation de dossiers et partage à plusieurs.</li>
 </ul>
 <p>La plupart des outils IA tournent <strong>sur votre ordinateur</strong> : vos fichiers ne quittent pas votre machine, et une
 fois les modèles téléchargés, ils fonctionnent sans connexion.</p>
@@ -77,10 +80,11 @@ fois les modèles téléchargés, ils fonctionnent sans connexion.</p>
 <a href="telechargements.html">Téléchargements<small>Vidéos, musique, playlists, abonnements.</small></a>
 <a href="conversion.html">Conversion<small>Convertisseur universel et HandBrake.</small></a>
 <a href="ia-image.html">IA pour l'image<small>Génération, gomme magique, détourage, amélioration.</small></a>
-<a href="ia-video-3d.html">IA pour la vidéo et la 3D<small>Interpolation, Topaz, Paint a plate, création 3D.</small></a>
+<a href="ia-video-3d.html">IA pour la vidéo et la 3D<small>Interpolation, Topaz, Paint a plate, 3D, PBR, mocap.</small></a>
+<a href="voix-musique-ia.html">Voix, doublage et musique IA<small>Voix off, doublage, bruitages, musique, changeur de voix.</small></a>
 <a href="audio-transcription.html">Audio et transcription<small>Studio Audio, sous-titres automatiques.</small></a>
 <a href="boite-a-outils.html">Boîte à outils et médiathèque<small>Plus de 60 outils rapides, vos médias.</small></a>
-<a href="drive.html">Drive Discord<small>Stockage chiffré et partage par code.</small></a>
+<a href="drive.html">Orbit Drive<small>Stockage chiffré, synchro de dossiers, partage.</small></a>
 <a href="reglages.html">Réglages<small>Chaque page des réglages, carte graphique.</small></a>
 <a href="premium.html">Orbit Premium<small>Ce qui est inclus et comment l'activer.</small></a>
 <a href="depannage.html">Dépannage<small>Les problèmes courants et leurs solutions.</small></a>
@@ -125,7 +129,7 @@ fois les modèles téléchargés, ils fonctionnent sans connexion.</p>
 </table>
 <p>Les outils de téléchargement, de conversion et la boîte à outils marchent sur n'importe quel PC. Les outils IA
 utilisent la carte graphique quand elle est là ; certains (IA Création 3D, Paint a plate, Génération IA en
-local) demandent une carte <strong>NVIDIA</strong>.</p>
+local, Voix IA, Doublage, Bruitages, Musique, Matériaux PBR, Mocap) demandent une carte <strong>NVIDIA</strong>.</p>
 </article>
 <nav class="pager">
 <a class="next" href="installation.html"><span>Suivant</span>Installation</a>
@@ -137,11 +141,11 @@ local) demandent une carte <strong>NVIDIA</strong>.</p>
 </div>
 <footer class="foot">
   <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
-  <span>v0.68.0</span>
+  <span>v0.81.0</span>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
 </footer>
-<script src="pages.js?v=1794509440" defer></script>
-<script src="site.js?v=1794509440" defer></script>
+<script src="pages.js?v=1795359584" defer></script>
+<script src="site.js?v=1795359584" defer></script>
 </body>
 </html>
