@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orbit Drive — Orbit</title>
 <link rel="icon" href="logos/orbit.png">
-<link rel="stylesheet" href="style.css?v=1795359584">
+<link rel="stylesheet" href="style.css?v=1795360507">
 </head>
 <body>
 <a class="skip" href="#content">Aller au contenu</a>
@@ -37,112 +37,186 @@
   <main id="content">
 <article>
 <h1 id="orbit-drive">Orbit Drive</h1>
-<p><strong>Orbit Drive</strong> (le Drive Discord) stocke vos fichiers en ligne en les découpant en morceaux <strong>chiffrés</strong> (AES-256) envoyés
-sur Discord. Vos fichiers sont chiffrés sur votre PC avant l'envoi : ni Discord ni le serveur d'Orbit ne peuvent
-les lire.</p>
+<p><strong>Orbit Drive</strong> est votre stockage en ligne, <strong>chiffré de bout en bout</strong> (AES-256) : vos fichiers sont chiffrés
+sur votre PC avant l'envoi, ni le serveur d'Orbit ni Discord ne peuvent les lire. Il sert aussi à <strong>partager</strong>
+des fichiers par lien, à <strong>synchroniser</strong> des dossiers de votre PC et à <strong>travailler à plusieurs</strong> sur un même
+dossier. Tout ce qui est dans votre Drive se retrouve aussi sur <a href="https://orbit-drive.com">orbit-drive.com</a>.</p>
 <blockquote>
-<p>Discord n'est pas fait pour stocker des fichiers et ses conditions d'utilisation ne le prévoient pas : un
-salon ou un compte peut être supprimé. <strong>Gardez toujours une autre copie de vos fichiers importants.</strong></p>
+<p>Les morceaux chiffrés sont stockés sur Discord (ou Telegram). Ces services ne sont pas faits pour ça et un
+compte peut être supprimé : <strong>gardez toujours une autre copie de vos fichiers importants.</strong></p>
 </blockquote>
-<p>L'onglet a trois modes, en haut à droite : <strong>Local</strong>, <strong>Cloud (compte)</strong> et <strong>Drop</strong>.</p>
-<figure><a href="images/drive.jpg"><img alt="Le Drive Discord en mode Local, à configurer" src="images/drive.jpg" loading="lazy"></a><figcaption>Le Drive Discord en mode Local, à configurer</figcaption></figure>
-<h2 id="mode-local">Mode Local</h2>
-<p>Tout reste sur votre PC (la liste des fichiers et la clé), les morceaux vont dans votre propre salon Discord.</p>
+<p>L'onglet a trois modes, en haut à droite : <strong>Cloud (compte)</strong>, <strong>Drop</strong> et <strong>Local</strong> (le mode Local n'apparaît
+que si vous l'utilisez déjà).</p>
+<figure><a href="images/drive.jpg"><img alt="Orbit Drive" src="images/drive.jpg" loading="lazy"></a><figcaption>Orbit Drive</figcaption></figure>
+<h2 id="se-connecter">Se connecter</h2>
 <ol>
-<li>Sur Discord, choisissez ou créez un <strong>salon privé</strong>.</li>
-<li><strong>Paramètres du salon › Intégrations › Webhooks › Nouveau webhook</strong>, puis <strong>Copier l'URL du webhook</strong>.</li>
-<li>Dans Orbit, collez-la dans <strong>URL du webhook Discord</strong>. Plusieurs webhooks (un par ligne, dans des salons
-   différents) rendent les envois plus rapides.</li>
-<li>Choisissez une <strong>Phrase secrète de chiffrement</strong> forte, puis <strong>Configurer le Drive</strong>.</li>
+<li><strong>Créer un compte</strong> (e-mail et mot de passe) ou <strong>Se connecter</strong>. Vous pouvez aussi vous connecter en un clic
+   avec <strong>Google</strong> ou <strong>Discord</strong> : la connexion s'ouvre dans votre navigateur puis revient seule dans Orbit.</li>
+<li>Choisissez une <strong>phrase secrète de chiffrement</strong>. Elle protège votre <strong>coffre</strong> (les clés de vos fichiers) et
+   marche sur tous vos appareils.</li>
 </ol>
+<p>À chaque ouverture, saisissez la phrase pour <strong>Déverrouiller</strong> le Drive ; <strong>Verrouiller</strong> le referme.</p>
+<ul>
+<li><strong>Mot de passe oublié ?</strong> envoie un code par e-mail. Il change le mot de passe de connexion, pas la phrase
+  secrète.</li>
+<li><strong>Phrase secrète oubliée ?</strong> crée une nouvelle phrase. Vos fichiers personnels, impossibles à déchiffrer sans
+  l'ancienne, sont supprimés ; les dossiers partagés avec vous reviennent tout seuls.</li>
+</ul>
 <blockquote>
-<p>Sans la phrase secrète, personne ne peut relire les fichiers, <strong>vous non plus</strong>. Notez-la en lieu sûr : elle
-ne peut pas être récupérée.</p>
+<p>Personne ne peut retrouver votre phrase secrète, pas même Orbit. Notez-la en lieu sûr.</p>
 </blockquote>
-<p>À chaque ouverture, saisissez la phrase pour <strong>Déverrouiller</strong> le Drive. <strong>Verrouiller</strong> le referme.</p>
-<h2 id="mode-cloud-compte">Mode Cloud (compte)</h2>
-<p>Le mode Cloud utilise un <strong>compte Orbit</strong> : vos fichiers vous suivent sur tous vos PC.</p>
-<ol>
-<li><strong>Créer un compte</strong> (e-mail et mot de passe) ou <strong>Se connecter</strong>.</li>
-<li>Choisissez une <strong>phrase secrète de chiffrement</strong> ; elle protège vos fichiers et fonctionne sur tous vos
-   appareils.</li>
-</ol>
-<p>Ensuite : <strong>Envoyer des fichiers</strong>, <strong>Nouveau dossier</strong>, <strong>Actualiser</strong>, filtrer, télécharger, supprimer. Les
-vidéos se lisent directement depuis le Drive. <strong>Mot de passe oublié ?</strong> envoie un code par e-mail ; il change le
-mot de passe de connexion, pas la phrase secrète.</p>
-<p>Le bouton <strong>Telegram</strong> permet de stocker sur votre compte Telegram (dans vos <strong>Messages enregistrés</strong>) plutôt
-que sur Discord. La connexion Telegram reste sur votre PC.</p>
-<h2 id="drop--partager-sans-compte">Drop : partager sans compte</h2>
-<p><strong>Drop</strong> envoie un fichier à quelqu'un, même sans compte : Orbit le chiffre avec une clé à usage unique et vous
-donne un <strong>code de partage</strong>. La personne colle ce code dans <strong>Drop › Récupérer</strong> pour télécharger et déchiffrer
-le fichier. Les Drops expirent automatiquement après un certain temps.</p>
-<p>Les <strong>dossiers partagés</strong> (codes qui commencent par <code>orbf1_</code>) s'ouvrent au même endroit ; vous pouvez les
-télécharger, les lire ou les <strong>Enregistrer dans mon Drive</strong>.</p>
-<h2 id="partager-depuis-le-drive">Partager depuis le Drive</h2>
-<p>Dans le mode Cloud, <strong>Partager</strong> un fichier ou un dossier crée un code : le contenu est rechiffré avec une clé
-neuve, votre clé de compte n'est jamais transmise. Donnez un <strong>titre au partage</strong> : il est visible par ceux qui
-ont le code.</p>
-<h3 id="protéger-un-lien">Protéger un lien</h3>
-<p>Au moment de <strong>Partager</strong>, choisissez :</p>
+<h2 id="ranger-vos-fichiers">Ranger vos fichiers</h2>
+<ul>
+<li><strong>Envoyer des fichiers</strong>, <strong>Envoyer un dossier</strong> (avec ses sous-dossiers) ou glissez-les directement dans la
+  fenêtre. <strong>Nouveau dossier</strong> et <strong>Actualiser</strong> sont dans la même barre.</li>
+<li><strong>Rechercher</strong> par nom, ou tapez <code>#tag</code> pour retrouver tout ce qui porte un tag.</li>
+<li><strong>Trier et filtrer</strong> : par nom, date, taille ou type, dans un sens ou dans l'autre ; n'afficher que les
+  dossiers, vidéos, images, audio, documents ou archives. Vue <strong>Grille</strong> ou <strong>Liste</strong>.</li>
+<li>Les photos, vidéos et modèles 3D ont une <strong>miniature</strong>, les dossiers montrent un aperçu de leur contenu, et
+  les fichiers de création affichent le logo de leur logiciel (Blender, After Effects, Photoshop…).</li>
+</ul>
+<h3 id="le-menu-dun-fichier-ou-dun-dossier">Le menu d'un fichier ou d'un dossier</h3>
+<p>Clic droit (ou bouton <strong>Actions</strong>) sur un élément :</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Ce qu'elle fait</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ouvrir</strong> / <strong>Lire</strong></td>
+<td>Ouvre un dossier, lit une vidéo ou un son, affiche une photo ou un modèle 3D</td>
+</tr>
+<tr>
+<td><strong>Télécharger</strong></td>
+<td>Enregistre le fichier (ou le dossier entier) sur votre PC</td>
+</tr>
+<tr>
+<td><strong>Partager le lien</strong></td>
+<td>Crée un lien de partage, voir plus bas</td>
+</tr>
+<tr>
+<td><strong>Partager avec des personnes…</strong></td>
+<td>Invite d'autres comptes Orbit dans un dossier</td>
+</tr>
+<tr>
+<td><strong>Synchroniser sur ce PC…</strong></td>
+<td>Garde ce dossier identique à un dossier de votre PC</td>
+</tr>
+<tr>
+<td><strong>Renommer</strong>, <strong>Déplacer vers…</strong></td>
+<td>Change le nom ou l'emplacement</td>
+</tr>
+<tr>
+<td><strong>Copier vers…</strong>, <strong>Dupliquer</strong></td>
+<td>Copie instantanée : rien n'est renvoyé, et supprimer l'original ne touche pas à la copie</td>
+</tr>
+<tr>
+<td><strong>Tags…</strong>, <strong>Couleur</strong></td>
+<td>Ajoute des tags de couleur ou colore un dossier pour le repérer</td>
+</tr>
+<tr>
+<td><strong>Propriétés</strong></td>
+<td>Type, taille exacte, contenu, emplacement, date, tags, chiffrement</td>
+</tr>
+<tr>
+<td><strong>Supprimer</strong></td>
+<td>Supprime l'élément (<code>Suppr</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Sélectionner</strong> plusieurs éléments permet de les déplacer, copier, taguer ou supprimer d'un coup.</p>
+<h3 id="voir-sans-télécharger">Voir sans télécharger</h3>
+<p>Un <strong>double-clic</strong> sur une photo ou un modèle 3D (GLB, FBX, OBJ, STL, PLY) l'ouvre dans la visionneuse, sans
+rien enregistrer sur votre PC : flèches <code>←</code> <code>→</code> pour passer au fichier suivant du dossier, <code>Échap</code> pour fermer.
+Pour les modèles 3D, les textures sont retrouvées toutes seules dans le dossier du modèle. Les vidéos se lisent
+directement.</p>
+<h3 id="transferts">Transferts</h3>
+<p>Chaque envoi ou téléchargement se met en <strong>pause</strong> et reprend, à côté du bouton Annuler. <strong>Tout arrêter</strong>, en
+haut du Drive, annule tous les transferts en cours et met les synchronisations en pause.</p>
+<h2 id="partager-un-lien">Partager un lien</h2>
+<p><strong>Partager le lien</strong> sur un fichier ou un dossier crée un lien en une seconde (rien n'est renvoyé). Donnez un
+<strong>titre</strong> au partage, puis choisissez :</p>
 <ul>
 <li><strong>Qui peut ouvrir le lien</strong> : <strong>Toute personne avec le lien</strong> ou <strong>Moi seulement</strong> ;</li>
-<li><strong>Ce qu'on peut faire</strong> : <strong>Lire et télécharger</strong>, ou <strong>Lire seulement</strong> (la personne regarde, sans pouvoir
-  enregistrer le fichier) ;</li>
-<li>un <strong>Mot de passe</strong> (facultatif) : la personne doit le taper pour ouvrir le lien ; il n'est jamais envoyé
-  au serveur en clair ;</li>
+<li><strong>Ce qu'on peut faire</strong> : <strong>Lire et télécharger</strong>, ou <strong>Lire seulement</strong> (la personne regarde et lit les
+  vidéos, sans pouvoir enregistrer les fichiers) ;</li>
+<li>un <strong>Mot de passe</strong> (facultatif) : il ne quitte jamais votre PC, donnez-le séparément ;</li>
 <li>l'<strong>Expiration</strong> : <strong>1 jour</strong>, <strong>7 jours</strong>, <strong>30 jours</strong> ou <strong>Jamais</strong>.</li>
 </ul>
-<p>Puis <strong>Créer le lien</strong>. Un lien de dossier suit le dossier : ce que vous y ajoutez plus tard apparaît pour ceux
-qui ont déjà le lien. Les liens s'ouvrent aussi dans un navigateur, sur
-<a href="https://orbit-drive.com">orbit-drive.com</a>, sans installer Orbit.</p>
-<h2 id="voir-sans-télécharger">Voir sans télécharger</h2>
-<p>Dans le mode Cloud, les fichiers ont des <strong>miniatures</strong> (photos, vidéos, modèles 3D) et les dossiers montrent un
-aperçu de leur contenu. Un <strong>double-clic</strong> sur une photo ou un modèle 3D l'ouvre dans la visionneuse (flèches
-<code>←</code> <code>→</code> pour passer au suivant, <code>Échap</code> pour fermer) ; les vidéos se lisent directement.</p>
+<p>Puis <strong>Créer le lien</strong> : il est copié, avec un <strong>QR code</strong> à scanner ou à enregistrer. Le lien d'un dossier
+<strong>suit le dossier</strong> : ce que vous y ajoutez, supprimez ou renommez apparaît chez ceux qui ont déjà le lien.</p>
+<p>Les liens s'ouvrent dans n'importe quel navigateur sur <a href="https://orbit-drive.com">orbit-drive.com</a>, sans installer
+Orbit ; l'aperçu affiché dans Discord ou WhatsApp montre le nom, le poids et le type du fichier.</p>
+<h2 id="drop--partager-sans-compte">Drop : partager sans compte</h2>
+<p><strong>Drop</strong> est le <strong>Partage rapide</strong> : envoyez des fichiers chiffrés à quelqu'un, même sans compte.</p>
+<ul>
+<li><strong>Envoyer</strong> : glissez vos fichiers ou dossiers, l'envoi démarre tout de suite et chaque fichier reçoit son
+  propre lien. <strong>Copier le lien</strong>, <strong>QR code</strong>, <strong>Ouvrir dans le navigateur</strong>, ou <strong>Copier tous les liens</strong>.
+  Taille illimitée, fichiers gardés 30 jours.</li>
+<li><strong>Recevoir</strong> : collez un lien orbit-drive.com ou un code de partage. Un lien protégé demande son mot de passe.</li>
+<li><strong>Mes partages</strong> : tous vos liens, avec leur expiration. <strong>Désactiver le lien</strong> coupe un lien déjà envoyé (les
+  fichiers restent dans votre Drive).</li>
+<li><strong>Dossiers partagés</strong> : les dossiers ouverts avec un code (<code>orbf1_…</code>) ; vous pouvez <strong>Tout télécharger</strong>,
+  les lire ou les <strong>Enregistrer dans mon Drive</strong>. Avec un compte, cette liste vous suit sur vos autres PC.</li>
+</ul>
 <h2 id="synchroniser-un-dossier-de-votre-pc">Synchroniser un dossier de votre PC</h2>
 <p>Comme Google Drive : un dossier de votre PC reste <strong>identique</strong> à un dossier du Drive, dans les deux sens.
-Chaque changement est envoyé et reçu automatiquement.</p>
+Ce que vous ajoutez, modifiez ou supprimez part tout seul, et les changements des autres arrivent en une à deux
+secondes.</p>
 <ol>
 <li>Dans le mode Cloud, ouvrez <strong>Synchronisation avec ce PC</strong> puis <strong>Synchroniser un dossier</strong>.</li>
 <li><strong>Dossier de ton PC</strong> : <strong>Choisir un dossier…</strong></li>
 <li><strong>Dans le Drive</strong> : un nouveau dossier du même nom dans <strong>Mon Drive</strong>, ou le dossier ouvert.</li>
 <li><strong>Synchroniser</strong>.</li>
 </ol>
-<p>Le panneau montre l'état (<strong>À jour</strong>, <strong>N fichiers en cours</strong>, <strong>En pause</strong>), l'<strong>Activité récente</strong>, et les
-boutons <strong>Synchroniser maintenant</strong>, <strong>Mettre en pause</strong> / <strong>Reprendre</strong> et <strong>Arrêter la synchronisation</strong> (les
-fichiers restent sur votre PC et dans le Drive).</p>
-<blockquote>
-<p>Si beaucoup de fichiers disparaissent d'un coup de votre PC, Orbit demande une <strong>confirmation</strong> avant de les
-supprimer du Drive : <strong>Supprimer du Drive</strong>, ou <strong>Non, les remettre sur mon PC</strong>.</p>
-</blockquote>
-<p>Quand vous fermez Orbit, la synchronisation continue en arrière-plan (icône près de l'horloge), avec très peu
-de mémoire.</p>
+<p>Le panneau montre l'état (<strong>À jour</strong>, fichiers en cours, <strong>En pause</strong>), l'<strong>Activité récente</strong>, et les boutons
+<strong>Synchroniser maintenant</strong>, <strong>Mettre en pause</strong> / <strong>Reprendre</strong> et <strong>Arrêter la synchronisation</strong> (les fichiers
+restent sur votre PC et dans le Drive).</p>
+<ul>
+<li><strong>Rien n'est écrasé</strong> : si deux personnes modifient le même fichier en même temps, les deux versions sont
+  gardées (« … (conflit - prénom date) »).</li>
+<li>Si beaucoup de fichiers disparaissent d'un coup de votre PC, Orbit demande une <strong>confirmation</strong> : <strong>Supprimer
+  du Drive</strong>, ou <strong>Non, les remettre sur mon PC</strong>.</li>
+<li>Avec un dossier synchronisé, Orbit démarre avec Windows en arrière-plan (icône près de l'horloge), rattrape
+  ce qui a changé pendant qu'il était fermé, et consomme très peu de mémoire. <strong>Quitter</strong> demande confirmation.</li>
+</ul>
 <h2 id="dossiers-partagés-à-plusieurs">Dossiers partagés à plusieurs</h2>
-<p>Un dossier synchronisé peut être <strong>partagé avec d'autres comptes Orbit</strong>, pour travailler à plusieurs sur un
-même projet (Blender, After Effects…) :</p>
+<p>Pour travailler à plusieurs sur un même projet (Blender, After Effects…) :</p>
 <ol>
-<li><strong>Partager</strong> le dossier, tapez l'<strong>E-mail du compte Orbit</strong> de la personne.</li>
+<li>Clic droit sur un dossier › <strong>Partager avec des personnes…</strong>, tapez l'<strong>E-mail du compte Orbit</strong> de la
+   personne.</li>
 <li>Cochez <strong>Peut modifier</strong> (sinon, elle est en <strong>Lecture seule</strong>), puis <strong>Inviter</strong>.</li>
-<li>L'accès s'ouvre dès que cette personne ouvre son Drive une fois. Si elle n'a pas vu l'invitation, envoyez-lui
-   le lien avec <strong>Copier le lien d'invitation</strong>.</li>
+<li>La personne reçoit un e-mail. L'accès s'ouvre dès qu'elle ouvre son Drive une fois (avec sa phrase secrète).
+   Sinon, envoyez-lui le lien avec <strong>Copier le lien d'invitation</strong>.</li>
 </ol>
-<p>La personne trouve le dossier dans <strong>Partagés avec moi</strong> et peut le <strong>Synchroniser sur ce PC…</strong>. Chaque
-modification arrive chez les autres en une à deux secondes. <strong>Retirer l'accès</strong>, <strong>Arrêter le partage</strong> ou
-<strong>Quitter ce dossier</strong> à tout moment. Le chiffrement reste de bout en bout : le serveur ne voit jamais vos
-fichiers.</p>
+<p>Elle trouve le dossier dans <strong>Partagés avec moi</strong> et peut le <strong>Synchroniser sur ce PC…</strong>. <strong>Personnes ayant
+accès…</strong> liste les membres ; <strong>Retirer l'accès</strong>, <strong>Arrêter le partage</strong> ou <strong>Quitter ce dossier</strong> à tout
+moment. Le chiffrement reste de bout en bout.</p>
+<h2 id="stocker-sur-telegram-ou-sur-votre-discord">Stocker sur Telegram ou sur votre Discord</h2>
+<ul>
+<li><strong>Telegram</strong> : stocke vos nouveaux fichiers (chiffrés) dans les <strong>Messages enregistrés</strong> de votre compte
+  Telegram. Il faut un <code>api_id</code> et un <code>api_hash</code> (sur my.telegram.org › API development tools), puis votre
+  numéro et le code reçu. La connexion Telegram reste sur votre PC.</li>
+<li><strong>Mode Local</strong> : la liste des fichiers et la clé restent sur votre PC, les morceaux vont dans votre propre
+  salon Discord via un <strong>webhook</strong> (Paramètres du salon › Intégrations › Webhooks › Nouveau webhook › Copier
+  l'URL). Plusieurs webhooks, un par ligne, rendent les envois plus rapides.</li>
+</ul>
 </article>
 <nav class="pager">
 <a class="prev" href="boite-a-outils.html"><span>Précédent</span>Boîte à outils et médiathèque</a>
 <a class="next" href="reglages.html"><span>Suivant</span>Réglages</a>
 </nav>
   </main>
-  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#mode-local">Mode Local</a></li>
-<li><a href="#mode-cloud-compte">Mode Cloud (compte)</a></li>
+  <aside class="toc"><p>Sur cette page</p><ul><li><a href="#se-connecter">Se connecter</a></li>
+<li><a href="#ranger-vos-fichiers">Ranger vos fichiers</a></li>
+<li><a href="#partager-un-lien">Partager un lien</a></li>
 <li><a href="#drop--partager-sans-compte">Drop : partager sans compte</a></li>
-<li><a href="#partager-depuis-le-drive">Partager depuis le Drive</a></li>
-<li><a href="#voir-sans-télécharger">Voir sans télécharger</a></li>
 <li><a href="#synchroniser-un-dossier-de-votre-pc">Synchroniser un dossier de votre PC</a></li>
-<li><a href="#dossiers-partagés-à-plusieurs">Dossiers partagés à plusieurs</a></li></ul></aside>
+<li><a href="#dossiers-partagés-à-plusieurs">Dossiers partagés à plusieurs</a></li>
+<li><a href="#stocker-sur-telegram-ou-sur-votre-discord">Stocker sur Telegram ou sur votre Discord</a></li></ul></aside>
 </div>
 <footer class="foot">
   <span><img src="logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
@@ -150,7 +224,7 @@ fichiers.</p>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Les noms et logos cités (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) appartiennent à leurs propriétaires ; ils désignent ici des sites et des logiciels compatibles.</small>
 </footer>
-<script src="pages.js?v=1795359584" defer></script>
-<script src="site.js?v=1795359584" defer></script>
+<script src="pages.js?v=1795360507" defer></script>
+<script src="site.js?v=1795360507" defer></script>
 </body>
 </html>

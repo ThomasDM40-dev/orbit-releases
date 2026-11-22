@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orbit Drive — Orbit</title>
 <link rel="icon" href="../logos/orbit.png">
-<link rel="stylesheet" href="../style.css?v=1795359584">
+<link rel="stylesheet" href="../style.css?v=1795360507">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -37,68 +37,131 @@
   <main id="content">
 <article>
 <h1 id="orbit-drive">Orbit Drive</h1>
-<p><strong>Orbit Drive</strong> (the Discord Drive) stores your files online by cutting them into <strong>encrypted</strong> pieces (AES-256) sent to
-Discord. Your files are encrypted on your PC before they leave: neither Discord nor the Orbit server can read
-them.</p>
+<p><strong>Orbit Drive</strong> is your online storage, <strong>end-to-end encrypted</strong> (AES-256): your files are encrypted on your PC
+before they leave, neither the Orbit server nor Discord can read them. It is also used to <strong>share</strong> files by
+link, <strong>sync</strong> folders from your PC and <strong>work together</strong> on the same folder. Everything in your Drive is also on
+<a href="https://orbit-drive.com">orbit-drive.com</a>.</p>
 <blockquote>
-<p>Discord is not made to store files and its terms of service do not plan for it: a channel or an account can be
-deleted. <strong>Always keep another copy of your important files.</strong></p>
+<p>The encrypted pieces are stored on Discord (or Telegram). These services are not made for this and an account
+can be deleted: <strong>always keep another copy of your important files.</strong></p>
 </blockquote>
-<p>The tab has three modes, at the top right: <strong>Local</strong>, <strong>Cloud (account)</strong> and <strong>Drop</strong>.</p>
-<figure><a href="images/drive.jpg"><img alt="The Discord Drive in Local mode, ready to set up" src="images/drive.jpg" loading="lazy"></a><figcaption>The Discord Drive in Local mode, ready to set up</figcaption></figure>
-<h2 id="local-mode">Local mode</h2>
-<p>Everything stays on your PC (the file list and the key); the pieces go to your own Discord channel.</p>
+<p>The tab has three modes, top right: <strong>Cloud (account)</strong>, <strong>Drop</strong> and <strong>Local</strong> (Local mode only shows up if you
+already use it).</p>
+<figure><a href="images/drive.jpg"><img alt="Orbit Drive" src="images/drive.jpg" loading="lazy"></a><figcaption>Orbit Drive</figcaption></figure>
+<h2 id="sign-in">Sign in</h2>
 <ol>
-<li>On Discord, pick or create a <strong>private channel</strong>.</li>
-<li><strong>Channel settings › Integrations › Webhooks › New webhook</strong>, then <strong>Copy webhook URL</strong>.</li>
-<li>In Orbit, paste it in <strong>Discord webhook URL</strong>. Several webhooks (one per line, in different channels) make
-   uploads faster.</li>
-<li>Pick a strong <strong>Encryption passphrase</strong>, then <strong>Set up Drive</strong>.</li>
+<li><strong>Create account</strong> (e-mail and password) or <strong>Sign in</strong>. You can also sign in in one click with <strong>Google</strong>
+   or <strong>Discord</strong>: sign-in opens in your browser then comes back to Orbit on its own.</li>
+<li>Choose an <strong>encryption passphrase</strong>. It protects your <strong>vault</strong> (your files' keys) and works on all your
+   devices.</li>
 </ol>
+<p>Each time you open it, type the passphrase to <strong>Unlock</strong> the Drive; <strong>Lock</strong> closes it.</p>
+<ul>
+<li><strong>Forgot password?</strong> sends a code by e-mail. It changes the sign-in password, not the passphrase.</li>
+<li><strong>Forgot your passphrase?</strong> creates a new one. Your personal files, impossible to decrypt without the old one,
+  are deleted; folders shared with you come back on their own.</li>
+</ul>
 <blockquote>
-<p>Without the passphrase, nobody can read the files back, <strong>not even you</strong>. Write it down somewhere safe: it
-cannot be recovered.</p>
+<p>Nobody can recover your passphrase, not even Orbit. Write it down somewhere safe.</p>
 </blockquote>
-<p>Each time you open it, type the passphrase to <strong>Unlock</strong> the Drive. <strong>Lock</strong> closes it.</p>
-<h2 id="cloud-mode-account">Cloud mode (account)</h2>
-<p>Cloud mode uses an <strong>Orbit account</strong>: your files follow you on all your PCs.</p>
-<ol>
-<li><strong>Create account</strong> (e-mail and password) or <strong>Sign in</strong>.</li>
-<li>Pick an <strong>encryption passphrase</strong>; it protects your files and works on all your devices.</li>
-</ol>
-<p>Then: <strong>Upload files</strong>, <strong>New folder</strong>, <strong>Refresh</strong>, filter, download, delete. Videos play straight from the
-Drive. <strong>Forgot password?</strong> sends a code by e-mail; it changes the sign-in password, not the passphrase.</p>
-<p>The <strong>Telegram</strong> button stores files on your Telegram account (in your <strong>Saved Messages</strong>) instead of Discord.
-The Telegram session stays on your PC.</p>
-<h2 id="drop-share-without-an-account">Drop: share without an account</h2>
-<p><strong>Drop</strong> sends a file to someone, even without an account: Orbit encrypts it with a one-time key and gives you a
-<strong>share code</strong>. The other person pastes this code in Drop to download and decrypt the file. Drops expire
-automatically after a while.</p>
-<p><strong>Shared folders</strong> (codes starting with <code>orbf1_</code>) open in the same place; you can download them, play them or
-<strong>Save to my Drive</strong>.</p>
-<h2 id="share-from-the-drive">Share from the Drive</h2>
-<p>In Cloud mode, <strong>Share</strong> on a file or a folder creates a code: the content is re-encrypted with a new key, your
-account key is never sent. Give the share a <strong>title</strong>: it is visible to anyone who has the code.</p>
-<h3 id="protect-a-link">Protect a link</h3>
-<p>When you <strong>Share</strong>, choose:</p>
+<h2 id="organize-your-files">Organize your files</h2>
+<ul>
+<li><strong>Upload files</strong>, <strong>Upload a folder</strong> (with its subfolders) or drop them straight into the window. <strong>New
+  folder</strong> and <strong>Refresh</strong> are in the same bar.</li>
+<li><strong>Search</strong> by name, or type <code>#tag</code> to find everything with a tag.</li>
+<li><strong>Sort and filter</strong>: by name, date, size or type, either way; show only folders, videos, images, audio,
+  documents or archives. <strong>Grid</strong> or <strong>List</strong> view.</li>
+<li>Photos, videos and 3D models have a <strong>thumbnail</strong>, folders show a peek of their content, and creative files show
+  their software's logo (Blender, After Effects, Photoshop…).</li>
+</ul>
+<h3 id="the-menu-of-a-file-or-folder">The menu of a file or folder</h3>
+<p>Right-click (or the <strong>Actions</strong> button) on an item:</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Open</strong> / <strong>Play</strong></td>
+<td>Opens a folder, plays a video or sound, shows a photo or 3D model</td>
+</tr>
+<tr>
+<td><strong>Download</strong></td>
+<td>Saves the file (or the whole folder) to your PC</td>
+</tr>
+<tr>
+<td><strong>Share link</strong></td>
+<td>Creates a share link, see below</td>
+</tr>
+<tr>
+<td><strong>Share with people…</strong></td>
+<td>Invites other Orbit accounts into a folder</td>
+</tr>
+<tr>
+<td><strong>Sync to this PC…</strong></td>
+<td>Keeps this folder identical to a folder on your PC</td>
+</tr>
+<tr>
+<td><strong>Rename</strong>, <strong>Move to…</strong></td>
+<td>Changes the name or location</td>
+</tr>
+<tr>
+<td><strong>Copy to…</strong>, <strong>Duplicate</strong></td>
+<td>Instant copy: nothing is re-uploaded, and deleting the original does not touch the copy</td>
+</tr>
+<tr>
+<td><strong>Tags…</strong>, <strong>Color</strong></td>
+<td>Adds colour tags or colours a folder to spot it</td>
+</tr>
+<tr>
+<td><strong>Properties</strong></td>
+<td>Type, exact size, content, location, date, tags, encryption</td>
+</tr>
+<tr>
+<td><strong>Delete</strong></td>
+<td>Deletes the item (<code>Del</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Select</strong> several items to move, copy, tag or delete them at once.</p>
+<h3 id="view-without-downloading">View without downloading</h3>
+<p><strong>Double-click</strong> a photo or a 3D model (GLB, FBX, OBJ, STL, PLY) to open it in the viewer, without saving
+anything on your PC: <code>←</code> <code>→</code> for the next file in the folder, <code>Esc</code> to close. For 3D models, textures are found
+on their own in the model's folder. Videos play directly.</p>
+<h3 id="transfers">Transfers</h3>
+<p>Each upload or download can be <strong>paused</strong> and resumed, next to the Cancel button. <strong>Stop all</strong>, at the top of the
+Drive, cancels every running transfer and pauses syncs.</p>
+<h2 id="share-a-link">Share a link</h2>
+<p><strong>Share link</strong> on a file or folder creates a link in one second (nothing is re-uploaded). Give the share a
+<strong>title</strong>, then choose:</p>
 <ul>
 <li><strong>Who can open the link</strong>: <strong>Anyone with the link</strong> or <strong>Only me</strong>;</li>
-<li><strong>What people can do</strong>: <strong>View and download</strong>, or <strong>View only</strong> (the person watches but cannot save the
-  file);</li>
-<li>a <strong>Password</strong> (optional): the person must type it to open the link; it is never sent to the server in
-  clear;</li>
+<li><strong>What people can do</strong>: <strong>View and download</strong>, or <strong>View only</strong> (the person watches and plays videos but
+  cannot save the files);</li>
+<li>a <strong>Password</strong> (optional): it never leaves your PC, give it separately;</li>
 <li>the <strong>Expiry</strong>: <strong>1 day</strong>, <strong>7 days</strong>, <strong>30 days</strong> or <strong>Never</strong>.</li>
 </ul>
-<p>Then <strong>Create the link</strong>. A folder link follows the folder: what you add later shows up for people who already
-have the link. Links also open in a browser, on <a href="https://orbit-drive.com">orbit-drive.com</a>, without installing
-Orbit.</p>
-<h2 id="view-without-downloading">View without downloading</h2>
-<p>In Cloud mode, files have <strong>thumbnails</strong> (photos, videos, 3D models) and folders show a peek of their content.
-<strong>Double-click</strong> a photo or a 3D model to open it in the viewer (<code>←</code> <code>→</code> for the next one, <code>Esc</code> to close);
-videos play directly.</p>
+<p>Then <strong>Create the link</strong>: it is copied, with a <strong>QR code</strong> to scan or save. A folder link <strong>follows the
+folder</strong>: what you add, delete or rename in it shows up for people who already have the link.</p>
+<p>Links open in any browser on <a href="https://orbit-drive.com">orbit-drive.com</a>, without installing Orbit; the preview
+shown in Discord or WhatsApp displays the file's name, size and type.</p>
+<h2 id="drop-share-without-an-account">Drop: share without an account</h2>
+<p><strong>Drop</strong> is <strong>Quick share</strong>: send encrypted files to someone, even without an account.</p>
+<ul>
+<li><strong>Send</strong>: drop your files or folders, the upload starts right away and each file gets its own link. <strong>Copy
+  link</strong>, <strong>QR code</strong>, <strong>Open in browser</strong>, or <strong>Copy all links</strong>. Unlimited size, files kept 30 days.</li>
+<li><strong>Receive</strong>: paste an orbit-drive.com link or a share code. A protected link asks for its password.</li>
+<li><strong>My shares</strong>: all your links, with their expiry. <strong>Disable the link</strong> cuts a link you already sent (files
+  stay in your Drive).</li>
+<li><strong>Shared folders</strong>: folders opened with a code (<code>orbf1_…</code>); you can <strong>Download all</strong>, play them or <strong>Save to
+  my Drive</strong>. With an account, this list follows you to your other PCs.</li>
+</ul>
 <h2 id="sync-a-folder-from-your-pc">Sync a folder from your PC</h2>
-<p>Like Google Drive: a folder on your PC stays <strong>identical</strong> to a folder in the Drive, both ways. Every change is
-sent and received automatically.</p>
+<p>Like Google Drive: a folder on your PC stays <strong>identical</strong> to a folder in the Drive, both ways. What you add,
+edit or delete goes up on its own, and other people's changes arrive in one to two seconds.</p>
 <ol>
 <li>In Cloud mode, open <strong>Sync with this PC</strong> then <strong>Sync a folder</strong>.</li>
 <li><strong>Folder on your PC</strong>: <strong>Choose a folder…</strong></li>
@@ -107,36 +170,46 @@ sent and received automatically.</p>
 </ol>
 <p>The panel shows the status (up to date, files in progress, paused), the <strong>Recent activity</strong>, and the <strong>Sync
 now</strong>, <strong>Pause</strong> / <strong>Resume</strong> and <strong>Stop syncing</strong> buttons (files stay on your PC and in the Drive).</p>
-<blockquote>
-<p>If many files disappear from your PC at once, Orbit asks for a <strong>confirmation</strong> before deleting them from
-the Drive: <strong>Delete from Drive</strong>, or <strong>No, put them back on my PC</strong>.</p>
-</blockquote>
-<p>When you close Orbit, sync keeps running in the background (icon near the clock), using very little memory.</p>
+<ul>
+<li><strong>Nothing is overwritten</strong>: if two people edit the same file at the same time, both versions are kept
+  ("… (conflict - name date)").</li>
+<li>If many files disappear from your PC at once, Orbit asks for a <strong>confirmation</strong>: <strong>Delete from Drive</strong>, or
+  <strong>No, put them back on my PC</strong>.</li>
+<li>With a synced folder, Orbit starts with Windows in the background (icon near the clock), catches up on what
+  changed while it was closed, and uses very little memory. <strong>Quit</strong> asks for confirmation.</li>
+</ul>
 <h2 id="folders-shared-with-others">Folders shared with others</h2>
-<p>A synced folder can be <strong>shared with other Orbit accounts</strong>, to work together on the same project (Blender,
-After Effects…):</p>
+<p>To work together on the same project (Blender, After Effects…):</p>
 <ol>
-<li><strong>Share</strong> the folder and type the person's <strong>Orbit account e-mail</strong>.</li>
+<li>Right-click a folder › <strong>Share with people…</strong>, type the person's <strong>Orbit account e-mail</strong>.</li>
 <li>Tick <strong>Can edit</strong> (otherwise they are <strong>Read-only</strong>), then <strong>Invite</strong>.</li>
-<li>Access opens as soon as that person opens their Drive once. If they did not see the invitation, send them
-   the link with <strong>Copy invitation link</strong>.</li>
+<li>The person gets an e-mail. Access opens as soon as they open their Drive once (with their passphrase).
+   Otherwise, send them the link with <strong>Copy invitation link</strong>.</li>
 </ol>
-<p>The person finds the folder in <strong>Shared with me</strong> and can sync it on their PC. Each change reaches the others in
-one to two seconds. <strong>Remove access</strong>, <strong>Stop sharing</strong> or <strong>Leave this folder</strong> at any time. Encryption stays
-end-to-end: the server never sees your files.</p>
+<p>They find the folder in <strong>Shared with me</strong> and can sync it on their PC. <strong>People with access…</strong> lists the
+members; <strong>Remove access</strong>, <strong>Stop sharing</strong> or <strong>Leave this folder</strong> at any time. Encryption stays end-to-end.</p>
+<h2 id="store-on-telegram-or-your-own-discord">Store on Telegram or your own Discord</h2>
+<ul>
+<li><strong>Telegram</strong>: stores your new files (encrypted) in your Telegram account's <strong>Saved Messages</strong>. You need an
+  <code>api_id</code> and an <code>api_hash</code> (on my.telegram.org › API development tools), then your number and the code you
+  receive. The Telegram connection stays on your PC.</li>
+<li><strong>Local mode</strong>: the file list and the key stay on your PC, the pieces go to your own Discord channel through a
+  <strong>webhook</strong> (Channel settings › Integrations › Webhooks › New webhook › Copy webhook URL). Several webhooks, one
+  per line, make uploads faster.</li>
+</ul>
 </article>
 <nav class="pager">
 <a class="prev" href="boite-a-outils.html"><span>Previous</span>Toolbox and media library</a>
 <a class="next" href="reglages.html"><span>Next</span>Settings</a>
 </nav>
   </main>
-  <aside class="toc"><p>On this page</p><ul><li><a href="#local-mode">Local mode</a></li>
-<li><a href="#cloud-mode-account">Cloud mode (account)</a></li>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#sign-in">Sign in</a></li>
+<li><a href="#organize-your-files">Organize your files</a></li>
+<li><a href="#share-a-link">Share a link</a></li>
 <li><a href="#drop-share-without-an-account">Drop: share without an account</a></li>
-<li><a href="#share-from-the-drive">Share from the Drive</a></li>
-<li><a href="#view-without-downloading">View without downloading</a></li>
 <li><a href="#sync-a-folder-from-your-pc">Sync a folder from your PC</a></li>
-<li><a href="#folders-shared-with-others">Folders shared with others</a></li></ul></aside>
+<li><a href="#folders-shared-with-others">Folders shared with others</a></li>
+<li><a href="#store-on-telegram-or-your-own-discord">Store on Telegram or your own Discord</a></li></ul></aside>
 </div>
 <footer class="foot">
   <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
@@ -144,7 +217,7 @@ end-to-end: the server never sees your files.</p>
   <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
   <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
 </footer>
-<script src="pages.js?v=1795359584" defer></script>
-<script src="../site.js?v=1795359584" defer></script>
+<script src="pages.js?v=1795360507" defer></script>
+<script src="../site.js?v=1795360507" defer></script>
 </body>
 </html>

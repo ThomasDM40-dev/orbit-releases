@@ -22,7 +22,7 @@
 <br/>
 
 **Orbit** réunit dans une seule application Windows ce qui demande d'habitude une dizaine de logiciels :
-un **téléchargeur** pour plus de 1000 sites, un **convertisseur universel**, et **25 outils de création par IA**
+un **téléchargeur** pour plus de 1000 sites, un **convertisseur universel**, et **16 outils de création par IA**
 (image, vidéo, 3D, voix, musique) qui tournent **sur votre propre carte graphique**.
 
 Pas d'abonnement, pas de crédits, pas de filigrane : vos fichiers restent sur votre PC.
@@ -40,10 +40,10 @@ Pas d'abonnement, pas de crédits, pas de filigrane : vos fichiers restent sur v
 | 🎨 **IA image** | **Génération IA** locale (SDXL, FLUX.2 klein), **Gomme magique** (effacer ou remplacer un objet), **Détourage** vidéo sans fond vert, **Amélioration** (upscale jusqu'en 8K, restauration). |
 | 🎬 **IA vidéo & 3D** | **Interpolateur** jusqu'à 240 i/s, **Paint a plate** (retouche de plans), **IA Création 3D** (image → modèle GLB/FBX riggé), **Matériaux PBR** (photo → matériau complet), **Mocap IA** (vidéo → animation 3D appliquée à votre personnage). |
 | 🎙️ **IA voix & son** | **Voix IA** (voix off, création et clonage de voix), **Doublage IA** (une vidéo dans une autre langue, avec la vraie voix de chacun), **Bruitages IA**, **Musique IA** (chansons complètes, avec paroles), **Changeur de voix** en direct pour Discord/OBS, **Studio Audio** (stems, débruitage), **Transcription**. |
-| ☁️ **Orbit Drive** | Stockage chiffré de bout en bout, **synchronisation de dossiers** comme Google Drive, **dossiers partagés** à plusieurs, liens protégés (mot de passe, expiration, lecture seule), ouverture dans le navigateur sur [orbit-drive.com](https://orbit-drive.com). |
+| ☁️ **Orbit Drive** | Stockage chiffré de bout en bout (Discord ou Telegram), connexion Google / Discord. **Synchronisation de dossiers** comme Google Drive, **dossiers partagés** à plusieurs (lecture seule ou modification). Liens protégés (mot de passe, expiration, lecture seule, QR code), **Drop** sans compte. Tags et couleurs, trier/filtrer, copier/dupliquer, propriétés, miniatures, visionneuse photo et 3D, pause/reprise des transferts. Tout est aussi sur [orbit-drive.com](https://orbit-drive.com). |
 
-Interface « Liquid Glass » animée, recherche `Ctrl + K`, assistant IA, **6 langues** (FR, EN, ES, DE, IT, PT)
-et mises à jour automatiques.
+Interface « Liquid Glass » animée, recherche `Ctrl + K`, assistant IA, centre des tâches, **25 succès** à débloquer,
+profil et réglages en 15 sections, **6 langues** (FR, EN, ES, DE, IT, PT) et mises à jour automatiques.
 
 ## 🖼️ Aperçu
 

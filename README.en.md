@@ -22,7 +22,7 @@
 <br/>
 
 **Orbit** brings together in one Windows app what usually takes a dozen programs: a **downloader** for more than
-1000 sites, a **universal converter**, and **25 AI creative tools** (image, video, 3D, voice, music) that run
+1000 sites, a **universal converter**, and **16 AI creative tools** (image, video, 3D, voice, music) that run
 **on your own graphics card**.
 
 No subscription, no credits, no watermark: your files stay on your PC.
@@ -40,10 +40,10 @@ No subscription, no credits, no watermark: your files stay on your PC.
 | 🎨 **Image AI** | Local **AI Generation** (SDXL, FLUX.2 klein), **Magic Eraser** (erase or replace an object), video **Cutout** without a green screen, **Enhance** (upscale up to 8K, restoration). |
 | 🎬 **Video & 3D AI** | **Interpolator** up to 240 fps, **Paint a plate** (shot retouching), **AI 3D Creation** (image → rigged GLB/FBX model), **PBR Materials** (photo → full material), **AI Mocap** (video → 3D animation applied to your character). |
 | 🎙️ **Voice & sound AI** | **AI Voice** (voice-over, voice design and cloning), **AI Dubbing** (a video in another language, with each person's real voice), **AI Foley**, **AI Music** (full songs, with lyrics), live **Voice Changer** for Discord/OBS, **Audio Studio** (stems, denoise), **Transcription**. |
-| ☁️ **Orbit Drive** | End-to-end encrypted storage, Google-Drive-style **folder sync**, **shared folders** for teams, protected links (password, expiry, view only), opens in the browser on [orbit-drive.com](https://orbit-drive.com). |
+| ☁️ **Orbit Drive** | End-to-end encrypted storage (Discord or Telegram), Google / Discord sign-in. Google-Drive-style **folder sync**, **shared folders** for teams (read-only or edit). Protected links (password, expiry, view only, QR code), **Drop** with no account. Tags and colours, sort/filter, copy/duplicate, properties, thumbnails, photo and 3D viewer, pause/resume transfers. Everything is also on [orbit-drive.com](https://orbit-drive.com). |
 
-Animated "Liquid Glass" interface, `Ctrl + K` search, AI assistant, **6 languages** (EN, FR, ES, DE, IT, PT) and
-automatic updates.
+Animated "Liquid Glass" interface, `Ctrl + K` search, AI assistant, task center, **25 achievements** to unlock,
+profile and settings in 15 sections, **6 languages** (EN, FR, ES, DE, IT, PT) and automatic updates.
 
 ## 🖼️ Preview
 
