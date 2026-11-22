@@ -60,6 +60,14 @@ profile and settings in 15 sections, **6 languages** (EN, FR, ES, DE, IT, PT) an
     <td><img src="docs/en/images/inpaint.jpg" alt="AI Magic Eraser"/><p align="center"><sub><b>Magic Eraser</b> — erase or replace an object</sub></p></td>
     <td><img src="docs/en/images/convertpro.jpg" alt="Converter"/><p align="center"><sub><b>Converter</b> — video, audio, image, 3D, fonts, AE</sub></p></td>
   </tr>
+  <tr>
+    <td><img src="docs/en/images/voicegen.jpg" alt="AI Voice"/><p align="center"><sub><b>AI Voice</b> — voice-over, voice design and cloning</sub></p></td>
+    <td><img src="docs/en/images/dubbing.jpg" alt="AI Dubbing"/><p align="center"><sub><b>AI Dubbing</b> — a video in another language, with the real voices</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src="docs/en/images/music.jpg" alt="AI Music"/><p align="center"><sub><b>AI Music</b> — full songs with lyrics, locally</sub></p></td>
+    <td><img src="docs/en/images/mocap.jpg" alt="AI Mocap"/><p align="center"><sub><b>AI Mocap</b> — a video becomes a 3D animation</sub></p></td>
+  </tr>
 </table>
 
 ## 💎 Free or Premium

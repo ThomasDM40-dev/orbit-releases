@@ -60,6 +60,14 @@ profil et réglages en 15 sections, **6 langues** (FR, EN, ES, DE, IT, PT) et mi
     <td><img src="docs/images/inpaint.jpg" alt="Gomme magique IA"/><p align="center"><sub><b>Gomme magique IA</b> — effacer ou remplacer un objet</sub></p></td>
     <td><img src="docs/images/convertpro.jpg" alt="Convertisseur"/><p align="center"><sub><b>Convertisseur</b> — vidéo, audio, image, 3D, polices, AE</sub></p></td>
   </tr>
+  <tr>
+    <td><img src="docs/images/voicegen.jpg" alt="Voix IA"/><p align="center"><sub><b>Voix IA</b> — voix off, création et clonage de voix</sub></p></td>
+    <td><img src="docs/images/dubbing.jpg" alt="Doublage IA"/><p align="center"><sub><b>Doublage IA</b> — une vidéo dans une autre langue, avec les vraies voix</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/music.jpg" alt="Musique IA"/><p align="center"><sub><b>Musique IA</b> — chansons complètes avec paroles, en local</sub></p></td>
+    <td><img src="docs/images/mocap.jpg" alt="Mocap IA"/><p align="center"><sub><b>Mocap IA</b> — une vidéo devient une animation 3D</sub></p></td>
+  </tr>
 </table>
 
 ## 💎 Gratuit ou Premium
