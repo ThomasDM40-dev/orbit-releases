@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API, terminal and AI agents — Orbit</title>
+<link rel="icon" href="../logos/orbit.png">
+<link rel="stylesheet" href="../style.css?v=1795524430">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="index.html"><img class="logo" src="../logos/orbit.png" alt="" width="28" height="28">Orbit <em>Documentation</em></a>
+  <a class="lang" href="../api.html">Français</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <a class="dl" href="https://github.com/ThomasDM40-dev/orbit-releases/releases/latest/download/Orbit-Installer.exe"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>Download Orbit</a>
+    <p class="dl-hint">Windows 10 and 11, 64-bit · free<br><a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">Release notes</a></p>
+    <details open><summary>Contents</summary><ul>
+<li><a href="index.html">Orbit</a></li>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="interface.html">The interface</a></li>
+<li><a href="telechargements.html">Downloads</a></li>
+<li><a href="conversion.html">Conversion</a></li>
+<li><a href="ia-image.html">AI for images</a></li>
+<li><a href="ia-video-3d.html">AI for video and 3D</a></li>
+<li><a href="voix-musique-ia.html">Voice, dubbing and music AI</a></li>
+<li><a href="audio-transcription.html">Audio and transcription</a></li>
+<li><a href="boite-a-outils.html">Toolbox and media library</a></li>
+<li><a href="drive.html">Orbit Drive</a></li>
+<li><a href="reglages.html">Settings</a></li>
+<li><a href="api.html" aria-current="page">API, terminal and AI agents</a></li>
+<li><a href="premium.html">Orbit Premium</a></li>
+<li><a href="depannage.html">Troubleshooting</a></li>
+    </ul></details>
+  </nav>
+  <main id="content">
+<article>
+<h1 id="api-terminal-and-ai-agents">API, terminal and AI agents</h1>
+<p>Orbit can be driven <strong>without opening its window</strong>: from your scripts, from the terminal with the <code>orbit</code>
+command, or by an AI agent (Claude, Cursor…) through its <strong>MCP</strong> server. Tools started this way are the same as in
+the app: same engines, same settings, same GPU queue, and they show up in the <strong>Task center</strong>.</p>
+<h2 id="turn-on-the-api">Turn on the API</h2>
+<p><strong>Settings › API &amp; integrations › Enable the local API.</strong> It is <strong>off by default</strong>.</p>
+<ul>
+<li>It only listens on this PC: <code>http://127.0.0.1:47821/v1</code> (the port can be changed on the same page).</li>
+<li>Every request must carry the <strong>access token</strong>: <code>Authorization: Bearer orb_…</code>. You can copy or regenerate it on
+  the same page.</li>
+<li>Web pages can't call the API: any request coming from a browser is refused.</li>
+<li>If Orbit is closed, the <code>orbit</code> command and the MCP server start it for you.</li>
+</ul>
+<blockquote>
+<p>The token gives access to your tools and your Drive. Never paste it into a website or a public repository.</p>
+</blockquote>
+<h2 id="the-orbit-command">The <code>orbit</code> command</h2>
+<p><strong>Settings › API &amp; integrations › “orbit” command › Install</strong>, then open a <strong>new</strong> terminal. Nothing else to
+install (no Node.js): the command runs on Orbit itself.</p>
+<pre><code class="language-text">orbit dl https://youtu.be/… --format MP3        download (BEST, 1080p, 4K… or MP3, FLAC…)
+orbit convert holiday.mov --to mp4                convert (video, audio, image, document, 3D, font, LUT)
+orbit stems song.mp3 --stems 4                    split into stems (Premium)
+orbit transcribe interview.mp4 --formats srt,vtt  subtitles (Premium)
+orbit tts &quot;Hello!&quot; --voice af_heart --lang en     AI voice (Premium)
+orbit image &quot;a lighthouse at sunset&quot;              AI image (Premium)
+orbit upscale old-clip.mp4 --scale 2              AI enhancement (Premium)
+
+orbit tools                 list the tools        orbit tools convert   a tool's parameters
+orbit run &lt;tool&gt; --param value …                  any tool
+orbit jobs · orbit job &lt;id&gt; --follow · orbit cancel &lt;id&gt;
+orbit drive ls · orbit drive upload photo.jpg --share · orbit drive share &lt;id&gt; --days 7
+</code></pre>
+<p>Several files or links at once start one job each: <code>orbit convert *.mov --to mp4</code>,
+<code>orbit dl link1 link2 --format MP3</code>. A progress bar shows while the job runs. <strong>Ctrl+C</strong> cancels the job. <code>--json</code> prints the result as JSON (handy in
+scripts), and <code>--no-wait</code> returns the job id right away instead of waiting for the end.</p>
+<p>Exit codes: <code>0</code> success · <code>1</code> the tool failed · <code>2</code> invalid parameter · <code>3</code> Orbit unreachable · <code>130</code> cancelled.</p>
+<h2 id="ai-agents-mcp">AI agents (MCP)</h2>
+<p>The MCP server gives Orbit's tools to your agent. You can then ask it, for example: “download this video, split the
+vocals from the music and put the vocals on my Drive”.</p>
+<ul>
+<li><strong>Claude Desktop, Cursor and other MCP clients</strong>: <em>Copy config</em>, then paste the block into the <code>mcpServers</code>
+  section of the client's configuration.</li>
+<li><strong>Claude Code</strong>: <em>Copy command</em>, then run it once in a terminal.</li>
+</ul>
+<p>Each Orbit tool becomes an MCP tool (<code>orbit_download</code>, <code>orbit_convert</code>, <code>orbit_tts</code>…), plus <code>orbit_status</code>,
+<code>orbit_job_status</code>, <code>orbit_cancel_job</code>, <code>orbit_list_jobs</code>, <code>orbit_analyze_url</code> and the Drive tools
+(<code>orbit_drive_list</code>, <code>orbit_drive_share</code>, <code>orbit_drive_create_folder</code>, <code>orbit_drive_trash</code>). When a job takes more
+than ~50 s, the agent gets a <code>jobId</code> and follows up with <code>orbit_job_status</code>.</p>
+<h2 id="sharex">ShareX</h2>
+<p><strong>Settings › API &amp; integrations › ShareX › Copy</strong>, then in ShareX: <em>Destinations › Custom uploader settings ›
+Import › From clipboard</em>. Your captures go to Orbit Drive, encrypted, and the share link is copied for you. Orbit
+Drive must be signed in (Cloud mode) and unlocked in the app.</p>
+<h2 id="the-http-api">The HTTP API</h2>
+<p>Every response is JSON. An error always has the same shape:</p>
+<pre><code class="language-json">{ &quot;error&quot;: { &quot;code&quot;: &quot;VALIDATION_ERROR&quot;, &quot;message&quot;: &quot;Paramètres invalides.&quot;, &quot;details&quot;: [{ &quot;field&quot;: &quot;target&quot;, &quot;message&quot;: &quot;obligatoire&quot; }] } }
+</code></pre>
+<p>Error <code>message</code> texts are in French; rely on <code>code</code>, which never changes.</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>HTTP</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UNAUTHORIZED</code></td>
+<td>401</td>
+<td>Missing or wrong token</td>
+</tr>
+<tr>
+<td><code>FORBIDDEN</code></td>
+<td>403</td>
+<td>Request from a browser, or host refused</td>
+</tr>
+<tr>
+<td><code>PREMIUM_REQUIRED</code></td>
+<td>403</td>
+<td>Tool reserved for Orbit Premium</td>
+</tr>
+<tr>
+<td><code>NOT_FOUND</code></td>
+<td>404</td>
+<td>Unknown route, tool or job</td>
+</tr>
+<tr>
+<td><code>CONFLICT</code> / <code>NOT_CANCELLABLE</code></td>
+<td>409</td>
+<td>Job already finished / tool that can't be interrupted</td>
+</tr>
+<tr>
+<td><code>DRIVE_NOT_READY</code> / <code>DRIVE_LOCKED</code></td>
+<td>409</td>
+<td>Drive not signed in / not unlocked</td>
+</tr>
+<tr>
+<td><code>VALIDATION_ERROR</code></td>
+<td>422</td>
+<td>Missing, unknown or mistyped parameter, file not found</td>
+</tr>
+<tr>
+<td><code>RATE_LIMITED</code></td>
+<td>429</td>
+<td>Too many tries with a wrong token (1 min wait)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="routes">Routes</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Route</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/v1/health</code></td>
+<td>Is Orbit up? (no token)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/info</code></td>
+<td>Version, Premium, Drive state, tools</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/tools</code> · <code>/v1/tools/{id}</code></td>
+<td>Tools and their JSON parameter schema</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/v1/jobs</code></td>
+<td>Run a tool: <code>{ "tool": "convert", "input": { … } }</code> → <code>202</code> + the job</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/jobs</code></td>
+<td>Latest jobs (<code>?status=running&amp;limit=20</code>)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/jobs/{id}</code></td>
+<td>Job state; <code>?wait=25</code> waits for it to finish (30 s max)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/jobs/{id}/events</code></td>
+<td>Live stream (Server-Sent Events): <code>job</code>, <code>progress</code>, <code>log</code>, <code>end</code></td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/v1/jobs/{id}</code></td>
+<td>Cancel the job</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/v1/analyze</code></td>
+<td>Info about a link without downloading it: <code>{ "url": "…" }</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/drive</code></td>
+<td>Drive sign-in and lock state</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/v1/drive/nodes</code></td>
+<td>A folder's content (<code>?parent=&lt;id&gt;</code>, <code>?q=name</code>, <code>?page=</code>, <code>?pageSize=</code>)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/v1/drive/folders</code></td>
+<td>Create a folder: <code>{ "name": "…", "parent": "&lt;id&gt;" }</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/v1/drive/files</code></td>
+<td>Raw file upload: <code>?name=capture.png&amp;parent=&lt;id&gt;&amp;share=1</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/v1/drive/shares</code></td>
+<td>Share link: <code>{ "id": "…", "days": 7, "password": "…" }</code></td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/v1/drive/nodes/{id}</code></td>
+<td>Move to the trash (30 days)</td>
+</tr>
+</tbody>
+</table>
+<p>A job goes through <code>queued</code> (waiting for a GPU slot), <code>running</code>, then <code>succeeded</code>, <code>failed</code> or <code>cancelled</code>. File
+paths are <strong>absolute</strong> and live on this PC.</p>
+<h3 id="tools">Tools</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+<th>Premium</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>download</code></td>
+<td>Download a link (video, audio, Spotify, file hosters…)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>convert</code></td>
+<td>Convert a file</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>audio</code></td>
+<td><code>op</code>: <code>stems</code>, <code>denoise</code>, <code>normalize</code>, <code>extract</code></td>
+<td><code>stems</code> only</td>
+</tr>
+<tr>
+<td><code>transcribe</code></td>
+<td>Speech → subtitles / text</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>upscale</code></td>
+<td>Upscale, frame interpolation, restoration</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>remove-background</code></td>
+<td>Video / image background removal</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>colorize</code></td>
+<td>Colorize a black-and-white photo</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>image-generate</code></td>
+<td>Local AI image (SDXL, FLUX Klein)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>tts</code></td>
+<td>AI voice</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>music</code></td>
+<td>AI music</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>image-to-3d</code></td>
+<td>Image → 3D model (.glb)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>pbr</code></td>
+<td>Photo → PBR material</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>drive-upload</code></td>
+<td>Files / folders → Orbit Drive</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><code>orbit tools &lt;tool&gt;</code> or <code>GET /v1/tools/&lt;tool&gt;</code> list every parameter of a tool.</p>
+<h3 id="example-powershell">Example (PowerShell)</h3>
+<pre><code class="language-powershell">$cfg = Get-Content &quot;$env:USERPROFILE\.orbit\api.json&quot; | ConvertFrom-Json
+$h = @{ Authorization = &quot;Bearer $($cfg.token)&quot; }
+$job = Invoke-RestMethod -Method Post -Uri &quot;http://127.0.0.1:$($cfg.port)/v1/jobs&quot; -Headers $h -ContentType 'application/json' `
+  -Body '{&quot;tool&quot;:&quot;convert&quot;,&quot;input&quot;:{&quot;inputPath&quot;:&quot;C:\\Videos\\clip.mov&quot;,&quot;target&quot;:&quot;mp4&quot;}}'
+do { $job = Invoke-RestMethod -Uri &quot;http://127.0.0.1:$($cfg.port)/v1/jobs/$($job.id)?wait=25&quot; -Headers $h } while ($job.status -in 'queued','running')
+$job.result.outputPath
+</code></pre>
+<h2 id="good-to-know">Good to know</h2>
+<ul>
+<li>AI tools use the <strong>same GPU queue</strong> as the tabs: an API job waits its turn if a render is already running
+  (<em>Simultaneous AI jobs</em> setting in AI &amp; Performance).</li>
+<li>The Drive goes through the app, which does the encryption: your Drive stays end-to-end encrypted, and the token
+  never leaves your PC.</li>
+<li>The job list is kept in memory until Orbit closes (last 200).</li>
+</ul>
+</article>
+<nav class="pager">
+<a class="prev" href="reglages.html"><span>Previous</span>Settings</a>
+<a class="next" href="premium.html"><span>Next</span>Orbit Premium</a>
+</nav>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#turn-on-the-api">Turn on the API</a></li>
+<li><a href="#the-orbit-command">The orbit command</a></li>
+<li><a href="#ai-agents-mcp">AI agents (MCP)</a></li>
+<li><a href="#sharex">ShareX</a></li>
+<li><a href="#the-http-api">The HTTP API</a></li>
+<li><a href="#good-to-know">Good to know</a></li></ul></aside>
+</div>
+<footer class="foot">
+  <span><img src="../logos/orbit.png" alt="" width="20" height="20"> Orbit</span>
+  <span>v0.86.1</span>
+  <a href="https://github.com/ThomasDM40-dev/orbit-releases/releases">GitHub</a>
+  <small>Names and logos mentioned (YouTube, Spotify, Discord, Topaz, HandBrake, After Effects…) belong to their owners; they refer here to compatible sites and software.</small>
+</footer>
+<script src="pages.js?v=1795524430" defer></script>
+<script src="../site.js?v=1795524430" defer></script>
+</body>
+</html>
